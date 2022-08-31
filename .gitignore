@@ -1,0 +1,8 @@
+.metadata/
+src-gen/
+xtend-gen/
+generated/
+bin/
+test-bin
+
+*.xml_gen

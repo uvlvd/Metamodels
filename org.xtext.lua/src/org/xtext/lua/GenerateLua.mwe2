@@ -41,14 +41,16 @@ Workflow {
   					backtrack = true
   				}
       		}
+      		
+      		// I think generateStub = true is the default  for these providers
       		scopeProvider = {
-      			generateStub = true
+//      			generateStub = true
       		}
       		labelProvider = {
-      			generateStub = true
+//      			generateStub = true
       		}
 			serializer = {
-				generateStub = true
+//				generateStub = true
 			}
 			validator = {
 				// composedCheck = "org.eclipse.xtext.validation.NamesAreUniqueValidator"

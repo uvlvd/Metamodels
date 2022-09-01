@@ -39,12 +39,16 @@ Workflow {
 			parserGenerator = parser.antlr.XtextAntlrGeneratorFragment2 {
   				options = {
   					backtrack = true
-//  					backtrackLexer = false
   				}
       		}
-			
+      		scopeProvider = {
+      			generateStub = true
+      		}
+      		labelProvider = {
+      			generateStub = true
+      		}
 			serializer = {
-				generateStub = false
+				generateStub = true
 			}
 			validator = {
 				// composedCheck = "org.eclipse.xtext.validation.NamesAreUniqueValidator"

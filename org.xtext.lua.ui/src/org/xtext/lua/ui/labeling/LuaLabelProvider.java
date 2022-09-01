@@ -6,6 +6,7 @@ package org.xtext.lua.ui.labeling;
 import com.google.inject.Inject;
 import org.eclipse.emf.edit.ui.provider.AdapterFactoryLabelProvider;
 import org.eclipse.xtext.ui.label.DefaultEObjectLabelProvider;
+import org.eclipse.emf.ecore.EObject;
 
 /**
  * Provides labels for EObjects.
@@ -20,12 +21,12 @@ public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 	}
 
 	// Labels and icons can be computed like this:
-	
-//	String text(Greeting ele) {
-//		return "A greeting to " + ele.getName();
-//	}
+	String text(EObject ele) {
+		return ele.eClass().getName();
+	}
 //
 //	String image(Greeting ele) {
 //		return "Greeting.gif";
 //	}
+	
 }

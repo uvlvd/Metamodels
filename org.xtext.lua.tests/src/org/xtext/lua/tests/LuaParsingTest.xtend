@@ -21,11 +21,15 @@ class LuaParsingTest {
 	@Test
 	def void loadModel() {
 		val result = parseHelper.parse('''
+			num = 666
 			local function foo()
 				print("foo bar")
+				num = num + 1
 			end
 			
 			foo()
+			
+			eq = num == 667
 		''')
 		Assertions.assertNotNull(result)
 		val errors = result.eResource.errors

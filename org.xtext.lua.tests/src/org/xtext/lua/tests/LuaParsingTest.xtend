@@ -3,7 +3,10 @@
  */
 package org.xtext.lua.tests
 
+import com.google.inject.Provider
 import java.io.ByteArrayOutputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 import javax.inject.Inject
 import org.eclipse.emf.common.util.URI
 import org.eclipse.emf.ecore.resource.Resource
@@ -16,13 +19,17 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
 import org.xtext.lua.LuaStandaloneSetup
 import org.xtext.lua.lua.Chunk
+import java.nio.file.FileSystems
 
 @ExtendWith(InjectionExtension)
 @InjectWith(LuaInjectorProvider)
 class LuaParsingTest {
 	@Inject
 	ParseHelper<Chunk> parseHelper
-
+	
+	@Inject
+	Provider<XtextResourceSet> resourceSetProvider
+	
 	val luaSnippet = '''
 		num = 666
 		
@@ -81,24 +88,42 @@ class LuaParsingTest {
 	
 	@Test
 	def void testXMIexport() {
+//		Setting the path like this did not work surprisingly: 
+//		new StandaloneSetup().platformUri = "./test-data/"
+
 		val injector = new LuaStandaloneSetup().createInjectorAndDoEMFRegistration()
 		var XtextResourceSet rs = injector.getInstance(XtextResourceSet)
-		var Resource r1 = rs.getResource(URI.createURI("foo.lua"), true)
+		var Resource r1 = rs.getResource(URI.createURI("./test-data/foo.lua"), true)
 		r1.load(null);
-		var Resource r2 = rs.createResource(URI.createURI("foo.xmi"));
+		var Resource r2 = rs.createResource(URI.createURI("./test-data/foo.xmi"));
 		r2.getContents().add(r1.getContents().get(0));
 		r2.save(null);
 	}
 
 		@Test
 	def void testDirectoryParsing() {
-		val injector = new LuaStandaloneSetup().createInjectorAndDoEMFRegistration()
-		var XtextResourceSet rs = injector.getInstance(XtextResourceSet)
-		var Resource r1 = rs.getResource(URI.createURI("foo.lua"), true)
-		rs.
-		r1.load(null);
-		var Resource r2 = rs.createResource(URI.createURI("foo.xmi"));
-		r2.getContents().add(r1.getContents().get(0));
-		r2.save(null);
+		val rs = resourceSetProvider.get()
+		val appPath = Paths.get("../caseStudy1")
+		val matcher = FileSystems.^default.getPathMatcher("glob:**.lua")
+
+		try (val paths = Files.walk(appPath))
+			paths
+				.filter[p | matcher.matches(p)]
+				.map[p | URI.createURI(p.toString)] // this is not the same as `p.toUri()` !
+				.forEach[u | rs.getResource(u, true)]
+		
+		// print the resources
+		rs.resources.forEach[r | println(r)]
+		
+//		var Resource r2 = rs.createResource(URI.createURI("./test-data/caseStudy1.xmi"));
+//		r2.getContents().add(allResources);
+//		r2.save(null);
+			
+		
+//		var Resource r1 = rs.getResource(URI.createURI("foo.lua"), true)
+//		r1.load(null);
+//		var Resource r2 = rs.createResource(URI.createURI("foo.xmi"));
+//		r2.getContents().add(r1.getContents().get(0));
+//		r2.save(null);
 	}
 }

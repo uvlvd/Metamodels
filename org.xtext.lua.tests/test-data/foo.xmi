@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="ASCII"?>
+<lua:Block xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:lua="http://www.xtext.org/lua/Lua">
+  <statements xsi:type="lua:Statement_LocalFunction_Declaration" functionName="foo">
+    <function>
+      <body>
+        <returnValue xsi:type="lua:LastStatement_ReturnWithValue">
+          <returnValues xsi:type="lua:Expression_String" value="&quot;foo&quot;"/>
+        </returnValue>
+      </body>
+    </function>
+  </statements>
+  <statements xsi:type="lua:Statement_Assignment">
+    <variable xsi:type="lua:Expression_VariableName" variable="result"/>
+    <values xsi:type="lua:Expression_CallFunction">
+      <object xsi:type="lua:Expression_VariableName" variable="foo"/>
+      <arguments/>
+    </values>
+  </statements>
+</lua:Block>

@@ -63,6 +63,9 @@ Workflow {
 			junitSupport = {
 				junitVersion = "5"
 			}
+			
+			// serialization for EMF
+			resourceFactoryFragment = resourceFactory.ResourceFactoryFragment2 { }
 		}
 	}
 }

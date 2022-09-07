@@ -24,6 +24,9 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 
 	@Override
 	public IScope getScope(EObject context, EReference reference) {
+		System.out.println("scope_" + reference.getEContainingClass().getName()
+				+ "_" + reference.getName()
+				+ "(" + context.eClass().getName() + ", ..)");
 		if (context instanceof Expression_VariableName && reference == LuaPackage.Literals.EXPRESSION_VARIABLE_NAME__VARIABLE) {
 			// Collect a list of candidates by going through the model
 			// EcoreUtil2 provides useful functionality to do that
@@ -32,7 +35,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 			List<Statement_Assignment> candidates = EcoreUtil2.getAllContentsOfType(rootElement, Statement_Assignment.class);
 
 			// Create IEObjectDescriptions and puts them into an IScope instance
-			return Scopes.scopeFor(candidates);
+//			return Scopes.scopeFor(candidates);
 		}
 		return super.getScope(context, reference);
 	}

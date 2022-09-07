@@ -3,13 +3,18 @@
  */
 package org.xtext.lua.tests
 
-import com.google.inject.Inject
+import java.io.ByteArrayOutputStream
+import javax.inject.Inject
+import org.eclipse.emf.common.util.URI
+import org.eclipse.emf.ecore.resource.Resource
+import org.eclipse.xtext.resource.XtextResourceSet
 import org.eclipse.xtext.testing.InjectWith
 import org.eclipse.xtext.testing.extensions.InjectionExtension
 import org.eclipse.xtext.testing.util.ParseHelper
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
+import org.xtext.lua.LuaStandaloneSetup
 import org.xtext.lua.lua.Chunk
 
 @ExtendWith(InjectionExtension)
@@ -17,22 +22,83 @@ import org.xtext.lua.lua.Chunk
 class LuaParsingTest {
 	@Inject
 	ParseHelper<Chunk> parseHelper
-	
+
+	val luaSnippet = '''
+		num = 666
+		
+		local function foo()
+			print("foo bar")
+			num = num + 1
+		end
+		
+		foo()
+		eq = num == 667
+	'''
+
 	@Test
 	def void loadModel() {
-		val result = parseHelper.parse('''
+		val result = parseHelper.parse(luaSnippet)
+		Assertions.assertNotNull(result)
+		val errors = result.eResource.errors
+		Assertions.assertTrue(errors.isEmpty, '''Unexpected errors: «errors.join(", ")»''')
+	}
+
+	@Test
+	def void printModel() {
+		val result = parseHelper.parse(luaSnippet)
+
+		val outputStream = new ByteArrayOutputStream()
+		val saveOptions = emptyMap
+		result.eResource.save(outputStream, saveOptions)
+		Assertions.assertEquals(outputStream.toString(), luaSnippet)
+	}
+
+	/*
+	 * Comments are currently not serialized!
+	 */
+	@Test
+	def void printModelWithComment() {
+
+		val luaSnippetWithComment = '''
 			num = 666
+			
+			-- A comment above a local function declaration
 			local function foo()
 				print("foo bar")
 				num = num + 1
 			end
 			
 			foo()
-			
 			eq = num == 667
-		''')
-		Assertions.assertNotNull(result)
-		val errors = result.eResource.errors
-		Assertions.assertTrue(errors.isEmpty, '''Unexpected errors: «errors.join(", ")»''')
+		'''
+		val result = parseHelper.parse(luaSnippetWithComment)
+
+		val outputStream = new ByteArrayOutputStream()
+		val saveOptions = emptyMap
+		result.eResource.save(outputStream, saveOptions)
+		Assertions.assertNotEquals(outputStream.toString(), luaSnippetWithComment)
+	}
+	
+	@Test
+	def void testXMIexport() {
+		val injector = new LuaStandaloneSetup().createInjectorAndDoEMFRegistration()
+		var XtextResourceSet rs = injector.getInstance(XtextResourceSet)
+		var Resource r1 = rs.getResource(URI.createURI("foo.lua"), true)
+		r1.load(null);
+		var Resource r2 = rs.createResource(URI.createURI("foo.xmi"));
+		r2.getContents().add(r1.getContents().get(0));
+		r2.save(null);
+	}
+
+		@Test
+	def void testDirectoryParsing() {
+		val injector = new LuaStandaloneSetup().createInjectorAndDoEMFRegistration()
+		var XtextResourceSet rs = injector.getInstance(XtextResourceSet)
+		var Resource r1 = rs.getResource(URI.createURI("foo.lua"), true)
+		rs.
+		r1.load(null);
+		var Resource r2 = rs.createResource(URI.createURI("foo.xmi"));
+		r2.getContents().add(r1.getContents().get(0));
+		r2.save(null);
 	}
 }

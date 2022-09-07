@@ -201,6 +201,7 @@ Expression_AccessMemberOrArrayElement returns Expression:
 // Delegate to top of expression rule chain for bracketed expressions
 Expression_VariableName returns Expression: 
     ('(' Expression ')') |
+//    ({Expression_VariableName} variable=[Statement_Local_Variable_Declaration | LUA_NAME]);
     ({Expression_VariableName} variable=LUA_NAME);
  
  
@@ -238,7 +239,10 @@ Field_AddEntryToTable:
 // fields of the form "exp" are equivalent to [i] = exp
 Field_AppendEntryToTable: 
     value=Expression;
- 
+    
+    
+
+
 // ****************************************************
 // TERMINALS
 // ****************************************************
@@ -264,3 +268,4 @@ terminal LUA_STRING returns ecore::EString:
 terminal LUA_NUMBER returns ecore::EDouble:
     ( ('0'..'9')+ ( '.' ('0'..'9')+ ( ('E'|'e') ('-')? ('0'..'9')+ )? )? ) |
     ( '0x' ('0'..'9'|'a'..'f')+ );
+    

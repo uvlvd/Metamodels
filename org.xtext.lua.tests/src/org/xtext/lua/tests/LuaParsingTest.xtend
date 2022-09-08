@@ -113,7 +113,12 @@ class LuaParsingTest {
 				.forEach[u | rs.getResource(u, true)]
 		
 		// print the resources
-		rs.resources.forEach[r | println(r)]
+//		rs.resources.forEach[r | println(r)]
+		val resource = rs.resources.get(0)
+		val contents = resource.allContents
+		println("Contents of the first resource:")
+		contents.forEach[o | println(o)]
+
 		
 //		var Resource r2 = rs.createResource(URI.createURI("./test-data/caseStudy1.xmi"));
 //		r2.getContents().add(allResources);

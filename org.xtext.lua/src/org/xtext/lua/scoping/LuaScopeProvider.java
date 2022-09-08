@@ -10,8 +10,9 @@ import org.eclipse.emf.ecore.EReference;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.Scopes;
-
-import org.xtext.lua.lua.*;
+import org.xtext.lua.lua.Expression_VariableName;
+import org.xtext.lua.lua.LuaPackage;
+import org.xtext.lua.lua.Statement_Assignment;
 
 /**
  * This class contains custom scoping description.
@@ -24,18 +25,19 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 
 	@Override
 	public IScope getScope(EObject context, EReference reference) {
-		System.out.println("scope_" + reference.getEContainingClass().getName()
-				+ "_" + reference.getName()
-				+ "(" + context.eClass().getName() + ", ..)");
-		if (context instanceof Expression_VariableName && reference == LuaPackage.Literals.EXPRESSION_VARIABLE_NAME__VARIABLE) {
+		System.out.println("scope_" + reference.getEContainingClass().getName() + "_" + reference.getName() + "("
+				+ context.eClass().getName() + ", ..)");
+		if (context instanceof Expression_VariableName
+				&& reference == LuaPackage.Literals.EXPRESSION_VARIABLE_NAME__VARIABLE) {
 			// Collect a list of candidates by going through the model
 			// EcoreUtil2 provides useful functionality to do that
 			// For example searching for all elements within the root Object's tree
 			EObject rootElement = EcoreUtil2.getRootContainer(context);
-			List<Statement_Assignment> candidates = EcoreUtil2.getAllContentsOfType(rootElement, Statement_Assignment.class);
+			List<Statement_Assignment> candidates = EcoreUtil2.getAllContentsOfType(rootElement,
+					Statement_Assignment.class);
 
 			// Create IEObjectDescriptions and puts them into an IScope instance
-//			return Scopes.scopeFor(candidates);
+			return Scopes.scopeFor(candidates);
 		}
 		return super.getScope(context, reference);
 	}

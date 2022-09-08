@@ -3,9 +3,16 @@
  */
 package org.xtext.lua;
 
+import org.eclipse.xtext.scoping.IScopeProvider;
+import org.xtext.lua.scoping.LuaScopeProvider;
 
 /**
- * Use this class to register components to be used at runtime / without the Equinox extension registry.
+ * Use this class to register components to be used at runtime / without the
+ * Equinox extension registry.
  */
 public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
+
+	public Class<? extends IScopeProvider> bindIScopeProvider() {
+		return LuaScopeProvider.class;
+	}
 }

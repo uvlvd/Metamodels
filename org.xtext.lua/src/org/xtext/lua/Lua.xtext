@@ -71,26 +71,65 @@ Statement_For_Generic:
     'for' names+=LUA_NAME (',' names+=LUA_NAME)* 'in' expressions+=Expression (',' expressions+=Expression)* 'do' block=Block 'end';
  
 Statement_GlobalFunction_Declaration:
-    'function' prefix+=LUA_NAME ('.' prefix+=LUA_NAME)* (':' functionName=LUA_NAME)? function=Function 'end';
+    'function' functionName=Identifier function=Function 'end';
  
 Statement_LocalFunction_Declaration:
-    'local' 'function' functionName=LUA_NAME function=Function 'end';
+    'local' 'function' functionName=LocalIdentifier function=Function 'end';
  
 // Local variables can be declared anywhere inside a block. The declaration can include an initial assignment "local ... [= ...]"
 Statement_Local_Variable_Declaration: 
-    'local' variableNames+=LUA_NAME (',' variableNames+=LUA_NAME)* ('=' initialValue+=Expression (',' initialValue+=Expression)*)?;
+    'local' variableName=LocalIdentifier  ('=' initialValue=Expression)?;
+//    'local' name=Reference  ('=' initialValue=Expression)?;
  
+//Statement_FunctioncallOrAssignment:
+//	(
+//		Expression_AccessMemberOrArrayElement_Declaration (
+//			// Assignment
+//			(
+//				{Statement_Assignment.variable+=current} (
+//					=> ',' variable+=Expression_AccessMemberOrArrayElement_Declaration
+//				)* '=' values+=Expression (',' values+=Expression)*
+//			)
+//		)
+//	)
+//    | (
+//    	Expression_AccessMemberOrArrayElement (
+//			// Call of a member function
+//			(
+//				':' {Statement_CallMemberFunction.object=current} memberFunctionName=LUA_NAME arguments=Functioncall_Arguments
+//			)
+//	 
+//			// Call of a function pointer
+//			| (
+//				{Statement_CallFunction.object=current} arguments=Functioncall_Arguments
+//			)
+//        )
+//    );
 Statement_FunctioncallOrAssignment:
-    Expression_AccessMemberOrArrayElement (
-        // Assignment
-        ({Statement_Assignment.variable+=current} (=> ',' variable+=Expression_AccessMemberOrArrayElement)* '=' values+=Expression (',' values+=Expression)*) |
- 
-        // Call of a member function
-        (':' {Statement_CallMemberFunction.object=current} memberFunctionName=LUA_NAME arguments=Functioncall_Arguments ) |
- 
-        // Call of a function pointer
-        ({Statement_CallFunction.object=current} arguments=Functioncall_Arguments)
+	(
+		Expression_AccessMemberOrArrayElement_Declaration (
+			// Assignment
+			(
+				{Statement_Assignment.variable+=current} (
+					=> ',' variable+=Expression_AccessMemberOrArrayElement_Declaration
+				)* '=' values+=Expression (',' values+=Expression)*
+			)
+		)
+	)
+    | (
+    	Expression_AccessMemberOrArrayElement (
+			// Call of a member function
+			(
+				':' {Statement_CallMemberFunction.object=current} memberFunctionName=LUA_NAME arguments=Functioncall_Arguments
+			)
+	 
+			// Call of a function pointer
+			| (
+				{Statement_CallFunction.object=current} arguments=Functioncall_Arguments
+			)
+        )
     );
+
  
 // ****************************************************
 // EXPRESSIONS
@@ -181,7 +220,7 @@ Expression_TableConstructor:
 Expression_Functioncall returns Expression: 
     Expression_AccessMemberOrArrayElement (
         // Member-Funktionsaufruf
-        (':' {Expression_CallMemberFunction.object=current} memberFunctionName=LUA_NAME arguments=Functioncall_Arguments) |
+//        (':' {Expression_CallMemberFunction.object=current} memberFunctionName=LUA_NAME arguments=Functioncall_Arguments) |
  
         // Aufruf eines Funktionspointer:
         ({Expression_CallFunction.object=current} arguments=Functioncall_Arguments)
@@ -191,18 +230,33 @@ Expression_Functioncall returns Expression:
 Expression_AccessMemberOrArrayElement returns Expression: 
     Expression_VariableName (
         // An expression accessing an element in a variable array
-        ('[' {Expression_AccessArray.array=current} index=Expression ']') |
+        ('[' {Expression_AccessArray.array=current} index=Expression ']')
  
         // Access a member variable using multiple parts separated by "."
-        ('.' {Expression_AccessMember.object=current} memberName=LUA_NAME)
+        | ('.' {Expression_AccessMember.object=current} memberName=Reference)
     )*;
  
 // access a variable, terminal expression, priority 11
 // Delegate to top of expression rule chain for bracketed expressions
 Expression_VariableName returns Expression: 
-    ('(' Expression ')') |
-//    ({Expression_VariableName} variable=[Statement_Local_Variable_Declaration | LUA_NAME]);
-    ({Expression_VariableName} variable=LUA_NAME);
+    ('(' Expression ')')
+    | ({Expression_VariableName} id=[Identifier|Reference])
+;
+
+Expression_AccessMemberOrArrayElement_Declaration returns Expression: 
+    Expression_VariableName_Declaration (
+        // An expression accessing an element in a variable array
+        ('[' {Expression_AccessArray.array=current} index=Expression ']')
+ 
+        // Access a member variable using multiple parts separated by "."
+        | ('.' {Expression_AccessMember.object=current} memberNameDecl=Reference)
+    )*;
+ 
+// access a variable, terminal expression, priority 11
+// Delegate to top of expression rule chain for bracketed expressions
+Expression_VariableName_Declaration returns Expression: 
+    ({Expression_VariableName_Declaration} variable=Identifier)
+;
  
  
 // ****************************************************
@@ -240,7 +294,44 @@ Field_AddEntryToTable:
 Field_AppendEntryToTable: 
     value=Expression;
     
+
+// ****************************************************
+// Identifiers (this hopefully works!)
+// ****************************************************
+
+// Wrap the references in a type so we have a common reference targen for all types of statements
+// -> Jumping to a variable or a function is done by jumping to their identifier
+Identifier:
+	GlobalIdentifier
+	| LocalIdentifier
+//	name=(Reference|LocalReference)
+//	GlobalIdentifier
+//	| LocalIdentifier
+;
+GlobalIdentifier:
+	name=Reference
+;
+LocalIdentifier:
+	name=LocalReference
+;
     
+// ****************************************************
+// References (this hopefully works!)
+// ****************************************************
+Reference:
+	QualifiedReference
+	| QualifiedMemberReference
+	| LocalReference
+	| LocalMemberReference;
+
+LocalReference:
+	LUA_NAME;
+LocalMemberReference:
+	LocalReference ':' LUA_NAME;
+QualifiedReference:
+	(LUA_NAME '.')+ LUA_NAME;
+QualifiedMemberReference:
+	QualifiedReference ':' LUA_NAME;
 
 
 // ****************************************************

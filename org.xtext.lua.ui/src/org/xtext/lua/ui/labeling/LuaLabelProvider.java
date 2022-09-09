@@ -3,15 +3,19 @@
  */
 package org.xtext.lua.ui.labeling;
 
-import com.google.inject.Inject;
+import java.util.stream.Collectors;
+
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.edit.ui.provider.AdapterFactoryLabelProvider;
 import org.eclipse.xtext.ui.label.DefaultEObjectLabelProvider;
-import org.eclipse.emf.ecore.EObject;
+
+import com.google.inject.Inject;
 
 /**
  * Provides labels for EObjects.
  * 
- * See https://www.eclipse.org/Xtext/documentation/310_eclipse_support.html#label-provider
+ * See
+ * https://www.eclipse.org/Xtext/documentation/310_eclipse_support.html#label-provider
  */
 public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 
@@ -22,11 +26,16 @@ public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 
 	// Labels and icons can be computed like this:
 	String text(EObject ele) {
-		return ele.eClass().getName();
+		var cls = ele.eClass();
+		var attributes = cls.getEAllAttributes().stream().map(a -> {
+			return a.getName();
+		}).collect(Collectors.joining(","));
+
+		return String.format("%s[%s]", cls.getName(), attributes);
 	}
 //
 //	String image(Greeting ele) {
 //		return "Greeting.gif";
 //	}
-	
+
 }

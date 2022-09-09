@@ -72,7 +72,7 @@ function doInsert(content, cType)
   return insert()
 end
 
---@insert()
+---@insert()
 --inserts dataset into the database
 ---@return bool success
 function insert()

@@ -79,32 +79,7 @@ Statement_LocalFunction_Declaration:
 // Local variables can be declared anywhere inside a block. The declaration can include an initial assignment "local ... [= ...]"
 Statement_Local_Variable_Declaration: 
     'local' variableName=LocalIdentifier  ('=' initialValue=Expression)?;
-//    'local' name=Reference  ('=' initialValue=Expression)?;
- 
-//Statement_FunctioncallOrAssignment:
-//	(
-//		Expression_AccessMemberOrArrayElement_Declaration (
-//			// Assignment
-//			(
-//				{Statement_Assignment.variable+=current} (
-//					=> ',' variable+=Expression_AccessMemberOrArrayElement_Declaration
-//				)* '=' values+=Expression (',' values+=Expression)*
-//			)
-//		)
-//	)
-//    | (
-//    	Expression_AccessMemberOrArrayElement (
-//			// Call of a member function
-//			(
-//				':' {Statement_CallMemberFunction.object=current} memberFunctionName=LUA_NAME arguments=Functioncall_Arguments
-//			)
-//	 
-//			// Call of a function pointer
-//			| (
-//				{Statement_CallFunction.object=current} arguments=Functioncall_Arguments
-//			)
-//        )
-//    );
+
 Statement_FunctioncallOrAssignment:
 	(
 		Expression_AccessMemberOrArrayElement_Declaration (
@@ -263,7 +238,7 @@ Expression_VariableName_Declaration returns Expression:
 // FUNCTIONS
 // ****************************************************
 Function:
-    '(' (parameters+=LUA_NAME (',' parameters+=LUA_NAME)* ','?)? (varArgs?='...')? ')' body=Block;
+    '(' (parameters+=LocalIdentifier (',' parameters+=LocalIdentifier)* ','?)? (varArgs?='...')? ')' body=Block;
  
 // Some syntactic sugar: strings and field can be passed as parameters without bracket
 Functioncall_Arguments: 

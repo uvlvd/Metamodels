@@ -18,7 +18,9 @@ result = Foo.globalFunc()
 result = localFunc()
 result = localVar
 
-Foo = {}
+Foo = {
+	bar = "bar"
+}
 Foo.result = globalVar
 --Foo.result = Foo.globalFunc()
 Foo.result = localFunc()
@@ -27,3 +29,5 @@ Foo.result = localVar
 Foo.globalFunc()
 localFunc()
 
+
+blub = Foo.bar

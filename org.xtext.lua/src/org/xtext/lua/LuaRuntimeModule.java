@@ -3,8 +3,8 @@
  */
 package org.xtext.lua;
 
-import org.eclipse.xtext.scoping.IScopeProvider;
-import org.xtext.lua.scoping.LuaScopeProvider;
+import org.eclipse.xtext.scoping.IGlobalScopeProvider;
+import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 
 /**
  * Use this class to register components to be used at runtime / without the
@@ -12,7 +12,9 @@ import org.xtext.lua.scoping.LuaScopeProvider;
  */
 public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 
-	public Class<? extends IScopeProvider> bindIScopeProvider() {
-		return LuaScopeProvider.class;
+	@Override
+	public Class<? extends IGlobalScopeProvider> bindIGlobalScopeProvider() {
+		return LuaGlobalScopeProvider.class;
 	}
+
 }

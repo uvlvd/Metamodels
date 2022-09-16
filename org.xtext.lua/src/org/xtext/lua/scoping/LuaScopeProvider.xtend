@@ -3,15 +3,6 @@
  */
 package org.xtext.lua.scoping
 
-import org.eclipse.emf.ecore.EObject
-import org.eclipse.emf.ecore.EReference
-import org.eclipse.xtext.EcoreUtil2
-import org.eclipse.xtext.naming.QualifiedName
-import org.eclipse.xtext.resource.EObjectDescription
-import org.eclipse.xtext.scoping.IScope
-import org.eclipse.xtext.scoping.impl.SimpleScope
-import org.xtext.lua.lua.LuaPackage
-
 /** 
  * This class contains custom scoping description.
  * See

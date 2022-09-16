@@ -42,7 +42,9 @@ Statement hidden (WS, COMMENT):
     Statement_GlobalFunction_Declaration |
     Statement_LocalFunction_Declaration |
     Statement_Local_Variable_Declaration |
-    Statement_FunctioncallOrAssignment;
+    Statement_Assignment
+//    Statement_FunctioncallOrAssignment;
+;
  
 // A block can be explicitly delimited to produce a single statement. "do ... end"
 Statement_Block: 
@@ -64,27 +66,31 @@ Statement_If_Then_Else_ElseIfPart:
  
 // The numeric for loop repeats a block of code while a control variable runs through an arithmetic progression "for ...=..., ... [,...] do ... end"
 Statement_For_Numeric: 
-    'for' iteratorName=Identifier '=' startExpr=Expression "," untilExpr=Expression ("," stepExpr=Expression)? 'do' block=Block 'end';
+    'for' iteratorName=LUA_NAME '=' startExpr=Expression "," untilExpr=Expression ("," stepExpr=Expression)? 'do' block=Block 'end';
  
 // The generic for statement works over functions, called iterators. On each iteration, the iterator function is called to produce a new value, stopping when this new value is nil "for ... in ... do ... end"
 Statement_For_Generic: 
-    'for' names+=Identifier (',' names+=Identifier)* 'in' expressions+=Expression (',' expressions+=Expression)* 'do' block=Block 'end';
+    'for' names+=LUA_NAME (',' names+=LUA_NAME)* 'in' expressions+=Expression (',' expressions+=Expression)* 'do' block=Block 'end';
  
-Statement_GlobalFunction_Declaration:
-    'function' name=Identifier function=Function'end';
+Statement_GlobalFunction_Declaration returns Referenceable:
+    'function' name=QualifiedName function=Function'end';
  
 Statement_LocalFunction_Declaration:
-    'local' 'function' name=Identifier function=Function 'end';
+    'local' 'function' name=LUA_NAME function=Function 'end';
  
 // Local variables can be declared anywhere inside a block. The declaration can include an initial assignment "local ... [= ...]"
-Statement_Local_Variable_Declaration: 
-    'local' variableName=Identifier  ('=' initialValue=Expression)?;
+Statement_Local_Variable_Declaration returns Referenceable: 
+    'local' name=LUA_NAME  ('=' initialValue=Expression)?;
 
-Statement_FunctioncallOrAssignment:
+Statement_Assignment returns Referenceable:
 //	variables=Expression_AccessMemberOrArrayElement_Declaration
-	(prefix+=ReferenceTerminal '.')*
-	variable=IdentifierTerminal
+//	(prefix+=ReferenceTerminal '.')*
+	name=QualifiedName
 	=>'=' value=Expression
+
+//Statement_FunctioncallOrAssignment returns Referenceable:
+//	variables=Expression_AccessMemberOrArrayElement_Declaration
+//	(prefix+=ReferenceTerminal '.')*
 //	(
 //		Expression_AccessMemberOrArrayElement_Declaration (
 //			// Assignment
@@ -224,7 +230,7 @@ Expression_TableConstructor:
 // Delegate to top of expression rule chain for bracketed expressions
 Expression_VariableName returns Expression: 
     =>'(' Expression ')'
-    | ({Expression_VariableName} id=Reference)
+    | ({Expression_VariableName} ref=[Referenceable|QualifiedName])
 ;
 
 //Expression_AccessMemberOrArrayElement_Declaration returns Expression: 
@@ -247,7 +253,7 @@ Expression_VariableName returns Expression:
 // FUNCTIONS
 // ****************************************************
 Function:
-    =>'(' (parameters+=Identifier (',' parameters+=Identifier)* ','?)? (varArgs?='...')? ')' body=Block;
+    =>'(' (parameters+=LUA_NAME (',' parameters+=LUA_NAME)* ','?)? (varArgs?='...')? ')' body=Block;
  
 // Some syntactic sugar: strings and field can be passed as parameters without bracket
 Functioncall_Arguments: 
@@ -271,8 +277,8 @@ Field_AddEntryToTable_Brackets:
     '[' indexExpression=Expression ']' '=' value=Expression;
  
 // A field of the form "name = exp" is equivalent to ["name"] = exp
-Field_AddEntryToTable: 
-    key=IdentifierTerminal '=' value=Expression;
+Field_AddEntryToTable returns Referenceable: 
+    name=LUA_NAME '=' value=Expression;
  
 // fields of the form "exp" are equivalent to [i] = exp
 Field_AppendEntryToTable: 
@@ -287,20 +293,20 @@ Field_AppendEntryToTable:
 // -> Jumping to a variable or a function is done by jumping to their identifier
 
 
-Identifier:
-	IdentifierTerminal ({Identifier.head=current} '.' tail=IdentifierTerminal)*
-;
-
-IdentifierTerminal:
-	name=LUA_NAME
-;
-
-Reference:
-	ReferenceTerminal ({Reference.head=current} '.' tail=ReferenceTerminal)*
-;
-ReferenceTerminal:
-	ref=[IdentifierTerminal|LUA_NAME]
-;
+//Identifier:
+//	IdentifierTerminal ({Identifier.head=current} '.' tail=IdentifierTerminal)*
+//;
+//
+//IdentifierTerminal:
+//	name=LUA_NAME
+//;
+//
+//Reference:
+//	ReferenceTerminal ({Reference.head=current} '.' tail=ReferenceTerminal)*
+//;
+//ReferenceTerminal:
+//	ref=[IdentifierTerminal|LUA_NAME]
+//;
 
 QualifiedName:
 	LUA_NAME (=>'.' LUA_NAME)*

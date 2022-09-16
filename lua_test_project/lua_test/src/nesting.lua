@@ -11,4 +11,5 @@ baz = "world"
 -- This should resolve to 42
 Foo.result = Foo.bar.baz
 
-foo = Foo.bar
+foo = Foo.result
+bar = baz

@@ -3,10 +3,9 @@
  */
 package org.xtext.lua.ui.labeling;
 
-import java.util.stream.Collectors;
-
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.edit.ui.provider.AdapterFactoryLabelProvider;
+import org.eclipse.xtext.naming.DefaultDeclarativeQualifiedNameProvider;
 import org.eclipse.xtext.ui.label.DefaultEObjectLabelProvider;
 
 import com.google.inject.Inject;
@@ -20,6 +19,9 @@ import com.google.inject.Inject;
 public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 
 	@Inject
+	DefaultDeclarativeQualifiedNameProvider qualifiedNameProvider;
+
+	@Inject
 	public LuaLabelProvider(AdapterFactoryLabelProvider delegate) {
 		super(delegate);
 	}
@@ -27,11 +29,19 @@ public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 	// Labels and icons can be computed like this:
 	String text(EObject ele) {
 		var cls = ele.eClass();
-		var attributes = cls.getEAllAttributes().stream().map(a -> {
-			return a.getName();
-		}).collect(Collectors.joining(","));
 
-		return String.format("%s[%s]", cls.getName(), attributes);
+//		var attributes = cls.getEAllAttributes().stream().map(a -> {
+//			return a.getName();
+//		}).collect(Collectors.joining(","));
+
+		var sb = new StringBuilder();
+		sb.append(cls.getName());
+
+		var fqn = qualifiedNameProvider.apply(ele);
+		if (fqn != null) {
+			sb.append(" aka " + fqn);
+		}
+		return sb.toString();
 	}
 //
 //	String image(Greeting ele) {

@@ -1,6 +1,6 @@
 grammar org.xtext.lua.Lua
-	with org.eclipse.xtext.common.Terminals
-	hidden(INT)
+// 	Now inlined because of INT not being matchable
+//	with org.eclipse.xtext.common.Terminals 
 
 import 'http://www.eclipse.org/emf/2002/Ecore' as ecore
 
@@ -64,46 +64,51 @@ Statement_If_Then_Else_ElseIfPart:
  
 // The numeric for loop repeats a block of code while a control variable runs through an arithmetic progression "for ...=..., ... [,...] do ... end"
 Statement_For_Numeric: 
-    'for' iteratorName=LUA_NAME '=' startExpr=Expression "," untilExpr=Expression ("," stepExpr=Expression)? 'do' block=Block 'end';
+    'for' iteratorName=Identifier '=' startExpr=Expression "," untilExpr=Expression ("," stepExpr=Expression)? 'do' block=Block 'end';
  
 // The generic for statement works over functions, called iterators. On each iteration, the iterator function is called to produce a new value, stopping when this new value is nil "for ... in ... do ... end"
 Statement_For_Generic: 
-    'for' names+=LUA_NAME (',' names+=LUA_NAME)* 'in' expressions+=Expression (',' expressions+=Expression)* 'do' block=Block 'end';
+    'for' names+=Identifier (',' names+=Identifier)* 'in' expressions+=Expression (',' expressions+=Expression)* 'do' block=Block 'end';
  
 Statement_GlobalFunction_Declaration:
-    'function' functionName=Identifier function=Function 'end';
+    'function' name=Identifier function=Function'end';
  
 Statement_LocalFunction_Declaration:
-    'local' 'function' functionName=LocalIdentifier function=Function 'end';
+    'local' 'function' name=Identifier function=Function 'end';
  
 // Local variables can be declared anywhere inside a block. The declaration can include an initial assignment "local ... [= ...]"
 Statement_Local_Variable_Declaration: 
-    'local' variableName=LocalIdentifier  ('=' initialValue=Expression)?;
+    'local' variableName=Identifier  ('=' initialValue=Expression)?;
 
 Statement_FunctioncallOrAssignment:
-	(
-		Expression_AccessMemberOrArrayElement_Declaration (
-			// Assignment
-			(
-				{Statement_Assignment.variable+=current} (
-					=> ',' variable+=Expression_AccessMemberOrArrayElement_Declaration
-				)* '=' values+=Expression (',' values+=Expression)*
-			)
-		)
-	)
-    | (
-    	Expression_AccessMemberOrArrayElement (
-			// Call of a member function
-			(
-				':' {Statement_CallMemberFunction.object=current} memberFunctionName=LUA_NAME arguments=Functioncall_Arguments
-			)
-	 
-			// Call of a function pointer
-			| (
-				{Statement_CallFunction.object=current} arguments=Functioncall_Arguments
-			)
-        )
-    );
+//	variables=Expression_AccessMemberOrArrayElement_Declaration
+	(prefix+=ReferenceTerminal '.')*
+	variable=IdentifierTerminal
+	=>'=' value=Expression
+//	(
+//		Expression_AccessMemberOrArrayElement_Declaration (
+//			// Assignment
+//			(
+//				{Statement_Assignment.variable+=current} (
+//					=> ',' variable+=Expression_AccessMemberOrArrayElement_Declaration
+//				)* '=' values+=Expression (',' values+=Expression)*
+//			)
+//		)
+//	)
+//    | (
+//    	Expression_AccessMemberOrArrayElement (
+//			// Call of a member function
+//			(
+//				':' {Statement_CallMemberFunction.object=current} memberFunctionName=LUA_NAME arguments=Functioncall_Arguments
+//			)
+//	 
+//			// Call of a function pointer
+//			| (
+//				{Statement_CallFunction.object=current} arguments=Functioncall_Arguments
+//			)
+//        )
+//    )
+;
 
     
 
@@ -173,8 +178,10 @@ Expression_Terminal returns Expression:
     Expression_VarArgs |
     Expression_String |
     Expression_Function |
-    Expression_TableConstructor |
-    Expression_Functioncall;
+    Expression_TableConstructor
+//  | Expression_Functioncall
+	| Expression_VariableName
+;
  
 Expression_Nil:
     'nil' {Expression_Nil};
@@ -193,54 +200,54 @@ Expression_Function:
 Expression_TableConstructor:
     '{' {Expression_TableConstructor} (fields+=Field ((','|';') fields+=Field)* (','|';')? )? '}';
  
-// Function calls, left associative, single call only, priority 9
-Expression_Functioncall returns Expression: 
-    Expression_AccessMemberOrArrayElement (
-        // Member-Funktionsaufruf
-//        (':' {Expression_CallMemberFunction.object=current} memberFunctionName=LUA_NAME arguments=Functioncall_Arguments) |
- 
-        // Aufruf eines Funktionspointer:
-        ({Expression_CallFunction.object=current} arguments=Functioncall_Arguments)
-    )?;
- 
-// Access a member or array element, left associative, chaining possible, priority 10
-Expression_AccessMemberOrArrayElement returns Expression: 
-    Expression_VariableName (
-        // An expression accessing an element in a variable array
-        ('[' {Expression_AccessArray.array=current} index=Expression ']')
- 
-        // Access a member variable using multiple parts separated by "."
-        | ('.' {Expression_AccessMember.object=current} memberName=Reference)
-    )*;
+//// Function calls, left associative, single call only, priority 9
+//Expression_Functioncall returns Expression: 
+//    Expression_AccessMemberOrArrayElement (
+//        // Member-Funktionsaufruf
+//        (':' {Expression_CallMemberFunction.object=current} memberFunctionName=[Identifier|LUA_NAME] arguments=Functioncall_Arguments) |
+// 
+//        // Aufruf eines Funktionspointer:
+//        ({Expression_CallFunction.object=current} arguments=Functioncall_Arguments)
+//    )?;
+// 
+//// Access a member or array element, left associative, chaining possible, priority 10
+//Expression_AccessMemberOrArrayElement returns Expression: 
+//    Expression_VariableName (
+//        // An expression accessing an element in a variable array
+//        ('[' {Expression_AccessArray.array=current} index=Expression ']')
+// 
+//        // Access a member variable using multiple parts separated by "."
+//        | ('.' {Expression_AccessMember.object=current} memberName=Reference)
+//    )*;
  
 // access a variable, terminal expression, priority 11
 // Delegate to top of expression rule chain for bracketed expressions
 Expression_VariableName returns Expression: 
-    ('(' Expression ')')
-    | ({Expression_VariableName} id=[Identifier|Reference])
+    =>'(' Expression ')'
+    | ({Expression_VariableName} id=Reference)
 ;
 
-Expression_AccessMemberOrArrayElement_Declaration returns Expression: 
-    Expression_VariableName_Declaration (
-        // An expression accessing an element in a variable array
-        ('[' {Expression_AccessArray.array=current} index=Expression ']')
- 
-        // Access a member variable using multiple parts separated by "."
-        | ('.' {Expression_AccessMember.object=current} memberNameDecl=Reference)
-    )*;
- 
-// access a variable, terminal expression, priority 11
-// Delegate to top of expression rule chain for bracketed expressions
-Expression_VariableName_Declaration returns Expression: 
-    ({Expression_VariableName_Declaration} variable=Identifier)
-;
+//Expression_AccessMemberOrArrayElement_Declaration returns Expression: 
+//	Declaration
+//;
+//    Expression_VariableName (
+//        // An expression accessing an element in a variable array
+//        ('[' {Expression_AccessArray.array=current} index=Expression ']')
+// 
+//        // Access a member variable using multiple parts separated by "."
+//        | ('.' {Expression_AccessMember.object=current} memberNameDecl=ReferenceTerminal)
+//
+//    )*
+//	// Add a member variable using multiple parts separated by "."
+//	 {Expression_DeclareMember.object=current} name=Identifier
+//;
  
  
 // ****************************************************
 // FUNCTIONS
 // ****************************************************
 Function:
-    '(' (parameters+=LocalIdentifier (',' parameters+=LocalIdentifier)* ','?)? (varArgs?='...')? ')' body=Block;
+    =>'(' (parameters+=Identifier (',' parameters+=Identifier)* ','?)? (varArgs?='...')? ')' body=Block;
  
 // Some syntactic sugar: strings and field can be passed as parameters without bracket
 Functioncall_Arguments: 
@@ -265,7 +272,7 @@ Field_AddEntryToTable_Brackets:
  
 // A field of the form "name = exp" is equivalent to ["name"] = exp
 Field_AddEntryToTable: 
-    key=LUA_NAME '=' value=Expression;
+    key=IdentifierTerminal '=' value=Expression;
  
 // fields of the form "exp" are equivalent to [i] = exp
 Field_AppendEntryToTable: 
@@ -278,37 +285,28 @@ Field_AppendEntryToTable:
 
 // Wrap the references in a type so we have a common reference targen for all types of statements
 // -> Jumping to a variable or a function is done by jumping to their identifier
+
+
 Identifier:
-	GlobalIdentifier
-	| LocalIdentifier
-//	name=(Reference|LocalReference)
-//	GlobalIdentifier
-//	| LocalIdentifier
-;
-GlobalIdentifier:
-	name=Reference
-;
-LocalIdentifier:
-	name=LocalReference
+	IdentifierTerminal ({Identifier.head=current} '.' tail=IdentifierTerminal)*
 ;
 
-// ****************************************************
-// References (this hopefully works!)
-// ****************************************************
+IdentifierTerminal:
+	name=LUA_NAME
+;
+
 Reference:
-	QualifiedReference
-	| QualifiedMemberReference
-	| LocalReference
-	| LocalMemberReference;
+	ReferenceTerminal ({Reference.head=current} '.' tail=ReferenceTerminal)*
+;
+ReferenceTerminal:
+	ref=[IdentifierTerminal|LUA_NAME]
+;
 
-LocalReference:
-	LUA_NAME;
-LocalMemberReference:
-	LocalReference ':' LUA_NAME;
-QualifiedReference:
-	(LUA_NAME '.')+ LUA_NAME;
-QualifiedMemberReference:
-	QualifiedReference ':' LUA_NAME;
+QualifiedName:
+	LUA_NAME (=>'.' LUA_NAME)*
+;
+
+
 
 
 // ****************************************************
@@ -320,13 +318,13 @@ terminal COMMENT:
         (!'[' (!'\n')* '\n'?)
     );
  
-@Override 
 terminal WS:
     (' '|'\t'|'\r'|'\n')+; // Consume all white space, tabs and new line characters
  
 // Identifiers can be any string of letters, digits, and underscores, but mustn't begin with a digit.
 terminal LUA_NAME returns ecore::EString:
     ( 'a'..'z' | 'A'..'Z' | '_' ) ( 'a'..'z' | 'A'..'Z' | '_' | '0'..'9' )*;
+
  
 terminal LUA_STRING returns ecore::EString:
     ( "'" ( '\\' ('a'|'b'|'f'|'n'|'r'|'t'|'v'|'"'|"'"|'\\'|('0'..'9'('0'..'9'('0'..'9')))) | !('\\'|"'") )* "'" ) |
@@ -336,4 +334,26 @@ terminal LUA_STRING returns ecore::EString:
 terminal LUA_NUMBER returns ecore::EDouble:
     ( ('0'..'9')+ ( '.' ('0'..'9')+ ( ('E'|'e') ('-')? ('0'..'9')+ )? )? ) |
     ( '0x' ('0'..'9'|'a'..'f')+ );
+    
+    
+// ****************************************************
+// INLINED COMMON TERMINALS
+// ****************************************************
+
+//grammar org.eclipse.xtext.common.Terminals hidden(WS, ML_COMMENT, SL_COMMENT)
+
+//import "http://www.eclipse.org/emf/2002/Ecore" as ecore
+
+terminal ID: '^'?('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*;
+//terminal INT returns ecore::EInt: ('0'..'9')+;
+terminal STRING:
+			'"' ( '\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\'|'"') )* '"' |
+			"'" ( '\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\'|"'") )* "'"
+		;
+terminal ML_COMMENT : '/*' -> '*/';
+terminal SL_COMMENT : '//' !('\n'|'\r')* ('\r'? '\n')?;
+
+//terminal WS         : (' '|'\t'|'\r'|'\n')+;
+
+terminal ANY_OTHER: .;
     

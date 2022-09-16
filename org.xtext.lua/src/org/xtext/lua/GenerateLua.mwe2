@@ -33,18 +33,24 @@ Workflow {
 		}
 		language = StandardLanguage {
 			name = "org.xtext.lua.Lua"
+			
 			fileExtensions = "lua"
 			
 			// from https://github.com/eclipse/xtext-core/issues/1518
 			parserGenerator = parser.antlr.XtextAntlrGeneratorFragment2 {
   				options = {
-  					backtrack = true
+//  					backtrack = true
   				}
+  				// from https://blogs.itemis.com/en/debugging-xtext-grammars-what-to-do-when-your-language-is-ambiguous
+  				debugGrammar = true
+      		}
+      		qualifiedNamesProvider = {
+      		
       		}
       		
       		// I think generateStub = true is the default  for these providers
       		scopeProvider = {
-//      			generateStub = true
+				generateXtendStub = true
       		}
       		labelProvider = {
 //      			generateStub = true

@@ -4,9 +4,11 @@ local function localFunc()
 end
 
 
-Foo = {}
-function Foo.globalFunc()
+Masked = {}
+function Masked.globalFunc()
 	return "globalFunc"
+end
+function globalFunc()
 end
 
 local localVar = "foo"
@@ -18,16 +20,23 @@ result = Foo.globalFunc()
 result = localFunc()
 result = localVar
 
+bar = "blu"
+
 Foo = {
 	bar = "bar"
 }
-Foo.result = globalVar
---Foo.result = Foo.globalFunc()
-Foo.result = localFunc()
-Foo.result = localVar
+Foo.aresult = globalVar
+Foo.aresult = Foo.globalFunc()
+Foo.aresult = localFunc()
+Foo.aresult = localVar
 
-Foo.globalFunc()
-localFunc()
+foo = result
 
 
 blub = Foo.bar
+inFoo = Foo.aresult
+
+
+
+
+

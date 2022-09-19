@@ -5,6 +5,7 @@ package org.xtext.lua.tests
 
 import com.google.inject.Provider
 import java.io.ByteArrayOutputStream
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 import javax.inject.Inject
@@ -19,16 +20,12 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
 import org.xtext.lua.LuaStandaloneSetup
 import org.xtext.lua.lua.Chunk
-import java.nio.file.FileSystems
 
 @ExtendWith(InjectionExtension)
 @InjectWith(LuaInjectorProvider)
 class LuaParsingTest {
-	@Inject
-	ParseHelper<Chunk> parseHelper
-	
-	@Inject
-	Provider<XtextResourceSet> resourceSetProvider
+	@Inject extension ParseHelper<Chunk>
+	@Inject extension Provider<XtextResourceSet>
 	
 	val luaSnippet = '''
 		num = 666
@@ -44,7 +41,7 @@ class LuaParsingTest {
 
 	@Test
 	def void loadModel() {
-		val result = parseHelper.parse(luaSnippet)
+		val result = parse(luaSnippet)
 		Assertions.assertNotNull(result)
 		val errors = result.eResource.errors
 		Assertions.assertTrue(errors.isEmpty, '''Unexpected errors: «errors.join(", ")»''')
@@ -52,7 +49,7 @@ class LuaParsingTest {
 
 	@Test
 	def void printModel() {
-		val result = parseHelper.parse(luaSnippet)
+		val result = parse(luaSnippet)
 
 		val outputStream = new ByteArrayOutputStream()
 		val saveOptions = emptyMap
@@ -78,7 +75,7 @@ class LuaParsingTest {
 			foo()
 			eq = num == 667
 		'''
-		val result = parseHelper.parse(luaSnippetWithComment)
+		val result = parse(luaSnippetWithComment)
 
 		val outputStream = new ByteArrayOutputStream()
 		val saveOptions = emptyMap
@@ -102,7 +99,7 @@ class LuaParsingTest {
 
 		@Test
 	def void testDirectoryParsing() {
-		val rs = resourceSetProvider.get()
+		val rs = get()
 		val appPath = Paths.get("../caseStudy1")
 		val matcher = FileSystems.^default.getPathMatcher("glob:**.lua")
 

@@ -3,14 +3,21 @@
  */
 package org.xtext.lua;
 
+import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.scoping.IGlobalScopeProvider;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
+import org.xtext.lua.scoping.LuaQualifiedNameProvider;
 
 /**
  * Use this class to register components to be used at runtime / without the
  * Equinox extension registry.
  */
 public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
+
+	@Override
+	public Class<? extends IQualifiedNameProvider> bindIQualifiedNameProvider() {
+		return LuaQualifiedNameProvider.class;
+	}
 
 	@Override
 	public Class<? extends IGlobalScopeProvider> bindIGlobalScopeProvider() {

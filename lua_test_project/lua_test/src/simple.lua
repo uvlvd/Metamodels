@@ -1,8 +1,4 @@
 
+result = foo
+foo = "hello"
 
-foo = {}
-
-
-foo.result = foo
-
-nextResult = result

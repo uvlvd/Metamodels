@@ -39,26 +39,29 @@ Workflow {
 			// from https://github.com/eclipse/xtext-core/issues/1518
 			parserGenerator = parser.antlr.XtextAntlrGeneratorFragment2 {
   				options = {
-//  					backtrack = true
+  					backtrack = false
   				}
   				// from https://blogs.itemis.com/en/debugging-xtext-grammars-what-to-do-when-your-language-is-ambiguous
-  				debugGrammar = true
+//  				debugGrammar = true
       		}
+
       		qualifiedNamesProvider = {
-      		
       		}
       		
-      		// I think generateStub = true is the default  for these providers
       		scopeProvider = {
 				generateXtendStub = true
       		}
+
       		labelProvider = {
-//      			generateStub = true
+      			generateXtendStub = true
       		}
+
 			serializer = {
-//				generateStub = true
+				generateXtendStub = true
 			}
+
 			validator = {
+				generateXtendStub = true
 				// composedCheck = "org.eclipse.xtext.validation.NamesAreUniqueValidator"
 				// Generates checks for @Deprecated grammar annotations, an IssueProvider and a corresponding PropertyPage
 				generateDeprecationValidation = true
@@ -66,6 +69,7 @@ Workflow {
 			generator = {
 				generateXtendStub = true
 			}
+
 			junitSupport = {
 				junitVersion = "5"
 			}

@@ -3,81 +3,63 @@
  */
 package org.xtext.lua.scoping
 
+import java.util.ArrayList
+import org.eclipse.emf.ecore.EObject
+import org.eclipse.emf.ecore.EReference
+import org.eclipse.xtext.EcoreUtil2
+import org.eclipse.xtext.scoping.IScope
+import org.eclipse.xtext.scoping.Scopes
+import org.eclipse.xtext.scoping.impl.ImportedNamespaceAwareLocalScopeProvider
+import org.xtext.lua.lua.Referenceable
+
 /** 
  * This class contains custom scoping description.
  * See
  * https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#scoping
  * on how and when to use it.
  */
-class LuaScopeProvider extends AbstractLuaScopeProvider {
-//	from https://stackoverflow.com/questions/53163003/xtext-how-to-reference-variables-by-qualified-name-through-an-instance
-//	   override getScope(EObject context, EReference reference) {
-//      if (reference === LuaPackage.Literals.USE__REFERENCE) {
-//         val model = EcoreUtil2.getContainerOfType(context, Model)
-//         if (model !== null) {
-//            val result = newArrayList
-//            for (i : model.instances) {
-//               result.add( EObjectDescription.create(
-//                  QualifiedName.create( i.variable.name ), i.variable ))
-//               for (v : i.type.variables) {
-//                  result.add( EObjectDescription.create(
-//                     QualifiedName.create( i.variable.name, v.variable.name ),
-//                     v.variable ))
-//               }
-//            }
-//            println(result)
-//            return new SimpleScope(IScope.NULLSCOPE, result)
-//         }
-//      }
-//      super.getScope(context, reference)
-//   }
+class LuaScopeProvider extends ImportedNamespaceAwareLocalScopeProvider {
+	
+	def boolean isLocalDeclaration(Referenceable refble) {
+		return (refble.localFunction !== null || refble.localInitialValue !== null)
+	}
 
-//	override IScope getScope(EObject context, EReference reference) {
-//		var prefix=if (reference.isContainment()) "CONT" else "NON_CONT"  
-//		var parent=reference.getEContainingClass() 
-//		var grandparent=parent.eContainer() 
-//		var contFeature=context.eContainingFeature() 
-//		System.out.println(String.format("%s_REF__TO__(%s<-%s<-%s;%s)__FROM__(%s)", prefix, reference.getName(), parent.getName(), grandparent.eClass().getName(), contFeature.getName(), context.eClass().getName())) 
-//		
-//		switch (context.eContainingFeature().getName()) {
-//			case "parent":/* FIXME unsupported fall-through */{
-//				System.out.println("I'm a parent: default name resolution should do fine") /* FIXME Unsupported BreakStatement */
-//			}
-//			case "children":{
-//				System.out.println("I'm a child: I need to resolve the names to the left of me") /* FIXME Unsupported BreakStatement */
-//			}
-//		}
-//		var superScope=super.getScope(context, reference) 
-//		return superScope 
-//	}
-//    def IScope scope_Reference_tail(Reference ref, EReference eref) {
-//    	println("Resolving: "+ref.head)
-//    	val stack = new Stack()
-//        var head = ref
-//        do  {
-//        	head=head.head
-//        	stack.push(head)
-//        } while (head.head !== null)
-//        
-//		println("Starting resolution at: "+ stack.peek)
-//		var searched = stack.pop
-//		println("Searching: "+ searched)
-//
-//	   	val rootElement = EcoreUtil2.getRootContainer(ref)
-//        val candidates = EcoreUtil2.getAllContentsOfType(rootElement, IdentifierTerminal)
-//        Scopes::scopeFor(candidates)
-//
-////        switch (head) {
-//////            ReferenceTerminal : Scopes::scopeFor(head)
-////            Reference : {
-////                val tail = head.tail
-////                switch (tail) {
-//////                    Reference : Scopes::scopeFor(tail.ref)
-////                    default: IScope::NULLSCOPE
-////                }
-////            }
-////             
-////            default: IScope::NULLSCOPE
-////        }
-//	}
+	def boolean isFunctionDeclaration(Referenceable refble) {
+		return (refble.localFunction !== null || refble.function !== null)
+	}
+
+	// Collects all visible referenceables from the POV of `context`
+	override IScope getScope(EObject context, EReference reference) {
+		val candidates = new ArrayList<Referenceable>()
+		
+		var currentSibling = context
+		var EObject previousSibling
+		
+		
+		while (currentSibling !== null)  {
+			previousSibling = EcoreUtil2.getPreviousSibling(currentSibling)
+			if (previousSibling !== null) {
+				// childs of my sibling
+				if (previousSibling instanceof Referenceable) {
+					candidates.add(previousSibling)
+
+					// Don't pull variables inside function declarations automatically into the scope
+					if (!isFunctionDeclaration(previousSibling)) {
+						EcoreUtil2.getAllContentsOfType(previousSibling, Referenceable).forall[
+							candidates.add(it)
+						]
+					}
+				}
+
+				// step upwards in current tree-level
+				currentSibling = previousSibling
+			} else {
+				// step one tree-level up
+				currentSibling = currentSibling.eContainer
+			}
+		}
+		
+		
+		Scopes::scopeFor(candidates, this.getQualifiedNameProvider, IScope::NULLSCOPE)
+	}
 }

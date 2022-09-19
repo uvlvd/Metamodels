@@ -1,3 +1,6 @@
+function print(...)
+end
+
 
 --Start of Global Scope---------------------------------------------------------
 -- path for the database

@@ -7,18 +7,18 @@ import org.xtext.lua.lua.Referenceable
 
 class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNameProvider {
 	override QualifiedName getFullyQualifiedName(EObject obj) {
-	 	val superFQN =super.getFullyQualifiedName(obj)
+	 	val qualifiedName =super.getFullyQualifiedName(obj)
 
 		if (obj instanceof Referenceable) {
- 			if (obj.entryValue === null) {
-				 // Other referenceables get simple naming
-				 println(superFQN+" => "+obj.name)
-				 return converter.toQualifiedName(obj.name)
+ 			if (obj.entryValue !== null) {
+				return qualifiedName
  			}
+
+			// Other referenceables get simple naming
+//			println(qualifiedName+" => "+obj.name)
+			return converter.toQualifiedName(obj.name)
 		}
 
-		// Only table entries and non Referenceables get qualified naming!
-//		println(superFQN)
-		return superFQN
+		return qualifiedName
 	}
 }

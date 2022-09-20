@@ -10,7 +10,9 @@ import org.eclipse.xtext.EcoreUtil2
 import org.eclipse.xtext.scoping.IScope
 import org.eclipse.xtext.scoping.Scopes
 import org.eclipse.xtext.scoping.impl.ImportedNamespaceAwareLocalScopeProvider
+import org.xtext.lua.lua.Block
 import org.xtext.lua.lua.Referenceable
+import org.eclipse.xtext.xtext.CurrentTypeFinder.Implementation
 
 /** 
  * This class contains custom scoping description.
@@ -20,12 +22,55 @@ import org.xtext.lua.lua.Referenceable
  */
 class LuaScopeProvider extends ImportedNamespaceAwareLocalScopeProvider {
 	
-	def boolean isLocalDeclaration(Referenceable refble) {
+	private def boolean isLocalDeclaration(Referenceable refble) {
 		return (refble.localFunction !== null || refble.localInitialValue !== null)
 	}
 
-	def boolean isFunctionDeclaration(Referenceable refble) {
-		return (refble.localFunction !== null || refble.function !== null)
+	private def boolean isFunctionDeclaration(EObject refble) {
+		if (refble instanceof Referenceable)
+			return (refble.localFunction !== null || refble.function !== null)
+		return false
+	}
+	
+	private def void ingestSibling(ArrayList<Referenceable> candidates, EObject sibling) {
+		if (sibling instanceof Referenceable) {
+			candidates.add(sibling)
+
+			// Don't pull variables inside function declarations automatically into the scope
+			if (!isFunctionDeclaration(sibling)) {
+				EcoreUtil2.getAllContentsOfType(sibling, Referenceable).forall[
+					candidates.add(it)
+				]
+			}
+		}
+	}
+
+	private def void ingestParentArgs(ArrayList<Referenceable> candidates, EObject parent) {
+		if (parent instanceof Referenceable) {
+			if (parent.localFunction !== null) {
+				parent.localFunction.arguments.forall[candidates.add(it)]
+				return
+			}
+			
+			if (parent.function !== null) {
+				parent.function.arguments.forall[candidates.add(it)]
+				return
+			}
+		}
+	}
+		
+	private def void ingestBlockExcluding(ArrayList<Referenceable> candidates, EObject excludedSibling) {
+			
+		var previousSibling = EcoreUtil2.getPreviousSibling(excludedSibling)
+					
+		// walk through statements of this block
+		while (previousSibling !== null)  {
+		
+			// ingest this sibling and possible children, like with table constructors
+			ingestSibling(candidates, previousSibling)
+		
+			previousSibling = EcoreUtil2.getPreviousSibling(previousSibling)
+		}
 	}
 
 	// Collects all visible referenceables from the POV of `context`
@@ -33,33 +78,30 @@ class LuaScopeProvider extends ImportedNamespaceAwareLocalScopeProvider {
 		val candidates = new ArrayList<Referenceable>()
 		
 		var currentSibling = context
-		var EObject previousSibling
+		var forceLevelAscend = false
 		
-		
-		while (currentSibling !== null)  {
-			previousSibling = EcoreUtil2.getPreviousSibling(currentSibling)
-			if (previousSibling !== null) {
-				// childs of my sibling
-				if (previousSibling instanceof Referenceable) {
-					candidates.add(previousSibling)
-
-					// Don't pull variables inside function declarations automatically into the scope
-					if (!isFunctionDeclaration(previousSibling)) {
-						EcoreUtil2.getAllContentsOfType(previousSibling, Referenceable).forall[
-							candidates.add(it)
-						]
-					}
-				}
-
-				// step upwards in current tree-level
-				currentSibling = previousSibling
-			} else {
-				// step one tree-level up
+		while (currentSibling !== null) {
+			// Walk up to the statement level of one block
+			while (currentSibling !== null && (forceLevelAscend || !(currentSibling.eContainer instanceof Block))) {
 				currentSibling = currentSibling.eContainer
+				forceLevelAscend = false
+			}
+
+			// ingest another level if it exists
+			if (currentSibling !== null) {
+
+				// ingest refbles like function args, vars of a for loop, etc.
+				ingestParentArgs(candidates, currentSibling)
+
+				ingestBlockExcluding(candidates, currentSibling)
+				
+				// walk one level up after we have ingested the current block
+				forceLevelAscend = true
 			}
 		}
 		
 		
 		Scopes::scopeFor(candidates, this.getQualifiedNameProvider, IScope::NULLSCOPE)
 	}
+
 }

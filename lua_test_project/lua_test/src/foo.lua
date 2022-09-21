@@ -46,4 +46,3 @@ inFoo = Foo.aresult
 
 
 
-

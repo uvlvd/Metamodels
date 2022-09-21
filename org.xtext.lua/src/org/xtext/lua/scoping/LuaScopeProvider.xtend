@@ -3,16 +3,19 @@
  */
 package org.xtext.lua.scoping
 
+import com.google.inject.Inject
 import java.util.ArrayList
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.ecore.EReference
 import org.eclipse.xtext.EcoreUtil2
+import org.eclipse.xtext.naming.IQualifiedNameProvider
+import org.eclipse.xtext.resource.EObjectDescription
 import org.eclipse.xtext.scoping.IScope
-import org.eclipse.xtext.scoping.Scopes
-import org.eclipse.xtext.scoping.impl.ImportedNamespaceAwareLocalScopeProvider
+import org.eclipse.xtext.scoping.impl.SimpleLocalScopeProvider
+import org.eclipse.xtext.scoping.impl.SimpleScope
 import org.xtext.lua.lua.Block
+import org.xtext.lua.lua.Expression_VariableName
 import org.xtext.lua.lua.Referenceable
-import org.eclipse.xtext.xtext.CurrentTypeFinder.Implementation
 
 /** 
  * This class contains custom scoping description.
@@ -20,11 +23,14 @@ import org.eclipse.xtext.xtext.CurrentTypeFinder.Implementation
  * https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#scoping
  * on how and when to use it.
  */
-class LuaScopeProvider extends ImportedNamespaceAwareLocalScopeProvider {
+class LuaScopeProvider extends SimpleLocalScopeProvider {
+
+	@Inject
+	IQualifiedNameProvider qualifiedNameProvider;
 	
-	private def boolean isLocalDeclaration(Referenceable refble) {
-		return (refble.localFunction !== null || refble.localInitialValue !== null)
-	}
+//	private def boolean isLocalDeclaration(Referenceable refble) {
+//		return (refble.localFunction !== null || refble.localInitialValue !== null)
+//	}
 
 	private def boolean isFunctionDeclaration(EObject refble) {
 		if (refble instanceof Referenceable)
@@ -32,19 +38,6 @@ class LuaScopeProvider extends ImportedNamespaceAwareLocalScopeProvider {
 		return false
 	}
 	
-	private def void ingestSibling(ArrayList<Referenceable> candidates, EObject sibling) {
-		if (sibling instanceof Referenceable) {
-			candidates.add(sibling)
-
-			// Don't pull variables inside function declarations automatically into the scope
-			if (!isFunctionDeclaration(sibling)) {
-				EcoreUtil2.getAllContentsOfType(sibling, Referenceable).forall[
-					candidates.add(it)
-				]
-			}
-		}
-	}
-
 	private def void ingestParentArgs(ArrayList<Referenceable> candidates, EObject parent) {
 		if (parent instanceof Referenceable) {
 			if (parent.localFunction !== null) {
@@ -57,8 +50,35 @@ class LuaScopeProvider extends ImportedNamespaceAwareLocalScopeProvider {
 				return
 			}
 		}
+//		if (parent instanceof HasArgs) {
+//			if (parent.forArgs !== null) {
+//				parent.forArgs.forall[candidates.add(it)]
+//			}
+//		}
 	}
 		
+	private def void ingestSibling(ArrayList<Referenceable> candidates, EObject sibling) {
+		if (sibling instanceof Referenceable) {
+			candidates.add(sibling)
+
+			// Don't pull variables inside function declarations automatically into the scope
+			if (!isFunctionDeclaration(sibling)) {
+				EcoreUtil2.getAllContentsOfType(sibling, Referenceable).forall[
+					candidates.add(it)
+				]
+			}
+			
+			
+			// Is this an assignment which causes aliasing?
+			if (sibling.value !== null) {
+				var value = sibling.value
+				if (value instanceof Expression_VariableName) {
+					println(value.ref.name + " aliased to " + sibling.name)
+				}
+			}
+		}
+	}
+
 	private def void ingestBlockExcluding(ArrayList<Referenceable> candidates, EObject excludedSibling) {
 			
 		var previousSibling = EcoreUtil2.getPreviousSibling(excludedSibling)
@@ -76,6 +96,7 @@ class LuaScopeProvider extends ImportedNamespaceAwareLocalScopeProvider {
 	// Collects all visible referenceables from the POV of `context`
 	override IScope getScope(EObject context, EReference reference) {
 		val candidates = new ArrayList<Referenceable>()
+		val elements = newArrayList
 		
 		var currentSibling = context
 		var forceLevelAscend = false
@@ -100,8 +121,14 @@ class LuaScopeProvider extends ImportedNamespaceAwareLocalScopeProvider {
 			}
 		}
 		
+		candidates.forEach[elements.add(
+			EObjectDescription.create(
+				qualifiedNameProvider.apply(it),
+				it		
+			)
+		)]
 		
-		Scopes::scopeFor(candidates, this.getQualifiedNameProvider, IScope::NULLSCOPE)
+//		Scopes::scopeFor(candidates, this.getQualifiedNameProvider, IScope::NULLSCOPE)
+		new SimpleScope(IScope.NULLSCOPE, elements)
 	}
-
 }

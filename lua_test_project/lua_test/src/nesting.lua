@@ -1,7 +1,7 @@
 
 Foo = {
 	bar = {
-		baz = 42,
+		baz = 41,
 		blub = function() end
 	}
 }
@@ -13,7 +13,7 @@ function Foo.bar.blub2(arg1)
 end
 
 
-function Foo2.bar.blub2() 
+function blub3() 
 	local ichBinLocal = 43
 end
 
@@ -27,5 +27,35 @@ foo = Foo.result
 bla = Foo.bar.blub
 
 Foo.bar.blub2()
+
+
+
+
+-------
+do
+	local ichBinImBlock = 42
+	ichBinNichtImBlock = 43
+end
+result = ichBinImBlock
+result = ichBinNichtImBlock
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

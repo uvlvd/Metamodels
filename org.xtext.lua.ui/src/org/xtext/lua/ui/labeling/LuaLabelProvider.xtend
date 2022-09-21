@@ -8,6 +8,8 @@ import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.edit.ui.provider.AdapterFactoryLabelProvider
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.eclipse.xtext.ui.label.DefaultEObjectLabelProvider
+import org.xtext.lua.lua.Referenceable
+import org.xtext.lua.lua.Expression_Import
 
 /** 
  * Provides labels for EObjects.
@@ -21,12 +23,18 @@ class LuaLabelProvider extends DefaultEObjectLabelProvider {
 	}
 
 	// Labels and icons can be computed like this:
-	def package String text(EObject ele) {
-		val clsName = ele.eClass().name
-		var fqn = qualifiedNameProvider.apply(ele)
-		if (fqn !== null) {
-			return '''«clsName» "«fqn»"'''
+	def package String text(EObject obj) {
+		val clsName = obj.eClass().name
+
+		if (obj instanceof Referenceable) {
+			var fqn = qualifiedNameProvider.apply(obj)
+			if (fqn !== null) {
+				return String.format('%s "%s"', clsName, fqn)
+			}
+		} else if (obj instanceof Expression_Import) {
+			return String.format('%s "%s"', clsName, obj.importURI)
 		}
+
 		return clsName
 	}
 	

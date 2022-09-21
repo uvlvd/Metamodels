@@ -1,5 +1,18 @@
 function print(...)
 end
+function Script.serveEvent(...)
+end
+function Script.serveFunction(...)
+end
+function Script.notifyEvent(...)
+end
+function string.format(...)
+end
+function Script.register(...)
+end
+function Database.SQL.SQLite.create(...)
+end
+File.open = function(...) end
 
 
 --Start of Global Scope---------------------------------------------------------
@@ -66,14 +79,6 @@ function getSqlQuery()
   return sqlQuery
 end
 
----@param content string
----@param cType string
----@return bool success
-function doInsert(content, cType)
-  codeContent = content
-  codeType = cType
-  return insert()
-end
 
 ---@insert()
 --inserts dataset into the database
@@ -96,6 +101,15 @@ function insert()
     printResult("Could not insert data into DB because statement is not pre-compiled")
   end
   return false
+end
+
+---@param content string
+---@param cType string
+---@return bool success
+function doInsert(content, cType)
+  codeContent = content
+  codeType = cType
+  return insert()
 end
 
 --@exec()
@@ -179,6 +193,7 @@ local function main()
     print("Error: " .. db:getErrorMessage())
   end
 end
+
 --The following registration is part of the global scope which runs once after startup
 --Registration of the 'main' function to the 'Engine.OnStarted' event 
 Script.register("Engine.OnStarted", main)

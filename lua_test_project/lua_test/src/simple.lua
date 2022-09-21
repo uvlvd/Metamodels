@@ -1,4 +1,0 @@
-
-result = foo
-foo = "hello"
-

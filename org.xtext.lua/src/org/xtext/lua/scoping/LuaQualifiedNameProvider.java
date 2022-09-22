@@ -11,7 +11,7 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
 		if ((obj instanceof Referenceable refble)) {
 
 			// Table field use qualified name calculation
-			if (LuaUtil.isTableField((refble))) {
+			if (LuaUtil.isTableField(refble)) {
 				return this.computeFullyQualifiedNameFromNameAttribute(obj);
 			}
 

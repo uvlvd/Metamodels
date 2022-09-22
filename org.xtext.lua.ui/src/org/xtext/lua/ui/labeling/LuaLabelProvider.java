@@ -29,23 +29,31 @@ public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 		super(delegate);
 	}
 
-	// Labels and icons can be computed like this:
+	@Override
+	protected Object doGetText(Object _obj) {
+		if (_obj instanceof EObject) {
+			var obj = (EObject) _obj;
+			var name = obj.eClass().getName();
 
-	String text(EObject obj) {
-		var name = qualifiedNameProvider.apply(obj).toString();
+			if (obj instanceof Referenceable) {
+				var refble = (Referenceable) obj;
 
-		if (obj instanceof Referenceable) {
-			var fqn = qualifiedNameProvider.apply(obj);
-			if (fqn != null) {
-				name = name + " \"" + fqn.toString() + "\"";
+				var fqn = qualifiedNameProvider.apply(refble);
+				if (fqn != null) {
+					name += " \"" + fqn.toString() + "\"";
+				}
+
+				if (LuaUtil.isLocalDeclaration((Referenceable) obj)) {
+					name = "Local " + name;
+				}
+			} else if (obj instanceof Expression_Import) {
+				name += " \"" + ((Expression_Import) obj).getImportURI() + "\"";
+			} else {
+				name += " " + super.doGetText(_obj);
 			}
-			if (LuaUtil.isLocalDeclaration((Referenceable) obj)) {
-				name = "Local " + name;
-			}
-		} else if (obj instanceof Expression_Import) {
-			name = name + " \"" + ((Expression_Import) obj).getImportURI() + "\"";
+			return name;
 		}
-		return name;
+		return super.doGetText(_obj);
 	}
 //
 //	String image(Greeting ele) {

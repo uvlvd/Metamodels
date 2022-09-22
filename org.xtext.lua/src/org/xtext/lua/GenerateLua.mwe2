@@ -43,14 +43,15 @@ Workflow {
   					backtrack = false
   				}
 //  			// from https://blogs.itemis.com/en/debugging-xtext-grammars-what-to-do-when-your-language-is-ambiguous
-				debugGrammar = true
+//				debugGrammar = true
       		}
+
 			validator = {
 //				generateXtendStub = true
 				// Generates checks for @Deprecated grammar annotations, an IssueProvider and a corresponding PropertyPage
 				generateDeprecationValidation = true
 //				composedCheck = "org.eclipse.xtext.validation.NamesAreUniqueValidator"
-//				composedCheck = "org.eclipse.xtext.validation.ImportUriValidator"
+				composedCheck = "org.eclipse.xtext.validation.ImportUriValidator"
 			}
 
 			junitSupport = {

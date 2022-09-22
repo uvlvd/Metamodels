@@ -9,3 +9,8 @@ end
 
 -- This should be an error
 blub = ichBinLocal
+
+
+
+duplicate = 42
+duplicate = duplicate

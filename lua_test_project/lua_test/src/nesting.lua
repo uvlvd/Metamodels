@@ -2,7 +2,7 @@
 Foo = {
 	bar = {
 		baz = 41,
-		blub = function() end
+		blub = function() end		
 	}
 }
 
@@ -27,6 +27,8 @@ foo = Foo.result
 bla = Foo.bar.blub
 
 Foo.bar.blub2()
+
+
 
 
 

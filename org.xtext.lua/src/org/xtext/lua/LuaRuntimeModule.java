@@ -6,9 +6,11 @@ package org.xtext.lua;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.scoping.IGlobalScopeProvider;
 import org.eclipse.xtext.scoping.IScopeProvider;
+import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
+import org.xtext.lua.scoping.LuaImportUriResolver;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
-import org.xtext.lua.scoping.LuaScopeProvider2;
+import org.xtext.lua.scoping.LuaScopeProvider;
 
 /**
  * Use this class to register components to be used at runtime / without the
@@ -27,6 +29,10 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 
 	@Override
 	public Class<? extends IScopeProvider> bindIScopeProvider() {
-		return LuaScopeProvider2.class;
+		return LuaScopeProvider.class;
+	}
+
+	public Class<? extends ImportUriResolver> bindImportUriResolver() {
+		return LuaImportUriResolver.class;
 	}
 }

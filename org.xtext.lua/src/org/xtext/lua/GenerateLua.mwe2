@@ -51,7 +51,7 @@ Workflow {
 				// Generates checks for @Deprecated grammar annotations, an IssueProvider and a corresponding PropertyPage
 				generateDeprecationValidation = true
 //				composedCheck = "org.eclipse.xtext.validation.NamesAreUniqueValidator"
-				composedCheck = "org.eclipse.xtext.validation.ImportUriValidator"
+//				composedCheck = "org.eclipse.xtext.validation.ImportUriValidator"
 			}
 
 			junitSupport = {
@@ -63,28 +63,6 @@ Workflow {
 			
 			xbaseSupport = null
 			xtypeSupport = null
-
-//      		qualifiedNamesProvider = {
-//      		}
-      		
-//      		scopeProvider = {
-//				generateXtendStub = true
-//      		}
-//
-//      		labelProvider = {
-//      			generateXtendStub = true
-//      		}
-//
-//			serializer = {
-//				generateXtendStub = true
-//			}
-//
-//			generator = {
-//				generateXtendStub = true
-//			}
-		
-
-
 		}
 	}
 }

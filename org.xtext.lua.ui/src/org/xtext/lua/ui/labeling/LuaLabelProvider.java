@@ -31,6 +31,8 @@ public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 
 	@Override
 	protected Object doGetText(Object _obj) {
+		var superName = super.doGetText(_obj);
+
 		if (_obj instanceof EObject) {
 			var obj = (EObject) _obj;
 			var name = obj.eClass().getName();
@@ -48,12 +50,12 @@ public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 				}
 			} else if (obj instanceof Expression_Import) {
 				name += " \"" + ((Expression_Import) obj).getImportURI() + "\"";
-			} else {
-				name += " " + super.doGetText(_obj);
+			} else if (superName != null) {
+				name += " " + superName;
 			}
 			return name;
 		}
-		return super.doGetText(_obj);
+		return superName;
 	}
 //
 //	String image(Greeting ele) {

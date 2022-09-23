@@ -4,19 +4,30 @@
 package org.xtext.lua;
 
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
+import org.eclipse.xtext.resource.IDefaultResourceDescriptionStrategy;
 import org.eclipse.xtext.scoping.IGlobalScopeProvider;
 import org.eclipse.xtext.scoping.IScopeProvider;
 import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.scoping.LuaImportUriResolver;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
+import org.xtext.lua.scoping.LuaResourceDescriptionStrategy;
 import org.xtext.lua.scoping.LuaScopeProvider;
+
+import com.google.inject.Binder;
 
 /**
  * Use this class to register components to be used at runtime / without the
  * Equinox extension registry.
  */
 public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
+	@Override
+	public void configure(Binder binder) {
+		super.configure(binder);
+
+		binder.bind(IDefaultResourceDescriptionStrategy.class).to(LuaResourceDescriptionStrategy.class);
+	}
+
 	@Override
 	public Class<? extends IQualifiedNameProvider> bindIQualifiedNameProvider() {
 		return LuaQualifiedNameProvider.class;

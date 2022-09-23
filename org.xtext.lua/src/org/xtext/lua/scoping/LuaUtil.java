@@ -27,6 +27,10 @@ public class LuaUtil {
 		return (Objects.equal(refble.getLocal(), "local") || (refble.eContainer() instanceof ContainsBlock));
 	}
 
+	public static boolean isGlobalDeclaration(final Referenceable refble) {
+		return isDeclaration(refble) && !isLocalDeclaration(refble);
+	}
+
 	public static Referenceable getContainingDeclaration(final EObject obj) {
 		Referenceable _xblockexpression = null;
 		{

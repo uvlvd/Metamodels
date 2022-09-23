@@ -1,4 +1,8 @@
 
+require('require_test/provides_require')
+
+result = RequireableFoo
+
 Foo = {
 	bar = {
 		baz = 41,

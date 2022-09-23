@@ -19,7 +19,6 @@ public class LuaImportUriResolver extends ImportUriResolver {
 			}
 			return uri;
 		}
-//		return super.apply(from);
 		return null;
 	}
 

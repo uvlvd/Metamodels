@@ -1,7 +1,9 @@
 
 
 
-require('provides_require.lua')
+foo = require('provides_require')
 
 
 result = RequireableFoo
+
+errorResult = nonRequireable

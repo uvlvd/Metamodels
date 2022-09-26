@@ -8,7 +8,10 @@ Foo = {
 -- Aliasing assignment
 foo = Foo
 foo.bar()
+foo:bar()
+
+result = foo.bar
 
 -- These two calls are synonymous
 Foo.bar(foo, "blub")
-foo:bar("blub")
+Foo:bar("blub")

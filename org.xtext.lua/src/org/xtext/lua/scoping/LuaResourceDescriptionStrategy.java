@@ -7,6 +7,7 @@ import org.eclipse.xtext.resource.impl.DefaultResourceDescriptionStrategy;
 import org.eclipse.xtext.util.IAcceptor;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Chunk;
+import org.xtext.lua.lua.MultiReferenceable;
 import org.xtext.lua.lua.Referenceable;
 
 public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionStrategy {
@@ -22,6 +23,16 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
 		} else if (eObject instanceof Block && eObject.eContainer() instanceof Chunk) {
 			// root block in a chunk
 			return true;
+		} else if (eObject instanceof MultiReferenceable) {
+			var multiRefble = (MultiReferenceable) eObject;
+			if (!multiRefble.isLocal()) {
+				multiRefble.getRefbles().forEach(refble -> {
+					var fqn = this.getQualifiedNameProvider().apply(refble);
+					if (fqn != null) {
+						acceptor.accept(EObjectDescription.create(fqn, refble));
+					}
+				});
+			}
 		} else if (eObject instanceof Referenceable) {
 			var refble = (Referenceable) eObject;
 			if (LuaUtil.isGlobalDeclaration(refble)) {

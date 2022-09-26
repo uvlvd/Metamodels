@@ -19,13 +19,16 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
 		if (eObject instanceof Chunk) {
 			// chunks always export
 			return true;
-		} else if (eObject instanceof Block block && block.eContainer() instanceof Chunk) {
+		} else if (eObject instanceof Block && eObject.eContainer() instanceof Chunk) {
 			// root block in a chunk
 			return true;
-		} else if (eObject instanceof Referenceable refble && LuaUtil.isGlobalDeclaration(refble)) {
-			var fqn = this.getQualifiedNameProvider().apply(refble);
-			if (fqn != null) {
-				acceptor.accept(EObjectDescription.create(fqn, refble));
+		} else if (eObject instanceof Referenceable) {
+			var refble = (Referenceable) eObject;
+			if (LuaUtil.isGlobalDeclaration(refble)) {
+				var fqn = this.getQualifiedNameProvider().apply(refble);
+				if (fqn != null) {
+					acceptor.accept(EObjectDescription.create(fqn, refble));
+				}
 			}
 		}
 		return false;

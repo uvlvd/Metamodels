@@ -10,6 +10,6 @@ Require-Bundle: org.xtext.lua,
  org.eclipse.xtext.ide,
  org.eclipse.xtext.xbase.ide,
  org.antlr.runtime;bundle-version="[3.2.0,3.2.1)"
-Bundle-RequiredExecutionEnvironment: JavaSE-17
+Bundle-RequiredExecutionEnvironment: JavaSE-11
 Export-Package: org.xtext.lua.ide.contentassist.antlr,
  org.xtext.lua.ide.contentassist.antlr.internal

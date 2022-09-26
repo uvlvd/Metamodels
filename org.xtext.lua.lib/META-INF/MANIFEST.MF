@@ -4,4 +4,4 @@ Bundle-Name: Lib
 Bundle-SymbolicName: org.xtext.lua.lib
 Bundle-Version: 1.0.0.qualifier
 Automatic-Module-Name: org.xtext.lua.lib
-Bundle-RequiredExecutionEnvironment: JavaSE-17
+Bundle-RequiredExecutionEnvironment: JavaSE-11

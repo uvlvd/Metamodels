@@ -1,11 +1,16 @@
 
 
-Foo = {
-	bar = function(...) end
+Foo, Bar = {
+	bar = {
+		baz = function(...)
+		end
+	}
+}, {
+	blub = 43
 }
 
 foo = Foo
 
 -- These two calls are synonymou
-Foo.bar(foo, "blub")
-foo:bar("blub")
+Foo.bar.baz(foo, "blub")
+foo.bar:bar("blub")

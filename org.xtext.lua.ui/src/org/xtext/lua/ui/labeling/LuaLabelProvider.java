@@ -8,8 +8,8 @@ import org.eclipse.emf.edit.ui.provider.AdapterFactoryLabelProvider;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.ui.label.DefaultEObjectLabelProvider;
 import org.xtext.lua.lua.Expression_Import;
+import org.xtext.lua.lua.MultiReferenceable;
 import org.xtext.lua.lua.Referenceable;
-import org.xtext.lua.scoping.LuaUtil;
 
 import com.google.inject.Inject;
 
@@ -44,8 +44,9 @@ public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 				if (fqn != null) {
 					name += " \"" + fqn.toString() + "\"";
 				}
-
-				if (LuaUtil.isLocalDeclaration((Referenceable) obj)) {
+			} else if (obj instanceof MultiReferenceable) {
+				final var multiRefble = (MultiReferenceable) obj;
+				if (multiRefble.isLocal()) {
 					name = "Local " + name;
 				}
 			} else if (obj instanceof Expression_Import) {

@@ -56,7 +56,7 @@ Statement hidden (WS, COMMENT):
 Statement_Declaration:
     Statement_GlobalFunction_Declaration |
     Statement_LocalFunction_Declaration |
-    Statement_Local_Variable_Declaration |
+//    Statement_Local_Variable_Declaration |
     Statement_Assignment
 ;
 
@@ -84,13 +84,13 @@ Statement_If_Then_Else_ElseIfPart returns ContainsBlock:
 Statement_For returns ContainsBlock: 
     'for'
     (
-		arguments+=Referenceable
+		arguments+=ArgReferenceable
 		=> '=' startExpr=Expression 
 		=> ',' untilExpr=Expression
 		(=> ',' stepExpr=Expression)?
     ) | (
 		arguments+=Referenceable
-		(=> ',' arguments+=Referenceable)*
+		(=> ',' arguments+=ArgReferenceable)*
 		=> 'in' forExpressions+=Expression
 		(=> ',' forExpressions+=Expression)*
     )
@@ -103,11 +103,14 @@ Statement_LocalFunction_Declaration returns Referenceable:
     local='local' 'function' name=LUA_NAME localFunction=Function 'end';
  
 // Local variables can be declared anywhere inside a block. The declaration can include an initial assignment "local ... [= ...]"
-Statement_Local_Variable_Declaration returns Referenceable: 
-    local='local' name=LUA_NAME (=> '=' localInitialValue=Expression)?;
+//Statement_Local_Variable_Declaration returns MultiReferenceable: 
+//    refbles+=Referenceable (=> ',' refbles+=Referenceable)*
+//    (=> '=' values+=Expression (=> ',' values+=Expression)*)?;
 
-Statement_Assignment returns Referenceable:
-	name=QualifiedName => '=' value=Expression
+Statement_Assignment returns MultiReferenceable:
+	(local?='local')?
+	refbles+=Referenceable (=> ',' refbles+=Referenceable)*
+	=> '=' values+=Expression (=> ',' values+=Expression)*
 ;
 
 Statement_Functioncall:
@@ -228,13 +231,13 @@ Expression_Nesting returns Expression:
 // FUNCTIONS
 // ****************************************************
 Function returns ContainsBlock:
-    =>'(' (arguments+=Referenceable (',' arguments+=Referenceable)* ','?)? (varArgs?='...')? ')' body=Block;
+    =>'(' (arguments+=ArgReferenceable (',' arguments+=ArgReferenceable)* ','?)? (varArgs?='...')? ')' body=Block;
  
 // Some syntactic sugar: strings and field can be passed as parameters without bracket
 Functioncall_Arguments: 
     {Functioncall_Arguments}
     (
-        ('(' (arguments+=Expression (',' arguments+=Expression)*)? ')' ) |
+        (=> '(' (arguments+=Expression (',' arguments+=Expression)*)? ')' ) |
         (arguments+=Expression_TableConstructor) |
         (arguments+=Expression_String)
     );
@@ -262,6 +265,10 @@ Field_AppendEntryToTable:
 
 // Everything that is referenceable returns this class and uses the 'name' feature
 Referenceable:
+	name=QualifiedName
+;
+
+ArgReferenceable returns Referenceable:
 	name=LUA_NAME
 ;
 

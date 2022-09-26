@@ -31,6 +31,7 @@ bar = "blu"
 Foo = {
 	bar = "bar"
 }
+
 Foo.aresult = globalVar
 Foo.aresult = localFunc()
 Foo.aresult = localVar

@@ -44,20 +44,21 @@ LastStatement_Break:
 // STATEMENT
 // ****************************************************
 Statement hidden (WS, COMMENT):
-    Statement_Block |
-    Statement_While |
-    Statement_Repeat |
-    Statement_If_Then_Else |
-    Statement_For |
-    Statement_Functioncall |
-    Statement_Declaration
+    Statement_Block
+    | Statement_While
+    | Statement_Repeat
+    | Statement_If_Then_Else
+    | Statement_For
+    | Statement_Functioncall
+    | Statement_Declaration
 ;
 
 Statement_Declaration:
-    Statement_GlobalFunction_Declaration |
-    Statement_LocalFunction_Declaration |
+//    Statement_GlobalFunction_Declaration |
+//    Statement_LocalFunction_Declaration |
 //    Statement_Local_Variable_Declaration |
-    Statement_Assignment
+	Statement_Function_Declaration
+    | Statement_Assignment
 ;
 
  
@@ -96,11 +97,13 @@ Statement_For returns ContainsBlock:
     )
     => 'do' block=Block 'end';
  
-Statement_GlobalFunction_Declaration returns Referenceable:
-    'function' name=QualifiedName function=Function 'end';
+//Statement_GlobalFunction_Declaration returns Referenceable:
+//    'function' name=QualifiedName function=Function 'end';
  
-Statement_LocalFunction_Declaration returns Referenceable:
-    local='local' 'function' name=LUA_NAME localFunction=Function 'end';
+Statement_Function_Declaration returns Referenceable:
+    ('function' name=QualifiedName function=Function 'end')
+   	| (local?='local' 'function' name=LUA_NAME function=Function 'end')
+;
  
 // Local variables can be declared anywhere inside a block. The declaration can include an initial assignment "local ... [= ...]"
 //Statement_Local_Variable_Declaration returns MultiReferenceable: 
@@ -110,7 +113,7 @@ Statement_LocalFunction_Declaration returns Referenceable:
 Statement_Assignment returns MultiReferenceable:
 	(local?='local')?
 	refbles+=Referenceable (=> ',' refbles+=Referenceable)*
-	=> '=' values+=Expression (=> ',' values+=Expression)*
+	(=> '=' values+=Expression (=> ',' values+=Expression)*)?
 ;
 
 Statement_Functioncall:

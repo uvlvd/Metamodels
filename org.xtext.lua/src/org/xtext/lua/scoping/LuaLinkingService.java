@@ -18,33 +18,21 @@ import org.xtext.lua.lua.Referenceable;
 
 public class LuaLinkingService extends DefaultLinkingService {
     private static final Logger LOGGER = Logger.getLogger("LuaLinkingService");
+    private static final URI mockUri = URI.createURI("dummy:/stdlibAndCrowns.lua");
 
-    @Override
-    public List<EObject> getLinkedObjects(EObject context, EReference ref, INode node) throws IllegalNodeException {
-        List<EObject> list = super.getLinkedObjects(context, ref, node);
-
-        // has super resolved the ref?
-        if (!list.isEmpty()) {
-            return list;
-        }
-
-        // we create missing refbles in a dummy resource
-
-        String name = getCrossRefNodeAsString(node);
-
+    private EObject getOrCreateMockReferenceable(EObject context, String name) {
         // create a dummy URI with the DSL's file extension
-        URI uri = URI.createURI("dummy:/stdlibAndCrowns.lua");
         ResourceSet resourceSet = context.eResource()
             .getResourceSet();
-        Resource resource = resourceSet.getResource(uri, true);
+        Resource resource = resourceSet.getResource(mockUri, true);
 
         // if we already created a mock refble we return it
-        for (Iterator<EObject> i = resource.getContents()
-            .iterator(); i.hasNext();) {
+        for (Iterator<EObject> i = resource.getAllContents(); i.hasNext();) {
             var eObj = i.next();
             var refble = (Referenceable) eObj;
-            if (refble.getName() == name) {
-                return Collections.singletonList(eObj);
+            if (refble.getName()
+                .equals(name)) {
+                return eObj;
             }
         }
 
@@ -55,30 +43,22 @@ public class LuaLinkingService extends DefaultLinkingService {
 
         List<EObject> contents = resource.getContents();
         contents.add(refble);
-        return Collections.singletonList((EObject) refble);
+        return refble;
+    }
 
-//        // create a dummy URI with the DSL's file extension
-////        URI uri = URI.createURI("dummy:/" + name + ".lua");
-//        URI uri = URI.createURI("dummy:/stdlibAndCrowns.lua");
-//        ResourceSet resourceSet = context.eResource()
-//            .getResourceSet();
-//        Resource resource = resourceSet.getResource(uri, false);
-//        Referenceable refble;
-//
-//        // if the refble doesn't exist we inject one
-//        if (resource == null) {
-//            LOGGER.debug(String.format("Injecting Referenceable with name %s", name));
-//            refble = LuaFactory.eINSTANCE.createReferenceable();
-//            refble.setName(name);
-//            resource = resourceSet.createResource(uri);
-////            resource = resourceSet.getResource(uri, true);
-//            List<EObject> contents = resource.getContents();
-//            contents.add(refble);
-//        } else {
-//            refble = (Referenceable) resource.getContents()
-//                .get(0);
-//        }
+    @Override
+    public List<EObject> getLinkedObjects(EObject context, EReference ref, INode node) throws IllegalNodeException {
+        List<EObject> list = super.getLinkedObjects(context, ref, node);
 
-//        return Collections.singletonList((EObject) refble);
+        // has super resolved the ref?
+        if (!list.isEmpty()) {
+            return list;
+        }
+
+        // If not:
+        // we create mock refbles in a dummy resource
+        String name = getCrossRefNodeAsString(node);
+        var mockReferenceable = getOrCreateMockReferenceable(context, name);
+        return Collections.singletonList(mockReferenceable);
     }
 }

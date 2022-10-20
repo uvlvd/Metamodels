@@ -3,6 +3,7 @@
  */
 package org.xtext.lua;
 
+import org.eclipse.xtext.linking.ILinkingService;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.resource.IDefaultResourceDescriptionStrategy;
 import org.eclipse.xtext.scoping.IGlobalScopeProvider;
@@ -10,6 +11,7 @@ import org.eclipse.xtext.scoping.IScopeProvider;
 import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.scoping.LuaImportUriResolver;
+import org.xtext.lua.scoping.LuaLinkingService;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
 import org.xtext.lua.scoping.LuaResourceDescriptionStrategy;
 import org.xtext.lua.scoping.LuaScopeProvider;
@@ -26,9 +28,10 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 		super.configure(binder);
 
 		binder.bind(IDefaultResourceDescriptionStrategy.class).to(LuaResourceDescriptionStrategy.class);
+		binder.bind(ImportUriResolver.class).to(LuaImportUriResolver.class);
 	}
 
-	@Override
+    @Override
 	public Class<? extends IQualifiedNameProvider> bindIQualifiedNameProvider() {
 		return LuaQualifiedNameProvider.class;
 	}
@@ -43,7 +46,8 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 		return LuaScopeProvider.class;
 	}
 
-	public Class<? extends ImportUriResolver> bindImportUriResolver() {
-		return LuaImportUriResolver.class;
-	}
+	@Override
+    public Class<? extends ILinkingService> bindILinkingService() {
+        return LuaLinkingService.class;
+    }
 }

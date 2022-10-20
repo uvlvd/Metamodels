@@ -38,8 +38,10 @@ import com.google.inject.Inject;
  */
 public class LuaScopeProvider extends SimpleLocalScopeProvider {
     private static final Logger LOGGER = Logger.getLogger("LuaScopeProvider");
+
     @Inject
     private IQualifiedNameConverter nameConverter;
+
 
     @Override
     protected ISelectable getAllDescriptions(Resource resource) {

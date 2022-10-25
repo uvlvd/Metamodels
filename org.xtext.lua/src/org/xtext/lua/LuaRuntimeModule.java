@@ -3,12 +3,14 @@
  */
 package org.xtext.lua;
 
+import org.eclipse.xtext.conversion.IValueConverterService;
 import org.eclipse.xtext.linking.ILinkingService;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.resource.IDefaultResourceDescriptionStrategy;
 import org.eclipse.xtext.scoping.IGlobalScopeProvider;
 import org.eclipse.xtext.scoping.IScopeProvider;
 import org.eclipse.xtext.scoping.impl.ImportUriResolver;
+import org.xtext.lua.converters.LuaValueConverterService;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.scoping.LuaImportUriResolver;
 import org.xtext.lua.scoping.LuaLinkingService;
@@ -30,6 +32,11 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 		binder.bind(IDefaultResourceDescriptionStrategy.class).to(LuaResourceDescriptionStrategy.class);
 		binder.bind(ImportUriResolver.class).to(LuaImportUriResolver.class);
 	}
+
+    @Override
+    public Class<? extends IValueConverterService> bindIValueConverterService() {
+        return LuaValueConverterService.class;
+    }
 
     @Override
 	public Class<? extends IQualifiedNameProvider> bindIQualifiedNameProvider() {

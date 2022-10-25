@@ -24,3 +24,4 @@ Export-Package: org.xtext.lua.ui.quickfix,
  org.xtext.lua.ui.contentassist,
  org.xtext.lua.ui.internal
 Bundle-Activator: org.xtext.lua.ui.internal.LuaActivator
+Import-Package: org.apache.log4j

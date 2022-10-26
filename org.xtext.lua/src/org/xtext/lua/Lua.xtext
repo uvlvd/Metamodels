@@ -8,6 +8,11 @@ generate lua "http://www.xtext.org/lua/Lua"
 Chunk hidden(WS, COMMENT):
 	block=Block;
 
+// ChunkSet is only used for merging resources before propagation.
+ChunkSet:
+	{ChunkSet} (chunks+=Chunk)*
+;
+
 Block hidden(WS, COMMENT):
 	{Block}
 	(statements+=Statement (=>';')?)*

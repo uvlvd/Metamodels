@@ -19,7 +19,7 @@ import org.xtext.lua.lua.Referenceable;
 
 public class LuaLinkingService extends DefaultLinkingService {
     private static final Logger LOGGER = Logger.getLogger("LuaLinkingService");
-    private static final URI mockUri = URI.createURI("dummy:/stdlibAndCrowns.lua");
+    public static final URI MOCK_URI = URI.createURI("dummy:/stdlibAndCrowns.lua");
 
     /**
      * Creates a dummy resource in the contexts resource set
@@ -29,9 +29,9 @@ public class LuaLinkingService extends DefaultLinkingService {
         ResourceSet resourceSet = context.eResource()
             .getResourceSet();
 
-        Resource resource = resourceSet.getResource(mockUri, false);
+        Resource resource = resourceSet.getResource(MOCK_URI, false);
         if (resource == null) {
-            resource = resourceSet.createResource(mockUri);
+            resource = resourceSet.createResource(MOCK_URI);
             var chunk = LuaFactory.eINSTANCE.createChunk();
             resource.getContents()
                 .add(chunk);

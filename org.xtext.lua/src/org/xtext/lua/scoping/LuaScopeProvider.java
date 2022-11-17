@@ -37,7 +37,7 @@ import com.google.inject.Inject;
  * to use it.
  */
 public class LuaScopeProvider extends SimpleLocalScopeProvider {
-    private static final Logger LOGGER = Logger.getLogger("LuaScopeProvider");
+    private static final Logger LOGGER = Logger.getLogger(LuaScopeProvider.class.getPackageName());
 
     @Inject
     private IQualifiedNameConverter nameConverter;
@@ -90,7 +90,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
                             var node = NodeModelUtils.getNode(value);
                             var aliasTarget = NodeModelUtils.getTokenText(node);
                             LOGGER
-                                .debug(String.format("Aliasing assignment: %s -> %s\n", refble.getName(), aliasTarget));
+                                .debug(String.format("Aliasing assignment: %s -> %s", refble.getName(), aliasTarget));
                             aliases.put(aliasTarget, description);
                         }
                     }

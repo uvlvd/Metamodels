@@ -3,13 +3,13 @@ package org.xtext.lua.scoping;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
-import org.xtext.lua.lua.ContainsBlock;
+import org.xtext.lua.lua.BlockWrapper;
 import org.xtext.lua.lua.Expression;
 import org.xtext.lua.lua.MultiReferenceable;
 import org.xtext.lua.lua.Referenceable;
 
 public class LuaUtil {
-    private static final Logger LOGGER = Logger.getLogger("LuaUtil");
+    private static final Logger LOGGER = Logger.getLogger(LuaUtil.class.getPackageName());
 
     public static boolean isTableField(final Referenceable refble) {
         Expression _entryValue = refble.getEntryValue();
@@ -28,7 +28,7 @@ public class LuaUtil {
     public static boolean isLocalDeclaration(final Referenceable refble) {
         final var parent = refble.eContainer();
         // arguments of for- or function-block
-        if (parent instanceof ContainsBlock)
+        if (parent instanceof BlockWrapper)
             return true;
 
         // refble inside a multirefble

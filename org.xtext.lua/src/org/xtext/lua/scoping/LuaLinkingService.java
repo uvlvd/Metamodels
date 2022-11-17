@@ -18,7 +18,7 @@ import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.Referenceable;
 
 public class LuaLinkingService extends DefaultLinkingService {
-    private static final Logger LOGGER = Logger.getLogger("LuaLinkingService");
+    private static final Logger LOGGER = Logger.getLogger(LuaLinkingService.class.getPackageName());
     public static final URI MOCK_URI = URI.createURI("dummy:/stdlibAndCrowns.lua");
 
     /**

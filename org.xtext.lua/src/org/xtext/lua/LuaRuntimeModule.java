@@ -18,20 +18,26 @@ import org.xtext.lua.scoping.LuaQualifiedNameProvider;
 import org.xtext.lua.scoping.LuaResourceDescriptionStrategy;
 import org.xtext.lua.scoping.LuaScopeProvider;
 
-import com.google.inject.Binder;
-
 /**
  * Use this class to register components to be used at runtime / without the
  * Equinox extension registry.
  */
 public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
-	@Override
-	public void configure(Binder binder) {
-		super.configure(binder);
-
-		binder.bind(IDefaultResourceDescriptionStrategy.class).to(LuaResourceDescriptionStrategy.class);
-		binder.bind(ImportUriResolver.class).to(LuaImportUriResolver.class);
-	}
+//	@Override
+//	public void configure(Binder binder) {
+//		super.configure(binder);
+//
+////		binder.bind(IDefaultResourceDescriptionStrategy.class).to(LuaResourceDescriptionStrategy.class);
+////		binder.bind(ImportUriResolver.class).to(LuaImportUriResolver.class);
+//	}
+	
+    public Class<? extends IDefaultResourceDescriptionStrategy> bindIDefaultResourceDescriptionStrategy() {
+        return LuaResourceDescriptionStrategy.class;
+    }
+    
+    public Class<? extends ImportUriResolver> bindImportUriResolver() {
+        return LuaImportUriResolver.class;
+    }
 
     @Override
     public Class<? extends IValueConverterService> bindIValueConverterService() {

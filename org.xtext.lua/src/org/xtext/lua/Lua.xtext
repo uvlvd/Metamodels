@@ -8,10 +8,27 @@ generate lua "http://www.xtext.org/lua/Lua"
 Chunk hidden(WS, COMMENT):
 	block=Block;
 
-// ChunkSet is only used for merging resources before propagation.
-ChunkSet:
-	{ChunkSet} (chunks+=Chunk)*
+// The synthetic are only used for merging resources before propagation.
+// BEGIN SYNTHETIC RULES
+NamedChunk hidden(WS, COMMENT):
+	'--namedchunk@' name=LUA_STRING
+	chunk=Chunk
 ;
+
+Component hidden(WS, COMMENT):
+	{Component}
+	'component:'
+	name=LUA_STRING
+	=> '--chunks'
+	(=> chunks+=NamedChunk)*
+;
+
+ComponentSet hidden(WS, COMMENT):
+	{ComponentSet}
+	'components:'
+	(=> components+=Component)*
+;
+// END SYNTHETIC RULES
 
 Block hidden(WS, COMMENT):
 	{Block}
@@ -44,7 +61,7 @@ Statement hidden(WS, COMMENT):
 	| Statement_Functioncall
 	| Statement_Declaration;
 
-Statement_Declaration:
+Statement_Declaration hidden(WS, COMMENT):
 //    Statement_GlobalFunction_Declaration |
 //    Statement_LocalFunction_Declaration |
 //    Statement_Local_Variable_Declaration |
@@ -52,27 +69,27 @@ Statement_Declaration:
 	| Statement_Assignment;
 
 // A block can be explicitly delimited to produce a single statement. "do ... end"
-Statement_Block:
+Statement_Block returns BlockWrapper:
 	=>'do' block=Block 'end';
 
 // Control structure. "while ... do ... end"
-Statement_While returns ContainsBlock:
+Statement_While returns BlockWrapper:
 	'while' expression=Expression 'do' block=Block 'end';
 
 // Control structure. "repeat ... until ..."
-Statement_Repeat returns ContainsBlock:
+Statement_Repeat returns BlockWrapper:
 	'repeat' block=Block 'until' expression=Expression;
 
 // Control structure. "if ... then ... elseif ... elseif ... else ... end"
-Statement_If_Then_Else returns ContainsBlock:
+Statement_If_Then_Else returns BlockWrapper:
 	'if' ifExpression=Expression 'then' ifBlock=Block (elseIf+=Statement_If_Then_Else_ElseIfPart)* ('else'
 	elseBlock=Block)? 'end';
 
-Statement_If_Then_Else_ElseIfPart returns ContainsBlock:
+Statement_If_Then_Else_ElseIfPart returns BlockWrapper:
 	'elseif' elseifExpression=Expression 'then' elseifBlock=Block;
 
 // The numeric for loop repeats a block of code while a control variable runs through an arithmetic progression "for ...=..., ... [,...] do ... end"
-Statement_For returns ContainsBlock:
+Statement_For returns BlockWrapper:
 	'for'
 	arguments+=ArgReferenceable
 	(=>',' arguments+=ArgReferenceable)*
@@ -81,11 +98,11 @@ Statement_For returns ContainsBlock:
 	(=>',' argExpressions+=Expression)*
 	=>'do' block=Block 'end';
 
-//Statement_GlobalFunction_Declaration returns Referenceable:
+
 //    'function' name=QualifiedName function=Function 'end';
 Statement_Function_Declaration returns Referenceable:
-	('function' name=QualifiedName function=Function 'end')
-	| (local?='local' 'function' name=LUA_NAME function=Function 'end');
+	(functionDeclaration?='function' name=QualifiedName function=Function 'end')
+	| (local?='local' functionDeclaration?='function' name=LUA_NAME function=Function 'end');
 
 // Local variables can be declared anywhere inside a block. The declaration can include an initial assignment "local ... [= ...]"
 //Statement_Local_Variable_Declaration returns MultiReferenceable: 
@@ -95,7 +112,8 @@ Statement_Assignment returns MultiReferenceable:
 	(local?='local')?
 	refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
 	(=>',' refbles+=Referenceable)*
-	(=>'=' values+=Expression (=>',' values+=Expression)*)?;
+	(=>'=' values+=Expression (=>',' values+=Expression)*)?
+;
 
 Statement_Functioncall:
 	Expression_Functioncall;
@@ -231,7 +249,8 @@ Expression_Nesting returns Expression:
 // ****************************************************
 // FUNCTIONS
 // ****************************************************
-Function returns ContainsBlock:
+//Function returns BlockWrapper:
+Function:
 	=>'(' (arguments+=ArgReferenceable (',' arguments+=ArgReferenceable)* ','?)? (varArgs?='...')? ')' body=Block;
 
 // Some syntactic sugar: strings and field can be passed as parameters without bracket

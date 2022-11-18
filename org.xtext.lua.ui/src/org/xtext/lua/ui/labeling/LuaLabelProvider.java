@@ -8,8 +8,7 @@ import org.eclipse.emf.edit.ui.provider.AdapterFactoryLabelProvider;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.ui.label.DefaultEObjectLabelProvider;
 import org.xtext.lua.lua.Expression_Import;
-import org.xtext.lua.lua.MultiReferenceable;
-import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Refble;
 
 import com.google.inject.Inject;
 
@@ -37,21 +36,16 @@ public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 			var obj = (EObject) _obj;
 			var name = obj.eClass().getName();
 
-			if (obj instanceof Referenceable) {
-				var refble = (Referenceable) obj;
+			if (obj instanceof Refble) {
+				var refble = (Refble) obj;
 
 				var fqn = qualifiedNameProvider.apply(refble);
 				if (fqn != null) {
 					name += " \"" + fqn.toString() + "\"";
 				}
-			} else if (obj instanceof MultiReferenceable) {
-				final var multiRefble = (MultiReferenceable) obj;
-				if (multiRefble.isLocal()) {
-					name = "Local " + name;
-				}
 			} else if (obj instanceof Expression_Import) {
-				name += " \"" + ((Expression_Import) obj).getImportURI() + "\"";
-			} else if (superName != null) {
+				name += " " + ((Expression_Import) obj).getImportURI();
+			} else if (superName != null && superName instanceof String) {
 				name += " " + superName;
 			}
 			return name;

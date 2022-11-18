@@ -15,7 +15,7 @@ import org.eclipse.xtext.nodemodel.INode;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Chunk;
 import org.xtext.lua.lua.LuaFactory;
-import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Statement_Global_Function_Declaration;
 
 public class LuaLinkingService extends DefaultLinkingService {
     private static final Logger LOGGER = Logger.getLogger(LuaLinkingService.class.getPackageName());
@@ -57,9 +57,9 @@ public class LuaLinkingService extends DefaultLinkingService {
 
         // if we already created a mock refble we return it
         for (var statement : mockBlock.getStatements()) {
-            if (statement instanceof Referenceable) {
-                var refble = (Referenceable) statement;
-                if (refble.getName()
+            if (statement instanceof Statement_Global_Function_Declaration) {
+                var funcDecl = (Statement_Global_Function_Declaration) statement;
+                if (funcDecl.getName()
                     .equals(name)) {
                     return statement;
                 }
@@ -68,12 +68,11 @@ public class LuaLinkingService extends DefaultLinkingService {
 
         // if not we create one
         LOGGER.debug(String.format("Mocking Referenceable with name %s", name));
-        var refble = LuaFactory.eINSTANCE.createReferenceable();
-        refble.setName(name);
-
+        var mockFunctionDecl = LuaFactory.eINSTANCE.createStatement_Global_Function_Declaration();
+        mockFunctionDecl.setName(name);
         mockBlock.getStatements()
-            .add(refble);
-        return refble;
+            .add(mockFunctionDecl);
+        return mockFunctionDecl;
     }
 
     @Override

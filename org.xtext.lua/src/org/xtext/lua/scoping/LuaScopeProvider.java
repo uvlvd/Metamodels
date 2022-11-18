@@ -23,7 +23,8 @@ import org.eclipse.xtext.scoping.impl.SimpleLocalScopeProvider;
 import org.eclipse.xtext.xbase.lib.IterableExtensions;
 import org.xtext.lua.lua.Expression_Function;
 import org.xtext.lua.lua.Expression_VariableName;
-import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Field_AddEntryToTable;
+import org.xtext.lua.lua.Refble;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -41,7 +42,6 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
 
     @Inject
     private IQualifiedNameConverter nameConverter;
-
 
     @Override
     protected ISelectable getAllDescriptions(Resource resource) {
@@ -63,8 +63,8 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
             @Override
             public List<IEObjectDescription> apply(EObject eObject) {
                 var descriptions = new ArrayList<IEObjectDescription>();
-                if (eObject instanceof Referenceable) {
-                    var refble = (Referenceable) eObject;
+                if (eObject instanceof Refble) {
+                    var refble = (Refble) eObject;
                     var fqn = getNameProvider().apply(refble);
                     if (fqn != null) {
 
@@ -74,7 +74,8 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
 
                         // Add alias for functions in tables because of the member syntactic sugar
                         // E.g. Foo:bar(...)
-                        if (refble.getEntryValue() instanceof Expression_Function) {
+                        if (eObject instanceof Field_AddEntryToTable
+                                && ((Field_AddEntryToTable) eObject).getValue() instanceof Expression_Function) {
                             var aliasString = fqn.skipLast(1)
                                 .toString() + ":"
                                     + fqn.skipFirst(fqn.getSegmentCount() - 1)
@@ -89,8 +90,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
                             // extract the reference name from the node model
                             var node = NodeModelUtils.getNode(value);
                             var aliasTarget = NodeModelUtils.getTokenText(node);
-                            LOGGER
-                                .debug(String.format("Aliasing assignment: %s -> %s", refble.getName(), aliasTarget));
+                            LOGGER.debug(String.format("Aliasing assignment: %s -> %s", refble.getName(), aliasTarget));
                             aliases.put(aliasTarget, description);
                         }
                     }

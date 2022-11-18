@@ -8,28 +8,32 @@ generate lua "http://www.xtext.org/lua/Lua"
 Chunk hidden(WS, COMMENT):
 	block=Block;
 
+// We introduce some typen into the inheritence hiearchy (uses multiple inheritence)
+Refble:
+	Referenceable
+	| Argument
+	| Field_AddEntryToTable
+	| Statement_Function_Declaration;
+
 // The synthetic are only used for merging resources before propagation.
 // BEGIN SYNTHETIC RULES
 NamedChunk hidden(WS, COMMENT):
 	'--namedchunk@' name=LUA_STRING
-	chunk=Chunk
-;
+	chunk=Chunk;
 
 Component hidden(WS, COMMENT):
 	{Component}
 	'component:'
 	name=LUA_STRING
-	=> '--chunks'
-	(=> chunks+=NamedChunk)*
-;
+	=>'--chunks'
+	(=>chunks+=NamedChunk)*;
 
 ComponentSet hidden(WS, COMMENT):
 	{ComponentSet}
 	'components:'
-	(=> components+=Component)*
-;
-// END SYNTHETIC RULES
+	(=>components+=Component)*;
 
+// END SYNTHETIC RULES
 Block hidden(WS, COMMENT):
 	{Block}
 	(statements+=Statement (=>';')?)*
@@ -59,67 +63,84 @@ Statement hidden(WS, COMMENT):
 	| Statement_If_Then_Else
 	| Statement_For
 	| Statement_Functioncall
-	| Statement_Declaration;
+	| Statement_Function_Declaration
+	| Statement_Assignment;
+
+// Blockwrapping statements
+BlockWrapper hidden(WS, COMMENT):
+	{BlockWrapper} block=Block
+	| Function
+	| Statement_Block
+	| Statement_While
+	| Statement_Repeat
+	| Statement_If_Then_Else
+	| Statement_If_Then_Else_ElseIfPart
+	| Statement_For;
 
 Statement_Declaration hidden(WS, COMMENT):
-//    Statement_GlobalFunction_Declaration |
-//    Statement_LocalFunction_Declaration |
-//    Statement_Local_Variable_Declaration |
-	Statement_Function_Declaration
+	{Statement_Declaration} local?='local'
+	| Statement_Function_Declaration
 	| Statement_Assignment;
 
 // A block can be explicitly delimited to produce a single statement. "do ... end"
-Statement_Block returns BlockWrapper:
-	=>'do' block=Block 'end';
+Statement_Block:
+	'do' block=Block 'end';
 
 // Control structure. "while ... do ... end"
-Statement_While returns BlockWrapper:
+Statement_While:
 	'while' expression=Expression 'do' block=Block 'end';
 
 // Control structure. "repeat ... until ..."
-Statement_Repeat returns BlockWrapper:
+Statement_Repeat:
 	'repeat' block=Block 'until' expression=Expression;
 
 // Control structure. "if ... then ... elseif ... elseif ... else ... end"
-Statement_If_Then_Else returns BlockWrapper:
-	'if' ifExpression=Expression 'then' ifBlock=Block (elseIf+=Statement_If_Then_Else_ElseIfPart)* ('else'
+Statement_If_Then_Else:
+	'if' ifExpression=Expression 'then' block=Block (elseIf+=Statement_If_Then_Else_ElseIfPart)* ('else'
 	elseBlock=Block)? 'end';
 
-Statement_If_Then_Else_ElseIfPart returns BlockWrapper:
-	'elseif' elseifExpression=Expression 'then' elseifBlock=Block;
+Statement_If_Then_Else_ElseIfPart:
+	'elseif' elseifExpression=Expression 'then' block=Block;
 
 // The numeric for loop repeats a block of code while a control variable runs through an arithmetic progression "for ...=..., ... [,...] do ... end"
-Statement_For returns BlockWrapper:
+Statement_For:
 	'for'
-	arguments+=ArgReferenceable
-	(=>',' arguments+=ArgReferenceable)*
+	arguments+=Argument
+	(=>',' arguments+=Argument)*
 	(numeric?='=' | generic?='in')
 	argExpressions+=Expression
 	(=>',' argExpressions+=Expression)*
 	=>'do' block=Block 'end';
 
-
 //    'function' name=QualifiedName function=Function 'end';
-Statement_Function_Declaration returns Referenceable:
-	(functionDeclaration?='function' name=QualifiedName function=Function 'end')
-	| (local?='local' functionDeclaration?='function' name=LUA_NAME function=Function 'end');
+Statement_Function_Declaration:
+	({Statement_Global_Function_Declaration} 'function' name=QualifiedName function=Function 'end')
+	| ({Statement_Local_Function_Declaration} 'local' 'function' name=LUA_NAME function=Function 'end');
 
 // Local variables can be declared anywhere inside a block. The declaration can include an initial assignment "local ... [= ...]"
 //Statement_Local_Variable_Declaration returns MultiReferenceable: 
 //    refbles+=Referenceable (=> ',' refbles+=Referenceable)*
 //    (=> '=' values+=Expression (=> ',' values+=Expression)*)?;
-Statement_Assignment returns MultiReferenceable:
-	(local?='local')?
-	refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
-	(=>',' refbles+=Referenceable)*
-	(=>'=' values+=Expression (=>',' values+=Expression)*)?
-;
+Statement_Assignment:
+	({Statement_Local_Assignment}
+		=> 'local'
+		refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
+		(=>',' refbles+=Referenceable)*
+		(=>'=' values+=Expression (=>',' values+=Expression)*)?
+	)
+	| ({Statement_Global_Assignment}
+		refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
+		(=>',' refbles+=Referenceable)*
+		(=>'=' values+=Expression (=>',' values+=Expression)*)?
+	);
 
 Statement_Functioncall:
-	Expression_Functioncall;
+	Expression_Functioncall
+	| Expression_Import
+;
 
 Statement_TableAssignment:
-	tableName=[Referenceable|QualifiedName]
+	tableName=[Refble|QualifiedName]
 	=>'['
 	indexExp=Expression
 	=>']'
@@ -225,11 +246,11 @@ Expression_Import:
 	=>')';
 
 Expression_Functioncall:
-	(calledFunction=[Referenceable|QualifiedName] =>calledFunctionArgs=Functioncall_Arguments);
+	(calledFunction=[Refble|QualifiedName] =>calledFunctionArgs=Functioncall_Arguments);
 
 Expression_VariableName:
 	{Expression_VariableName}
-	ref=[Referenceable|QualifiedName];
+	ref=[Refble|QualifiedName];
 
 // We only allow table accesses on variables
 Expression_TableAccess:
@@ -251,7 +272,7 @@ Expression_Nesting returns Expression:
 // ****************************************************
 //Function returns BlockWrapper:
 Function:
-	=>'(' (arguments+=ArgReferenceable (',' arguments+=ArgReferenceable)* ','?)? (varArgs?='...')? ')' body=Block;
+	=>'(' (arguments+=Argument (',' arguments+=Argument)* ','?)? (varArgs?='...')? ')' block=Block;
 
 // Some syntactic sugar: strings and field can be passed as parameters without bracket
 Functioncall_Arguments:
@@ -273,8 +294,8 @@ Field_AddEntryToTable_Brackets:
 	'[' indexExpression=Expression ']' '=' value=Expression;
 
 // A field of the form "name = exp" is equivalent to ["name"] = exp
-Field_AddEntryToTable returns Referenceable:
-	name=LUA_NAME '=' entryValue=Expression;
+Field_AddEntryToTable:
+	name=LUA_NAME '=' value=Expression;
 
 // fields of the form "exp" are equivalent to [i] = exp
 Field_AppendEntryToTable:
@@ -284,7 +305,7 @@ Field_AppendEntryToTable:
 Referenceable:
 	name=QualifiedName;
 
-ArgReferenceable returns Referenceable:
+Argument returns Referenceable:
 	name=LUA_NAME;
 
 QualifiedName:
@@ -319,11 +340,9 @@ terminal LUA_NAME returns ecore::EString:
 //	| ('"' 
 //		('\\' ('a' | 'b' | 'f' | 'n' | 'r' | 't' | 'v' | '"' | "'" | '\\' | ('0'..'9' ('0'..'9' ('0'..'9')))) | !('\\' | '"'))* 
 //	'"');
-
 terminal LUA_STRING:
-		'"' ( '\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\'|'"') )* '"' |
-		"'" ( '\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\'|"'") )* "'"
-;
+	'"' ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | '"'))* '"' |
+	"'" ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | "'"))* "'";
 
 //terminal LUA_IMPORT_STRING returns ecore::EString:
 //	('a'..'z'|'A'..'Z'|'_'|'-'|'/'|'.')*

@@ -7,24 +7,32 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.resource.ISelectable;
 import org.eclipse.xtext.resource.impl.AliasedEObjectDescription;
+import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.impl.MultimapBasedSelectable;
 import org.eclipse.xtext.scoping.impl.SimpleLocalScopeProvider;
+import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.eclipse.xtext.xbase.lib.IterableExtensions;
+import org.xtext.lua.lua.Block;
+import org.xtext.lua.lua.BlockWrapperWithArgs;
 import org.xtext.lua.lua.Expression_Function;
 import org.xtext.lua.lua.Expression_VariableName;
 import org.xtext.lua.lua.Field_AddEntryToTable;
 import org.xtext.lua.lua.Refble;
+import org.xtext.lua.lua.Statement_Assignment;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -42,6 +50,83 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
 
     @Inject
     private IQualifiedNameConverter nameConverter;
+
+    private IScope getScopeOfBlock(Block block, EReference reference) {
+        var parentScope = getScope(block, reference);
+
+        List<Refble> refblesInBlock = new ArrayList<Refble>();
+
+        if (block.eContainer() instanceof BlockWrapperWithArgs) {
+            // add arguments to refbles
+            var argsOfBlock = ((BlockWrapperWithArgs) block.eContainer()).getArguments();
+            argsOfBlock.forEach(arg -> refblesInBlock.add(arg));
+        }
+        for (var statement : block.getStatements()) {
+            if (statement instanceof Statement_Assignment) {
+                var assignment = (Statement_Assignment) statement;
+                refblesInBlock.addAll(EcoreUtil2.getAllContentsOfType(assignment, Refble.class));
+//                refblesInBlock.addAll(assignment.getRefbles());
+//                for (var expr : assignment.getValues()) {
+//                    if (expr instanceof Expression_TableConstructor) {
+//                        var tableFields = EcoreUtil2.getAllContentsOfType(expr, Ref)
+//                    }
+//                }
+            }
+        }
+
+        List<IEObjectDescription> descriptions = refblesInBlock.stream()
+            .map(refble -> describeRefble(refble))
+            .flatMap(List::stream)
+            .collect(Collectors.toList());
+
+        var thisScope = new SimpleScope(parentScope, descriptions, isIgnoreCase(reference));
+        return thisScope;
+    }
+
+    @Override
+    public IScope getScope(final EObject context, final EReference reference) {
+        var parentBlock = EcoreUtil2.getContainerOfType(context.eContainer(), Block.class);
+        if (parentBlock == null) {
+            // if we have no parent anymore we delegate to the global scope
+            return super.getGlobalScope(context.eResource(), reference);
+        }
+        var blockScope = getScopeOfBlock(parentBlock, reference);
+        return blockScope;
+    }
+
+    private List<IEObjectDescription> describeRefble(Refble refble) {
+        var descriptions = new ArrayList<IEObjectDescription>();
+        var fqn = getNameProvider().apply(refble);
+        if (fqn != null) {
+
+            // create description
+            var description = EObjectDescription.create(fqn, refble);
+            descriptions.add(description);
+
+            // Add alias for functions in tables because of the member syntactic sugar
+            // E.g. Foo:bar(...)
+            if (refble instanceof Field_AddEntryToTable
+                    && ((Field_AddEntryToTable) refble).getValue() instanceof Expression_Function) {
+                var aliasString = fqn.skipLast(1)
+                    .toString() + ":"
+                        + fqn.skipFirst(fqn.getSegmentCount() - 1)
+                            .toString();
+                var aliasQn = nameConverter.toQualifiedName(aliasString);
+                descriptions.add(new AliasedEObjectDescription(aliasQn, description));
+            }
+
+            // Check if this is an aliasing assignment
+//            var value = LuaUtil.resolveRefToValue(refble);
+//            if (value instanceof Expression_VariableName) {
+//                // extract the reference name from the node model
+//                var node = NodeModelUtils.getNode(value);
+//                var aliasTarget = NodeModelUtils.getTokenText(node);
+//                LOGGER.debug(String.format("Aliasing assignment: %s -> %s", refble.getName(), aliasTarget));
+//                aliases.put(aliasTarget, description);
+//            }
+        }
+        return descriptions;
+    }
 
     @Override
     protected ISelectable getAllDescriptions(Resource resource) {

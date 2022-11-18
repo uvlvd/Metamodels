@@ -69,13 +69,17 @@ Statement hidden(WS, COMMENT):
 // Blockwrapping statements
 BlockWrapper hidden(WS, COMMENT):
 	{BlockWrapper} block=Block
-	| Function
+	| BlockWrapperWithArgs
 	| Statement_Block
 	| Statement_While
 	| Statement_Repeat
 	| Statement_If_Then_Else
-	| Statement_If_Then_Else_ElseIfPart
-	| Statement_For;
+	| Statement_If_Then_Else_ElseIfPart;
+	
+BlockWrapperWithArgs hidden (WS, COMMENT):
+	Function
+	| Statement_For
+;
 
 Statement_Declaration hidden(WS, COMMENT):
 	{Statement_Declaration} local?='local'
@@ -132,7 +136,7 @@ Statement_Assignment:
 	| Statement_Global_Assignment;
 
 Statement_Local_Assignment:
-	=> 'local'
+	=>'local'
 	refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
 	(=>',' refbles+=Referenceable)*
 	(=>'=' values+=Expression (=>',' values+=Expression)*)?;
@@ -146,6 +150,17 @@ Statement_Functioncall:
 	Expression_Functioncall
 	| Expression_Import;
 
+//Statement_Import:
+//	Statement_Import_Bound
+//	| Statement_Import_Unbound;
+//
+//Statement_Import_Unbound:
+//	importExpr=Expression_Import;
+//
+//Statement_Import_Bound:
+//	boundVariable=Referenceable =>'=' importExpr=Expression_Import;
+
+// TODO should this be included somewhere?
 Statement_TableAssignment:
 	tableName=[Refble|QualifiedName]
 	=>'['

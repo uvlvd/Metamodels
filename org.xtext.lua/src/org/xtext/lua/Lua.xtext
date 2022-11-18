@@ -114,30 +114,37 @@ Statement_For:
 
 //    'function' name=QualifiedName function=Function 'end';
 Statement_Function_Declaration:
-	({Statement_Global_Function_Declaration} 'function' name=QualifiedName function=Function 'end')
-	| ({Statement_Local_Function_Declaration} 'local' 'function' name=LUA_NAME function=Function 'end');
+	Statement_Local_Function_Declaration
+	| Statement_Global_Function_Declaration;
+
+Statement_Local_Function_Declaration:
+	=>'local' 'function' name=LUA_NAME function=Function 'end';
+
+Statement_Global_Function_Declaration:
+	'function' name=QualifiedName function=Function 'end';
 
 // Local variables can be declared anywhere inside a block. The declaration can include an initial assignment "local ... [= ...]"
 //Statement_Local_Variable_Declaration returns MultiReferenceable: 
 //    refbles+=Referenceable (=> ',' refbles+=Referenceable)*
 //    (=> '=' values+=Expression (=> ',' values+=Expression)*)?;
 Statement_Assignment:
-	({Statement_Local_Assignment}
-		=> 'local'
-		refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
-		(=>',' refbles+=Referenceable)*
-		(=>'=' values+=Expression (=>',' values+=Expression)*)?
-	)
-	| ({Statement_Global_Assignment}
-		refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
-		(=>',' refbles+=Referenceable)*
-		(=>'=' values+=Expression (=>',' values+=Expression)*)?
-	);
+	Statement_Local_Assignment
+	| Statement_Global_Assignment;
+
+Statement_Local_Assignment:
+	=> 'local'
+	refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
+	(=>',' refbles+=Referenceable)*
+	(=>'=' values+=Expression (=>',' values+=Expression)*)?;
+
+Statement_Global_Assignment:
+	refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
+	(=>',' refbles+=Referenceable)*
+	(=>'=' values+=Expression (=>',' values+=Expression)*)?;
 
 Statement_Functioncall:
 	Expression_Functioncall
-	| Expression_Import
-;
+	| Expression_Import;
 
 Statement_TableAssignment:
 	tableName=[Refble|QualifiedName]

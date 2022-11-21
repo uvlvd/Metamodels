@@ -29,6 +29,7 @@ import org.eclipse.xtext.xbase.lib.IterableExtensions;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.BlockWrapperWithArgs;
 import org.xtext.lua.lua.Expression_Function;
+import org.xtext.lua.lua.Expression_TableConstructor;
 import org.xtext.lua.lua.Expression_VariableName;
 import org.xtext.lua.lua.Field_AddEntryToTable;
 import org.xtext.lua.lua.Refble;
@@ -51,28 +52,39 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     @Inject
     private IQualifiedNameConverter nameConverter;
 
-    private IScope getScopeOfBlock(Block block, EReference reference) {
-        var parentScope = getScope(block, reference);
+    private List<Refble> getRefblesInAssignment(Statement_Assignment assignment) {
+        var refbles = new ArrayList<Refble>();
+        refbles.addAll(assignment.getRefbles());
+        for (var expr : assignment.getValues()) {
+            if (expr instanceof Expression_TableConstructor) {
+                // if we assign a table we also pull in its fields
+                var tableFields = EcoreUtil2.getAllContentsOfType(expr, Field_AddEntryToTable.class);
+                refbles.addAll(tableFields);
+            }
+        }
+        return refbles;
+    }
 
-        List<Refble> refblesInBlock = new ArrayList<Refble>();
+    private List<Refble> getRefblesInBlock(Block block) {
+        List<Refble> refbles = new ArrayList<Refble>();
 
         if (block.eContainer() instanceof BlockWrapperWithArgs) {
             // add arguments to refbles
             var argsOfBlock = ((BlockWrapperWithArgs) block.eContainer()).getArguments();
-            argsOfBlock.forEach(arg -> refblesInBlock.add(arg));
+            argsOfBlock.forEach(arg -> refbles.add(arg));
         }
         for (var statement : block.getStatements()) {
             if (statement instanceof Statement_Assignment) {
-                var assignment = (Statement_Assignment) statement;
-                refblesInBlock.addAll(EcoreUtil2.getAllContentsOfType(assignment, Refble.class));
-//                refblesInBlock.addAll(assignment.getRefbles());
-//                for (var expr : assignment.getValues()) {
-//                    if (expr instanceof Expression_TableConstructor) {
-//                        var tableFields = EcoreUtil2.getAllContentsOfType(expr, Ref)
-//                    }
-//                }
+                refbles.addAll(getRefblesInAssignment((Statement_Assignment) statement));
             }
         }
+        return refbles;
+    }
+
+    private IScope getScopeOfBlock(Block block, EReference reference) {
+        var parentScope = getScope(block, reference);
+
+        var refblesInBlock = getRefblesInBlock(block);
 
         List<IEObjectDescription> descriptions = refblesInBlock.stream()
             .map(refble -> describeRefble(refble))

@@ -75,15 +75,13 @@ BlockWrapper hidden(WS, COMMENT):
 	| Statement_Repeat
 	| Statement_If_Then_Else
 	| Statement_If_Then_Else_ElseIfPart;
-	
-BlockWrapperWithArgs hidden (WS, COMMENT):
+
+BlockWrapperWithArgs hidden(WS, COMMENT):
 	Function
-	| Statement_For
-;
+	| Statement_For;
 
 Statement_Declaration hidden(WS, COMMENT):
-	{Statement_Declaration} local?='local'
-	| Statement_Function_Declaration
+	Statement_Function_Declaration
 	| Statement_Assignment;
 
 // A block can be explicitly delimited to produce a single statement. "do ... end"
@@ -159,7 +157,6 @@ Statement_Functioncall:
 //
 //Statement_Import_Bound:
 //	boundVariable=Referenceable =>'=' importExpr=Expression_Import;
-
 // TODO should this be included somewhere?
 Statement_TableAssignment:
 	tableName=[Refble|QualifiedName]
@@ -268,7 +265,7 @@ Expression_Import:
 	=>')';
 
 Expression_Functioncall:
-	(calledFunction=[Refble|QualifiedName] =>calledFunctionArgs=Functioncall_Arguments);
+	calledFunction=[Refble|QualifiedName] =>calledFunctionArgs=Functioncall_Arguments;
 
 Expression_VariableName:
 	{Expression_VariableName}
@@ -332,6 +329,9 @@ Argument returns Referenceable:
 
 QualifiedName:
 	LUA_NAME (=>'.' LUA_NAME)* (=>':' LUA_NAME)?;
+
+QualifiedNameWithoutTableAccess:
+	LUA_NAME (=>'.' LUA_NAME)*;
 
 // ****************************************************
 // TERMINALS

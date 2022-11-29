@@ -34,6 +34,7 @@ import org.xtext.lua.lua.Expression_VariableName;
 import org.xtext.lua.lua.Field_AddEntryToTable;
 import org.xtext.lua.lua.Refble;
 import org.xtext.lua.lua.Statement_Assignment;
+import org.xtext.lua.lua.Statement_Declaration;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -76,6 +77,8 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
         for (var statement : block.getStatements()) {
             if (statement instanceof Statement_Assignment) {
                 refbles.addAll(getRefblesInAssignment((Statement_Assignment) statement));
+            } else if (statement instanceof Refble) {
+                refbles.add((Refble) statement);
             }
         }
         return refbles;

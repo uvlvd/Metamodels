@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="ASCII"?>
 <lua:Chunk xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:lua="http://www.xtext.org/lua/Lua">
   <block>
-    <statements xsi:type="lua:Referenceable" local="true" name="foo">
+    <statements xsi:type="lua:Statement_Local_Function_Declaration" name="foo">
       <function>
-        <body>
+        <block>
           <returnValue xsi:type="lua:LastStatement_ReturnWithValue">
             <returnValues xsi:type="lua:Expression_String" value="&quot;foo&quot;"/>
           </returnValue>
-        </body>
+        </block>
       </function>
     </statements>
-    <statements xsi:type="lua:MultiReferenceable">
+    <statements xsi:type="lua:Statement_Global_Assignment">
       <refbles name="result"/>
       <values xsi:type="lua:Expression_Functioncall">
         <calledFunction href="./test-data/foo.lua#|0"/>

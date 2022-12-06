@@ -12,119 +12,127 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
 import org.xtext.lua.lua.Chunk
+import org.xtext.lua.lua.Expression_Functioncall
+import org.xtext.lua.lua.Expression_TableConstructor
+import org.xtext.lua.lua.Expression_VariableName
+import org.xtext.lua.lua.Field_AddEntryToTable
+import org.xtext.lua.lua.Refble
+import org.xtext.lua.lua.Statement_Functioncall
+import org.xtext.lua.lua.Statement_Global_Assignment
+import org.xtext.lua.lua.Statement_Global_Function_Declaration
+import org.xtext.lua.lua.Statement_Local_Assignment
+import org.xtext.lua.lua.Statement_Local_Function_Declaration
 
+/*
+ * check if a references point to the correct refbles
+ */
 @ExtendWith(InjectionExtension)
 @InjectWith(LuaInjectorProvider)
 class LuaScopingTest {
 	@Inject extension ParseHelper<Chunk>
 	@Inject extension ValidationTestHelper
 	
+	def Chunk getParsedChunk(String snippet) {
+		val chunk = parse(snippet)
+		Assertions.assertTrue(chunk.eResource.errors.isEmpty)
+		assertNoIssues(chunk)
+		chunk
+	}
+
+	@Test
+	def void testRefFunctionDecl() {
+		val snippet = '''
+			function foo(...)
+			end
+			result = foo()
+			foo()
+		'''
+		val parsed = getParsedChunk(snippet)
+		Assertions.assertEquals(3, parsed.block.statements.length)
+
+		val foo = parsed.block.statements.get(0) as Statement_Global_Function_Declaration as Refble
+
+		// with assignment
+		val hasCall = parsed.block.statements.get(1) as Statement_Global_Assignment
+		val fooCall =  hasCall.values.get(0) as Expression_Functioncall
+		val fooRef = fooCall.calledFunction
+		Assertions.assertEquals(foo, fooRef)
+
+
+		// without assignment
+		val fooCallFlat = parsed.block.statements.get(2) as Statement_Functioncall as Expression_Functioncall
+		val fooRefFlat = fooCallFlat.calledFunction
+		Assertions.assertEquals(foo, fooRefFlat)
+	}
 	
-	val successSrc = #{
-		// Uses qualified name for crossref
+	@Test
+	def void testRefFunctionDeclLocal() {
+		val snippet = '''
+			local function foo(...)
+			end
+			local result = foo()
+			foo()
 		'''
-		Foo = {
-			bar = {
-				baz = 42
+		val parsed = getParsedChunk(snippet)
+		Assertions.assertEquals(3, parsed.block.statements.length)
+
+		val foo = parsed.block.statements.get(0) as Statement_Local_Function_Declaration as Refble
+
+		// with assignment
+		val hasCall = parsed.block.statements.get(1) as Statement_Local_Assignment
+		val fooCall =  hasCall.values.get(0) as Expression_Functioncall
+		val fooRef = fooCall.calledFunction
+		Assertions.assertEquals(foo, fooRef)
+
+
+		// without assignment
+		val fooCallFlat = parsed.block.statements.get(2) as Statement_Functioncall as Expression_Functioncall
+		val fooRefFlat = fooCallFlat.calledFunction
+		Assertions.assertEquals(foo, fooRefFlat)
+	}
+
+	@Test
+	def void testRefSimpleAssignment() {
+		val snippet = '''
+			bar = 42
+			result = bar
+		'''
+		val parsed = getParsedChunk(snippet)
+		Assertions.assertEquals(2, parsed.block.statements.length)
+
+		val hasBar = parsed.block.statements.get(0) as Statement_Global_Assignment
+		val bar = hasBar.refbles.get(0)
+
+		val hasRef = parsed.block.statements.get(1) as Statement_Global_Assignment
+		val barRef = (hasRef.values.get(0) as Expression_VariableName).ref
+
+		// check if barRef points to bar
+		Assertions.assertEquals(bar, barRef)
+	}
+
+	/*
+	 * check if a reference points to the correct refble
+	 */
+	@Test
+	def void testRefTableAssignment() {
+		val snippet = '''
+			Foo = {
+				bar = 42
 			}
-		}
-		
-		result = Foo.bar.baz
+			result = Foo.bar
 		'''
-		,
-		// global function
-		'''
-		function foo(...)
-		end
+		val parsed = getParsedChunk(snippet)
+		Assertions.assertEquals(2, parsed.block.statements.length)
 
-		foo()
-		result = foo()
-		'''
-		, 
-		// local function
-		'''
-		local function foo(...)
-		end
+		val hasBar = parsed.block.statements.get(0) as Statement_Global_Assignment
+		val fooList = hasBar.values.get(0) as Expression_TableConstructor
+		// this field is refble
+		val bar = fooList.fields.get(0) as Field_AddEntryToTable
 
-		foo()
-		result = foo()
-		'''
-		,
-		// Multi Assignments
-		'''
-		foo, bar = 42, 43
-		'''
+		val hasRef = parsed.block.statements.get(1) as Statement_Global_Assignment
+		val barRef = (hasRef.values.get(0) as Expression_VariableName).ref
+
+		// check if barRef points to bar
+		Assertions.assertEquals(bar, barRef)
 	}
-
-	val failureSrc = #{
-		// no self reference
-		'''
-		hello = hello
-		'''
-		,
-		// no access to uncalled function
-		'''
-		local function foo(...)
-			local bar = 42
-		end
-		
-		result = foo.bar
-		'''
-		,
-		// no access to uncalled function
-		'''
-		local function foo(...)
-			local bar = 42
-		end
-		
-		result = bar
-		'''
-		,
-		// Cannot declare a qualified function without declaring the table first
-		'''
-		function Foo.bar(...)
-		end
-		'''
-	}
-
-	@Test
-	def void testSuccessfulScoping() {
-		val falseNegs = newArrayList
-		successSrc.forEach[
-			val result = parse(it)
-			val errors = result.eResource.errors
-			if (!errors.isEmpty)
-				falseNegs.add('''Unexpected errors:
-				«errors.join(", ")»
-				in:
-				«it»
-				''')
-			assertNoIssues(result)
-		]
-		Assertions.assertTrue(falseNegs.isEmpty, '''There were false negatives:
-		«falseNegs.join('\n')»
-		''') 
-	}
-
-	@Test
-	def void testFailureScoping() {
-		val falsePositives = newArrayList
-		failureSrc.forEach[
-			val result = parse(it)
-			val errors = result.eResource.errors
-//			ValidationTestHelper.assertIssue(result, Chunk.eClass, "Foo", Severity.INFO)
-
-//			assertIssue(result, result.eClass,)
-
-
-			if (errors.isEmpty)
-				falsePositives.add('''Missing expected errors in:
-				«it»
-				''')
-		]
-		Assertions.assertTrue(falsePositives.isEmpty, '''There were false positives:
-		«falsePositives.join('\n')»
-		''') 
-	}
-
 }

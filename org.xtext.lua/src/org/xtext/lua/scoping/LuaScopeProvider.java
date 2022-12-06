@@ -34,7 +34,6 @@ import org.xtext.lua.lua.Expression_VariableName;
 import org.xtext.lua.lua.Field_AddEntryToTable;
 import org.xtext.lua.lua.Refble;
 import org.xtext.lua.lua.Statement_Assignment;
-import org.xtext.lua.lua.Statement_Declaration;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -66,6 +65,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
         return refbles;
     }
 
+//     TODO is this complete?
     private List<Refble> getRefblesInBlock(Block block) {
         List<Refble> refbles = new ArrayList<Refble>();
 

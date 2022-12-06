@@ -26,7 +26,7 @@ import org.xtext.lua.lua.Chunk
 class LuaParsingTest {
 	@Inject extension ParseHelper<Chunk>
 	@Inject extension Provider<XtextResourceSet>
-	
+
 	val luaSnippet = '''
 		num = 666
 		
@@ -82,12 +82,11 @@ class LuaParsingTest {
 		result.eResource.save(outputStream, saveOptions)
 		Assertions.assertNotEquals(outputStream.toString(), luaSnippetWithComment)
 	}
-	
+
 	@Test
 	def void testXMIexport() {
 //		Setting the path like this did not work surprisingly: 
 //		new StandaloneSetup().platformUri = "./test-data/"
-
 		val injector = new LuaStandaloneSetup().createInjectorAndDoEMFRegistration()
 		var XtextResourceSet rs = injector.getInstance(XtextResourceSet)
 		var Resource r1 = rs.getResource(URI.createURI("./test-data/foo.lua"), true)
@@ -97,26 +96,21 @@ class LuaParsingTest {
 		r2.save(null);
 	}
 
-		@Test
+	@Test
 	def void testDirectoryParsing() {
 		val rs = get()
 		val appPath = Paths.get("../caseStudy1")
 		val matcher = FileSystems.^default.getPathMatcher("glob:**.lua")
 
 		try (val paths = Files.walk(appPath))
-			paths
-				.filter[p | matcher.matches(p)]
-				.map[p | URI.createURI(p.toString)] // this is not the same as `p.toUri()` !
-				.forEach[u | rs.getResource(u, true)]
-		
+			paths.filter[p|matcher.matches(p)].map[p|URI.createURI(p.toString)] // this is not the same as `p.toUri()` !
+			.forEach[u|rs.getResource(u, true)]
 		// print the resources
-		rs.resources.forEach[r | println(r)]
-		
+		rs.resources.forEach[r|println(r)]
+
 //		var Resource r2 = rs.createResource(URI.createURI("./test-data/caseStudy1.xmi"));
 //		r2.getContents().add(allResources);
 //		r2.save(null);
-			
-		
 //		var Resource r1 = rs.getResource(URI.createURI("foo.lua"), true)
 //		r1.load(null);
 //		var Resource r2 = rs.createResource(URI.createURI("foo.xmi"));

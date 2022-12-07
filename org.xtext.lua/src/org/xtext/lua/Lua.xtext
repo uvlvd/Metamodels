@@ -65,6 +65,7 @@ Statement hidden(WS, COMMENT):
 	| Statement_Functioncall
 	| Statement_Function_Declaration
 	| Statement_Assignment;
+//	| Statement_TableAssignment;
 
 // Blockwrapping statements
 BlockWrapper hidden(WS, COMMENT):
@@ -133,38 +134,33 @@ Statement_Assignment:
 	Statement_Local_Assignment
 	| Statement_Global_Assignment;
 
+
+// Assignment_Destination is only used in the assignments
+Assignment_Destination:
+	Referenceable
+	| Expression_TableAccess 
+;
+
 Statement_Local_Assignment:
 	=>'local'
-	refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
-	(=>',' refbles+=Referenceable)*
+	dests+=Assignment_Destination
+	(=>',' dests+=Assignment_Destination)*
 	(=>'=' values+=Expression (=>',' values+=Expression)*)?;
 
 Statement_Global_Assignment:
-	refbles+=Referenceable (=>'[' indexExp=Expression =>']')?
-	(=>',' refbles+=Referenceable)*
+	dests+=Assignment_Destination
+	(=>',' dests+=Assignment_Destination)*
 	(=>'=' values+=Expression (=>',' values+=Expression)*)?;
 
 Statement_Functioncall:
 	Expression_Functioncall
 	| Expression_Import;
 
-//Statement_Import:
-//	Statement_Import_Bound
-//	| Statement_Import_Unbound;
-//
-//Statement_Import_Unbound:
-//	importExpr=Expression_Import;
-//
-//Statement_Import_Bound:
-//	boundVariable=Referenceable =>'=' importExpr=Expression_Import;
 // TODO should this be included somewhere?
-Statement_TableAssignment:
-	tableName=[Refble|QualifiedName]
-	=>'['
-	indexExp=Expression
-	=>']'
-	=>'='
-	values=Expression;
+//Statement_TableAssignment:
+//	tableAccess=Expression_TableAccess
+//	=>'='
+//	values=Expression;
 
 // ****************************************************
 // EXPRESSIONS
@@ -274,10 +270,11 @@ Expression_VariableName:
 // We only allow table accesses on variables
 Expression_TableAccess:
 //	indexableExpression=Indexable_Expression
-	indexableExpression=Expression_VariableName
-	=>'['
-	indexExpression=Expression
-	=>']';
+	indexableExpression=(Expression_VariableName)
+	(=>'['
+	indexExpression+=Expression
+	=>']')+
+;
 
 Expression_Nesting returns Expression:
 	=>'(' Expression ')';

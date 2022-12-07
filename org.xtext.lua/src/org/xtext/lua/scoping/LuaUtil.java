@@ -3,8 +3,8 @@ package org.xtext.lua.scoping;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
+import org.xtext.lua.lua.Assignment_Destination;
 import org.xtext.lua.lua.Expression;
-import org.xtext.lua.lua.Refble;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Statement_Assignment;
 import org.xtext.lua.lua.Statement_Declaration;
@@ -56,7 +56,7 @@ public class LuaUtil {
      * 
      * This method can be used to e.g. resolve val2 to ref2
      */
-    public static Referenceable resolveValueToRef(Expression expression) {
+    public static Assignment_Destination resolveValueToDest(Expression expression) {
         if (expression.eContainer() instanceof Statement_Assignment) {
             var assignment = (Statement_Assignment) expression.eContainer();
 
@@ -66,7 +66,7 @@ public class LuaUtil {
                 if (index < 0)
                     return null; // expression did not exist
 
-                return assignment.getRefbles()
+                return assignment.getDests()
                     .get(index);
             }
         }
@@ -81,7 +81,7 @@ public class LuaUtil {
      * 
      * This method can be used to e.g. resolve ref1 to val1
      */
-    public static Expression resolveRefToValue(Refble refble) {
+    public static Expression resolveRefToValue(Referenceable refble) {
         if (!(refble.eContainer() instanceof Statement_Assignment)) {
             LOGGER.debug("resolveRefToValue: Cannot resolve Referenceable that is outside a MultiReferenceable");
             return null;
@@ -93,7 +93,7 @@ public class LuaUtil {
             return null; // expression did not exist
         }
 
-        var index = assignment.getRefbles()
+        var index = assignment.getDests()
             .indexOf(refble);
         if (index < 0) {
             LOGGER.debug("resolveRefToValue: expression does not exist");

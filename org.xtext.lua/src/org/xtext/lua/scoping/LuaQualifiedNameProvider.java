@@ -6,6 +6,7 @@ import org.eclipse.xtext.naming.QualifiedName;
 import org.xtext.lua.lua.Expression_TableConstructor;
 import org.xtext.lua.lua.Field_AddEntryToTable;
 import org.xtext.lua.lua.Refble;
+import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Statement_Assignment;
 
 public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNameProvider {
@@ -20,8 +21,9 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
                 var tableConstructor = (Expression_TableConstructor) obj.eContainer();
                 if (tableConstructor.eContainer() instanceof Statement_Assignment) {
                     // find the refble that is associated with us in the parent multirefble
-                    var myRefble = LuaUtil.resolveValueToRef(tableConstructor);
-                    if (myRefble != null) {
+                    var dest = LuaUtil.resolveValueToDest(tableConstructor);
+                    if (dest != null && dest instanceof Referenceable) {
+                        var myRefble = (Referenceable) dest;
                         var myName = myRefble.getName() + "." + computedFQN.toString();
                         return this.getConverter()
                             .toQualifiedName(myName);

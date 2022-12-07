@@ -9,6 +9,7 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.ArrayList
 import javax.inject.Inject
 import org.eclipse.emf.common.util.URI
 import org.eclipse.emf.ecore.resource.Resource
@@ -43,7 +44,7 @@ class LuaParsingTest {
 
 	/* this is critical, as parsing it using the ParseHelper will create a synthetic
 	 * resource, where our stdlib injection scheme does _not_ work.
-	*/
+	 */
 	val luaSnippetWithStdLib = '''
 		local function foo()
 			print("foo bar")
@@ -60,25 +61,10 @@ class LuaParsingTest {
 		Assertions.assertTrue(errors.isEmpty, '''Unexpected errors: «errors.join(", ")»''')
 	}
 
-	def String stripComments(String luaCode) {
-		// strip comments
-		var striped = luaCode.replaceAll("(?m)--[^\n]*\n?", "")
-
-		// to leading and trailingwhite space characters
-		striped = striped.replaceAll("(?m)^[\t ]*", "")
-		striped = striped.replaceAll("(?m)[\t ]*$", "")
-
-		// only one newline between lines
-		striped = striped.replaceAll("\n+", "\n")
-		
-		// no newlines in first and last line 
-		striped.trim()
-	}
-
 	def void assertEqualsCodeAndParsedPrinted(String orig) {
 		val result = parse(orig)
 		assertNoIssues(result)
-		
+
 		val outputStream = new ByteArrayOutputStream()
 		result.eResource.save(outputStream, #{})
 		val parsedAndPrinted = outputStream.toString()
@@ -105,8 +91,32 @@ class LuaParsingTest {
 		r2.getContents().add(r1.getContents().get(0));
 		r2.save(null);
 	}
-	
-	def void checkCaseStudyFile(XtextResourceSet rs, Path srcFile) {
+
+	/**
+	 * This brings a string into a form where we can compare it to another of the same form
+	 * This prevents false positives from whitespace, comment which would otherwise create
+	 * differences between the two strings.
+	 */
+	def String bringIntoCanonicalForm(String luaCode) {
+		// strip comments
+		var striped = luaCode.replaceAll("(?m)--[^\n]*\n?", "")
+
+		// to leading and trailingwhite space characters
+		striped = striped.replaceAll("(?m)^[\t ]*", "")
+		striped = striped.replaceAll("(?m)[\t ]*$", "")
+
+		// only one newline between lines
+		striped = striped.replaceAll("[\r\n]+", "\n")
+
+		// spaces my occur in the original file
+		// this breaks strings, but that doesn't matter here
+		striped = striped.replaceAll("[\t ]+", "")
+
+		// no newlines in first and last line 
+		striped.trim()
+	}
+
+	def boolean checkCaseStudyFile(XtextResourceSet rs, Path srcFile) {
 		val uri = URI.createURI(srcFile.toString)
 		val res = rs.getResource(uri, true)
 		val origString = Files.readString(srcFile)
@@ -114,23 +124,45 @@ class LuaParsingTest {
 		val outputStream = new ByteArrayOutputStream()
 		res.save(outputStream, #{})
 		val parsedAndPrinted = outputStream.toString()
-		
-		val origWithoutComments = stripComments(origString)
-		val parsedAndPrintedWithoutComments = stripComments(parsedAndPrinted)
+
+		val origCanonical = bringIntoCanonicalForm(origString)
+		val parsedAndPrintedCanonical = bringIntoCanonicalForm(parsedAndPrinted)
 
 		assertNoIssues(res)
-		Assertions.assertEquals(origWithoutComments, parsedAndPrintedWithoutComments)
+		origCanonical.equals(parsedAndPrintedCanonical)
+	}
+
+	def void checkApp(Path appPath) {
+		val rs = get()
+		val matcher = FileSystems.^default.getPathMatcher("glob:**.lua")
+
+		val equalPaths = new ArrayList<Path>();
+		val unequalPaths = new ArrayList<Path>();
+
+		try (val paths = Files.walk(appPath))
+			paths.filter[p|matcher.matches(p)].forEach [ path |
+				val relPath = appPath.relativize(path)
+				if (checkCaseStudyFile(rs, path)) {
+					equalPaths.add(relPath)
+				} else {
+					unequalPaths.add(relPath)
+				}
+			]
+		System.out.printf("Equal paths: %s\n", equalPaths)
+		System.out.printf("Unequal paths: %s\n", unequalPaths)
+		Assertions.assertTrue(unequalPaths.empty, "Files which failed check: " + unequalPaths.toString)
 	}
 
 	@Test
 	def void testCaseStudy1CodeModelCorrectness() {
-		val rs = get()
 		val appPath = Paths.get("../caseStudy1")
-		val matcher = FileSystems.^default.getPathMatcher("glob:**.lua")
+		checkApp(appPath)
+	}
 
-		try (val paths = Files.walk(appPath))
-			paths.filter[p|matcher.matches(p)]
-			.forEach[path|checkCaseStudyFile(rs, path)]
-
+	@Test
+	def void testCaseStudy2CodeModelCorrectness() {
+		val appPath = Paths.get(
+			"/home/burgey/documents/studium/ma/src/gitlab.sickcn.net/tburglu/color-sorter/ColorInspectionSorter")
+		checkApp(appPath)
 	}
 }

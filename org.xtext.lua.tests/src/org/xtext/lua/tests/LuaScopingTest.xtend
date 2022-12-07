@@ -17,6 +17,7 @@ import org.xtext.lua.lua.Expression_TableConstructor
 import org.xtext.lua.lua.Expression_VariableName
 import org.xtext.lua.lua.Field_AddEntryToTable
 import org.xtext.lua.lua.Refble
+import org.xtext.lua.lua.Referenceable
 import org.xtext.lua.lua.Statement_Functioncall
 import org.xtext.lua.lua.Statement_Global_Assignment
 import org.xtext.lua.lua.Statement_Global_Function_Declaration
@@ -101,7 +102,7 @@ class LuaScopingTest {
 		Assertions.assertEquals(2, parsed.block.statements.length)
 
 		val hasBar = parsed.block.statements.get(0) as Statement_Global_Assignment
-		val bar = hasBar.refbles.get(0)
+		val bar = hasBar.dests.get(0) as Referenceable
 
 		val hasRef = parsed.block.statements.get(1) as Statement_Global_Assignment
 		val barRef = (hasRef.values.get(0) as Expression_VariableName).ref

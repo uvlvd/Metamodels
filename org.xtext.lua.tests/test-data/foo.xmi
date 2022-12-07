@@ -11,7 +11,7 @@
       </function>
     </statements>
     <statements xsi:type="lua:Statement_Global_Assignment">
-      <refbles name="result"/>
+      <dests xsi:type="lua:Referenceable" name="result"/>
       <values xsi:type="lua:Expression_Functioncall">
         <calledFunction href="./test-data/foo.lua#|0"/>
         <calledFunctionArgs/>

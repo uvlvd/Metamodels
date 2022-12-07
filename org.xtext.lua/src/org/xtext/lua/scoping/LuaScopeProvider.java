@@ -33,6 +33,7 @@ import org.xtext.lua.lua.Expression_TableConstructor;
 import org.xtext.lua.lua.Expression_VariableName;
 import org.xtext.lua.lua.Field_AddEntryToTable;
 import org.xtext.lua.lua.Refble;
+import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Statement_Assignment;
 
 import com.google.common.base.Function;
@@ -54,7 +55,12 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
 
     private List<Refble> getRefblesInAssignment(Statement_Assignment assignment) {
         var refbles = new ArrayList<Refble>();
-        refbles.addAll(assignment.getRefbles());
+        
+        for (var dest : assignment.getDests()) {
+            if (dest instanceof Referenceable)
+                refbles.add((Referenceable) dest);
+        }
+        
         for (var expr : assignment.getValues()) {
             if (expr instanceof Expression_TableConstructor) {
                 // if we assign a table we also pull in its fields
@@ -190,13 +196,15 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
                         }
 
                         // Check if this is an aliasing assignment
-                        var value = LuaUtil.resolveRefToValue(refble);
-                        if (value instanceof Expression_VariableName) {
-                            // extract the reference name from the node model
-                            var node = NodeModelUtils.getNode(value);
-                            var aliasTarget = NodeModelUtils.getTokenText(node);
-                            LOGGER.debug(String.format("Aliasing assignment: %s -> %s", refble.getName(), aliasTarget));
-                            aliases.put(aliasTarget, description);
+                        if (refble instanceof Referenceable) {
+                            var value = LuaUtil.resolveRefToValue((Referenceable) refble);
+                            if (value instanceof Expression_VariableName) {
+                                // extract the reference name from the node model
+                                var node = NodeModelUtils.getNode(value);
+                                var aliasTarget = NodeModelUtils.getTokenText(node);
+                                LOGGER.debug(String.format("Aliasing assignment: %s -> %s", refble.getName(), aliasTarget));
+                                aliases.put(aliasTarget, description);
+                            }
                         }
                     }
                 }

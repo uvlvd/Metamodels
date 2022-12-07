@@ -7,6 +7,7 @@ import com.google.inject.Provider
 import java.io.ByteArrayOutputStream
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import javax.inject.Inject
 import org.eclipse.emf.common.util.URI
@@ -15,6 +16,7 @@ import org.eclipse.xtext.resource.XtextResourceSet
 import org.eclipse.xtext.testing.InjectWith
 import org.eclipse.xtext.testing.extensions.InjectionExtension
 import org.eclipse.xtext.testing.util.ParseHelper
+import org.eclipse.xtext.testing.validation.ValidationTestHelper
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
@@ -26,17 +28,28 @@ import org.xtext.lua.lua.Chunk
 class LuaParsingTest {
 	@Inject extension ParseHelper<Chunk>
 	@Inject extension Provider<XtextResourceSet>
+	@Inject extension ValidationTestHelper
 
 	val luaSnippet = '''
 		num = 666
 		
 		local function foo()
-			print("foo bar")
 			num = num + 1
 		end
 		
 		foo()
 		eq = num == 667
+	'''
+
+	/* this is critical, as parsing it using the ParseHelper will create a synthetic
+	 * resource, where our stdlib injection scheme does _not_ work.
+	*/
+	val luaSnippetWithStdLib = '''
+		local function foo()
+			print("foo bar")
+		end
+		
+		foo()
 	'''
 
 	@Test
@@ -47,40 +60,37 @@ class LuaParsingTest {
 		Assertions.assertTrue(errors.isEmpty, '''Unexpected errors: «errors.join(", ")»''')
 	}
 
-	@Test
-	def void printModel() {
-		val result = parse(luaSnippet)
+	def String stripComments(String luaCode) {
+		// strip comments
+		var striped = luaCode.replaceAll("(?m)--[^\n]*\n?", "")
 
-		val outputStream = new ByteArrayOutputStream()
-		val saveOptions = emptyMap
-		result.eResource.save(outputStream, saveOptions)
-		Assertions.assertEquals(outputStream.toString(), luaSnippet)
+		// to leading and trailingwhite space characters
+		striped = striped.replaceAll("(?m)^[\t ]*", "")
+		striped = striped.replaceAll("(?m)[\t ]*$", "")
+
+		// only one newline between lines
+		striped = striped.replaceAll("\n+", "\n")
+		
+		// no newlines in first and last line 
+		striped.trim()
 	}
 
-	/*
-	 * Comments are currently not serialized!
-	 */
-	@Test
-	def void printModelWithComment() {
-
-		val luaSnippetWithComment = '''
-			num = 666
-			
-			-- A comment above a local function declaration
-			local function foo()
-				print("foo bar")
-				num = num + 1
-			end
-			
-			foo()
-			eq = num == 667
-		'''
-		val result = parse(luaSnippetWithComment)
-
+	def void assertEqualsCodeAndParsedPrinted(String orig) {
+		val result = parse(orig)
+		assertNoIssues(result)
+		
 		val outputStream = new ByteArrayOutputStream()
-		val saveOptions = emptyMap
-		result.eResource.save(outputStream, saveOptions)
-		Assertions.assertNotEquals(outputStream.toString(), luaSnippetWithComment)
+		result.eResource.save(outputStream, #{})
+		val parsedAndPrinted = outputStream.toString()
+
+		val expected = orig
+		val actual = parsedAndPrinted
+		Assertions.assertEquals(expected, actual)
+	}
+
+	@Test
+	def void testSimpleCode() {
+		assertEqualsCodeAndParsedPrinted(luaSnippet)
 	}
 
 	@Test
@@ -95,26 +105,32 @@ class LuaParsingTest {
 		r2.getContents().add(r1.getContents().get(0));
 		r2.save(null);
 	}
+	
+	def void checkCaseStudyFile(XtextResourceSet rs, Path srcFile) {
+		val uri = URI.createURI(srcFile.toString)
+		val res = rs.getResource(uri, true)
+		val origString = Files.readString(srcFile)
+
+		val outputStream = new ByteArrayOutputStream()
+		res.save(outputStream, #{})
+		val parsedAndPrinted = outputStream.toString()
+		
+		val origWithoutComments = stripComments(origString)
+		val parsedAndPrintedWithoutComments = stripComments(parsedAndPrinted)
+
+		assertNoIssues(res)
+		Assertions.assertEquals(origWithoutComments, parsedAndPrintedWithoutComments)
+	}
 
 	@Test
-	def void testDirectoryParsing() {
+	def void testCaseStudy1CodeModelCorrectness() {
 		val rs = get()
 		val appPath = Paths.get("../caseStudy1")
 		val matcher = FileSystems.^default.getPathMatcher("glob:**.lua")
 
 		try (val paths = Files.walk(appPath))
-			paths.filter[p|matcher.matches(p)].map[p|URI.createURI(p.toString)] // this is not the same as `p.toUri()` !
-			.forEach[u|rs.getResource(u, true)]
-		// print the resources
-		rs.resources.forEach[r|println(r)]
+			paths.filter[p|matcher.matches(p)]
+			.forEach[path|checkCaseStudyFile(rs, path)]
 
-//		var Resource r2 = rs.createResource(URI.createURI("./test-data/caseStudy1.xmi"));
-//		r2.getContents().add(allResources);
-//		r2.save(null);
-//		var Resource r1 = rs.getResource(URI.createURI("foo.lua"), true)
-//		r1.load(null);
-//		var Resource r2 = rs.createResource(URI.createURI("foo.xmi"));
-//		r2.getContents().add(r1.getContents().get(0));
-//		r2.save(null);
 	}
 }

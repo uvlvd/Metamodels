@@ -100,6 +100,11 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
 
     @Override
     public IScope getScope(final EObject context, final EReference reference) {
+        if (context == null) {
+            // nothing todo without context
+            return IScope.NULLSCOPE;
+        }
+
         var parentBlock = EcoreUtil2.getContainerOfType(context.eContainer(), Block.class);
         if (parentBlock == null) {
             // if we have no parent anymore we delegate to the global scope

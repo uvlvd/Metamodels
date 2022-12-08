@@ -1,11 +1,12 @@
 grammar org.xtext.lua.Lua
+	hidden(WS, COMMENT)
 
 // 	Now inlined because of INT not being matchable
 //	with org.eclipse.xtext.common.Terminals 
 import 'http://www.eclipse.org/emf/2002/Ecore' as ecore
 generate lua "http://www.xtext.org/lua/Lua"
 
-Chunk hidden(WS, COMMENT):
+Chunk:
 	block=Block;
 
 // We introduce some typen into the inheritence hiearchy (uses multiple inheritence)
@@ -17,24 +18,24 @@ Refble:
 
 // The synthetic are only used for merging resources before propagation.
 // BEGIN SYNTHETIC RULES
-NamedChunk hidden(WS, COMMENT):
+NamedChunk:
 	'--namedchunk@' name=LUA_STRING
 	chunk=Chunk;
 
-Component hidden(WS, COMMENT):
+Component:
 	{Component}
 	'component:'
 	name=LUA_STRING
 	=>'--chunks'
 	(=>chunks+=NamedChunk)*;
 
-ComponentSet hidden(WS, COMMENT):
+ComponentSet:
 	{ComponentSet}
 	'components:'
 	(=>components+=Component)*;
 
 // END SYNTHETIC RULES
-Block hidden(WS, COMMENT):
+Block:
 	{Block}
 	(statements+=Statement (=>';')?)*
 	(=>returnValue=LastStatement (=>';')?)?;
@@ -43,11 +44,15 @@ Block hidden(WS, COMMENT):
 // LAST STATEMENT
 // ****************************************************
 LastStatement:
-	LastStatement_Return | LastStatement_Break;
+	LastStatement_Return | LastStatement_Break | LastStatement_Return_WithValue;
 
 // The return statement is used to return values from a function or a chunk
 LastStatement_Return:
-	'return' {LastStatement_ReturnWithValue} (returnValues+=Expression (',' returnValues+=Expression)*)?;
+	{LastStatement_Return}
+	'return';
+
+LastStatement_Return_WithValue:
+	'return' returnValues+=Expression (',' returnValues+=Expression)*;
 
 // The break statement is used to terminate the execution of a while, repeat, or for loop, skipping to the next statement after the loop
 LastStatement_Break:
@@ -56,7 +61,7 @@ LastStatement_Break:
 // ****************************************************
 // STATEMENT
 // ****************************************************
-Statement hidden(WS, COMMENT):
+Statement:
 	Statement_Block
 	| Statement_While
 	| Statement_Repeat
@@ -65,10 +70,10 @@ Statement hidden(WS, COMMENT):
 	| Statement_Functioncall
 	| Statement_Function_Declaration
 	| Statement_Assignment;
-//	| Statement_TableAssignment;
 
+//	| Statement_TableAssignment;
 // Blockwrapping statements
-BlockWrapper hidden(WS, COMMENT):
+BlockWrapper:
 	{BlockWrapper} block=Block
 	| BlockWrapperWithArgs
 	| Statement_Block
@@ -77,11 +82,11 @@ BlockWrapper hidden(WS, COMMENT):
 	| Statement_If_Then_Else
 	| Statement_If_Then_Else_ElseIfPart;
 
-BlockWrapperWithArgs hidden(WS, COMMENT):
+BlockWrapperWithArgs:
 	Function
 	| Statement_For;
 
-Statement_Declaration hidden(WS, COMMENT):
+Statement_Declaration:
 	Statement_Function_Declaration
 	| Statement_Assignment;
 
@@ -99,8 +104,11 @@ Statement_Repeat:
 
 // Control structure. "if ... then ... elseif ... elseif ... else ... end"
 Statement_If_Then_Else:
-	'if' ifExpression=Expression 'then' block=Block (elseIf+=Statement_If_Then_Else_ElseIfPart)* ('else'
-	elseBlock=Block)? 'end';
+	'if' ifExpression=Expression 'then'
+	block=Block
+	(elseIf+=Statement_If_Then_Else_ElseIfPart)*
+	('else' elseBlock=Block)?
+	'end';
 
 Statement_If_Then_Else_ElseIfPart:
 	'elseif' elseifExpression=Expression 'then' block=Block;
@@ -134,12 +142,10 @@ Statement_Assignment:
 	Statement_Local_Assignment
 	| Statement_Global_Assignment;
 
-
 // Assignment_Destination is only used in the assignments
 Assignment_Destination:
 	Referenceable
-	| Expression_TableAccess 
-;
+	| Expression_TableAccess;
 
 Statement_Local_Assignment:
 	=>'local'
@@ -161,12 +167,11 @@ Statement_Functioncall:
 //	tableAccess=Expression_TableAccess
 //	=>'='
 //	values=Expression;
-
 // ****************************************************
 // EXPRESSIONS
 // ****************************************************
 // Delegate to the priority chain of operators by calling the rule for the lowest priority operator
-Expression hidden(WS, COMMENT):
+Expression:
 	Expression_Or;
 
 // Or: left associative, priority 0
@@ -244,12 +249,13 @@ Expression_Number:
 Expression_VarArgs:
 	'...' {Expression_VarArgs};
 
-Expression_String:
+Expression_String hidden():
 	value=LUA_STRING;
 
 Expression_Function:
 	'function' function=Function 'end';
 
+// TODO can this returns be removed?
 Expression_TableConstructor returns Expression:
 	=>'{'
 	{Expression_TableConstructor} (fields+=Field ((',' | ';') fields+=Field)* (',' | ';')?)?
@@ -261,7 +267,18 @@ Expression_Import:
 	=>')';
 
 Expression_Functioncall:
-	calledFunction=[Refble|QualifiedName] =>calledFunctionArgs=Functioncall_Arguments;
+	Expression_Functioncall_Table
+	| Expression_Functioncall_Direct;
+
+Expression_Functioncall_Direct:
+	calledFunction=[Refble|QualifiedNameWithoutTableAccess]
+	=>calledFunctionArgs=Functioncall_Arguments;
+
+Expression_Functioncall_Table:
+	calledTable=[Refble|QualifiedNameWithoutTableAccess]
+	=>':'
+	functionName=LUA_NAME
+	=>calledFunctionArgs=Functioncall_Arguments;
 
 Expression_VariableName:
 	{Expression_VariableName}
@@ -273,8 +290,7 @@ Expression_TableAccess:
 	indexableExpression=(Expression_VariableName)
 	(=>'['
 	indexExpression+=Expression
-	=>']')+
-;
+	=>']')+;
 
 Expression_Nesting returns Expression:
 	=>'(' Expression ')';
@@ -340,7 +356,8 @@ terminal ML_COMMENT:
 	'--' '[['->']]';
 
 terminal SL_COMMENT:
-	'--' !'[' (!'\n')* '\n'?;
+//	(' ' | '\t')* '--' !'[' (!('\r' | '\n'))* ('\r'? '\n');
+	'--' !'[' (!'\n')*;
 
 terminal WS:
 	(' ' | '\t' | '\r' | '\n')+; // Consume all white space, tabs and new line characters
@@ -382,7 +399,7 @@ terminal LUA_NUMBER returns ecore::EDouble:
 //			"'" ( '\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\'|"'") )* "'"
 //		;
 //terminal ML_COMMENT : '/*' -> '*/';
-//terminal SL_COMMENT : '--' !('\n'|'\r')* ('\r'? '\n')?;
+//terminal SL_COMMENT : '--' !('\n'|'\r'|'[[')* ('\r'? '\n')?;
 //terminal WS         : (' '|'\t'|'\r'|'\n')+;
 terminal ANY_OTHER:
 	.;

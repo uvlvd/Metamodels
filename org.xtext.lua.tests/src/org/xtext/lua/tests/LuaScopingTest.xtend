@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
 import org.xtext.lua.lua.Chunk
-import org.xtext.lua.lua.Expression_Functioncall
+import org.xtext.lua.lua.Expression_Functioncall_Direct
 import org.xtext.lua.lua.Expression_TableConstructor
 import org.xtext.lua.lua.Expression_VariableName
 import org.xtext.lua.lua.Field_AddEntryToTable
@@ -55,13 +55,13 @@ class LuaScopingTest {
 
 		// with assignment
 		val hasCall = parsed.block.statements.get(1) as Statement_Global_Assignment
-		val fooCall =  hasCall.values.get(0) as Expression_Functioncall
+		val fooCall =  hasCall.values.get(0) as Expression_Functioncall_Direct
 		val fooRef = fooCall.calledFunction
 		Assertions.assertEquals(foo, fooRef)
 
 
 		// without assignment
-		val fooCallFlat = parsed.block.statements.get(2) as Statement_Functioncall as Expression_Functioncall
+		val fooCallFlat = parsed.block.statements.get(2) as Statement_Functioncall as Expression_Functioncall_Direct
 		val fooRefFlat = fooCallFlat.calledFunction
 		Assertions.assertEquals(foo, fooRefFlat)
 	}
@@ -81,13 +81,13 @@ class LuaScopingTest {
 
 		// with assignment
 		val hasCall = parsed.block.statements.get(1) as Statement_Local_Assignment
-		val fooCall =  hasCall.values.get(0) as Expression_Functioncall
+		val fooCall =  hasCall.values.get(0) as Expression_Functioncall_Direct
 		val fooRef = fooCall.calledFunction
 		Assertions.assertEquals(foo, fooRef)
 
 
 		// without assignment
-		val fooCallFlat = parsed.block.statements.get(2) as Statement_Functioncall as Expression_Functioncall
+		val fooCallFlat = parsed.block.statements.get(2) as Statement_Functioncall as Expression_Functioncall_Direct
 		val fooRefFlat = fooCallFlat.calledFunction
 		Assertions.assertEquals(foo, fooRefFlat)
 	}

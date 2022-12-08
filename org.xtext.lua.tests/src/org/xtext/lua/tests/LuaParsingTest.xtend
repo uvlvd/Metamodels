@@ -108,15 +108,20 @@ class LuaParsingTest {
 		// only one newline between lines
 		striped = striped.replaceAll("[\r\n]+", "\n")
 
-		// spaces my occur in the original file
-		// this breaks strings, but that doesn't matter here
-		striped = striped.replaceAll("[\t ]+", "")
-
 		// no newlines in first and last line 
 		striped.trim()
 	}
 
-	def boolean checkCaseStudyFile(XtextResourceSet rs, Path srcFile) {
+	def String bringIntoExtremelyCanonicalForm(String canonicalForm) {
+		// spaces my occur in the original file
+		// this breaks strings, but that doesn't matter here
+		var canonical = canonicalForm.replaceAll("[\t ]+", "")
+
+		// no newlines in first and last line 
+		canonical.replaceAll("\n","")
+	}
+
+	def boolean checkCaseStudyFile(XtextResourceSet rs, Path srcFile, Path appPath, String name) {
 		val uri = URI.createURI(srcFile.toString)
 		val res = rs.getResource(uri, true)
 		val origString = Files.readString(srcFile)
@@ -125,14 +130,39 @@ class LuaParsingTest {
 		res.save(outputStream, #{})
 		val parsedAndPrinted = outputStream.toString()
 
+		// strip things like unimportant whitespace, duplicate newlines, etc.
 		val origCanonical = bringIntoCanonicalForm(origString)
 		val parsedAndPrintedCanonical = bringIntoCanonicalForm(parsedAndPrinted)
+		
+		// further also strip _all_ newlines and whitespace
+		// this definitely breaks the file, but that does not matter for the string comparision
+		val origExtremelyCanonical = bringIntoExtremelyCanonicalForm(origCanonical)
+		val parsedAndPrintedExtremelyCanonical = bringIntoExtremelyCanonicalForm(parsedAndPrintedCanonical)
 
 		assertNoIssues(res)
-		origCanonical.equals(parsedAndPrintedCanonical)
+		val equivalence = origExtremelyCanonical.equals(parsedAndPrintedExtremelyCanonical)
+
+		// write strings to files if there are differences
+		if (!equivalence) {
+			val targetDir = Paths.get("./caseStudyEvaluation/").resolve(name).resolve(appPath.relativize(srcFile))
+			val plainDir = targetDir.resolve("plain")
+			val canonicalDir = targetDir.resolve("canonical")
+			val extremelyCanonicalDir = targetDir.resolve("extremely-canonical")
+			Files.createDirectories(plainDir)
+			Files.createDirectories(canonicalDir)
+			Files.createDirectories(extremelyCanonicalDir)
+			Files.writeString(plainDir.resolve("orig.lua"), origString)
+			Files.writeString(plainDir.resolve("parsedAndPrinted.lua"), parsedAndPrinted)
+			Files.writeString(canonicalDir.resolve("orig.lua"), origCanonical)
+			Files.writeString(canonicalDir.resolve("parsedAndPrinted.lua"), parsedAndPrintedCanonical)
+			Files.writeString(extremelyCanonicalDir.resolve("orig.lua"), origExtremelyCanonical)
+			Files.writeString(extremelyCanonicalDir.resolve("parsedAndPrinted.lua"), parsedAndPrintedExtremelyCanonical)
+		}
+
+		return equivalence
 	}
 
-	def void checkApp(Path appPath) {
+	def void checkApp(Path appPath, String name) {
 		val rs = get()
 		val matcher = FileSystems.^default.getPathMatcher("glob:**.lua")
 
@@ -142,27 +172,27 @@ class LuaParsingTest {
 		try (val paths = Files.walk(appPath))
 			paths.filter[p|matcher.matches(p)].forEach [ path |
 				val relPath = appPath.relativize(path)
-				if (checkCaseStudyFile(rs, path)) {
+				if (checkCaseStudyFile(rs, path, appPath, name)) {
 					equalPaths.add(relPath)
 				} else {
 					unequalPaths.add(relPath)
 				}
 			]
-		System.out.printf("Equal paths: %s\n", equalPaths)
-		System.out.printf("Unequal paths: %s\n", unequalPaths)
+		System.out.printf("Equivalent files: %d %s\n", equalPaths.size, equalPaths)
+		System.out.printf("Not equivalent files: %d %s\n", unequalPaths.size, unequalPaths)
 		Assertions.assertTrue(unequalPaths.empty, "Files which failed check: " + unequalPaths.toString)
 	}
 
 	@Test
 	def void testCaseStudy1CodeModelCorrectness() {
 		val appPath = Paths.get("../caseStudy1")
-		checkApp(appPath)
+		checkApp(appPath, "CaseStudy1")
 	}
 
 	@Test
 	def void testCaseStudy2CodeModelCorrectness() {
 		val appPath = Paths.get(
 			"/home/burgey/documents/studium/ma/src/gitlab.sickcn.net/tburglu/color-sorter/ColorInspectionSorter")
-		checkApp(appPath)
+		checkApp(appPath, "CaseStudy2")
 	}
 }

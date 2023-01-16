@@ -14,9 +14,9 @@ import org.xtext.lua.LuaStandaloneSetup;
  */
 public class LuaIdeSetup extends LuaStandaloneSetup {
 
-	@Override
-	public Injector createInjector() {
-		return Guice.createInjector(Modules2.mixin(new LuaRuntimeModule(), new LuaIdeModule()));
-	}
-	
+    @Override
+    public Injector createInjector() {
+        return Guice.createInjector(Modules2.mixin(new LuaRuntimeModule(), new LuaIdeModule()));
+    }
+
 }

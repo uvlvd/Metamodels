@@ -3,14 +3,13 @@
  */
 package org.xtext.lua.validation;
 
-
 /**
- * This class contains custom validation rules. 
+ * This class contains custom validation rules.
  *
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#validation
  */
 public class LuaValidator extends AbstractLuaValidator {
-	
+
 //	public static final String INVALID_NAME = "invalidName";
 //
 //	@Check
@@ -21,5 +20,5 @@ public class LuaValidator extends AbstractLuaValidator {
 //					INVALID_NAME);
 //		}
 //	}
-	
+
 }

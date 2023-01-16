@@ -15,43 +15,43 @@ import com.google.inject.Inject;
 /**
  * Provides labels for EObjects.
  * 
- * See
- * https://www.eclipse.org/Xtext/documentation/310_eclipse_support.html#label-provider
+ * See https://www.eclipse.org/Xtext/documentation/310_eclipse_support.html#label-provider
  */
 public class LuaLabelProvider extends DefaultEObjectLabelProvider {
 
-	@Inject
-	IQualifiedNameProvider qualifiedNameProvider;
+    @Inject
+    IQualifiedNameProvider qualifiedNameProvider;
 
-	@Inject
-	public LuaLabelProvider(AdapterFactoryLabelProvider delegate) {
-		super(delegate);
-	}
+    @Inject
+    public LuaLabelProvider(AdapterFactoryLabelProvider delegate) {
+        super(delegate);
+    }
 
-	@Override
-	protected Object doGetText(Object _obj) {
-		var superName = super.doGetText(_obj);
+    @Override
+    protected Object doGetText(Object _obj) {
+        var superName = super.doGetText(_obj);
 
-		if (_obj instanceof EObject) {
-			var obj = (EObject) _obj;
-			var name = obj.eClass().getName();
+        if (_obj instanceof EObject) {
+            var obj = (EObject) _obj;
+            var name = obj.eClass()
+                .getName();
 
-			if (obj instanceof Refble) {
-				var refble = (Refble) obj;
+            if (obj instanceof Refble) {
+                var refble = (Refble) obj;
 
-				var fqn = qualifiedNameProvider.apply(refble);
-				if (fqn != null) {
-					name += " \"" + fqn.toString() + "\"";
-				}
-			} else if (obj instanceof Expression_Import) {
-				name += " " + ((Expression_Import) obj).getImportURI();
-			} else if (superName != null && superName instanceof String) {
-				name += " " + superName;
-			}
-			return name;
-		}
-		return superName;
-	}
+                var fqn = qualifiedNameProvider.apply(refble);
+                if (fqn != null) {
+                    name += " \"" + fqn.toString() + "\"";
+                }
+            } else if (obj instanceof Expression_Import) {
+                name += " " + ((Expression_Import) obj).getImportURI();
+            } else if (superName != null && superName instanceof String) {
+                name += " " + superName;
+            }
+            return name;
+        }
+        return superName;
+    }
 //
 //	String image(Greeting ele) {
 //		return "Greeting.gif";

@@ -12,7 +12,7 @@ import org.eclipse.xtext.ui.label.DefaultDescriptionLabelProvider;
  */
 public class LuaDescriptionLabelProvider extends DefaultDescriptionLabelProvider {
 
-	// Labels and icons can be computed like this:
+    // Labels and icons can be computed like this:
 //	@Override
 //	public String text(IEObjectDescription ele) {
 //		return ele.getName().toString();

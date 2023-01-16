@@ -55,12 +55,12 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
 
     private List<Refble> getRefblesInAssignment(Statement_Assignment assignment) {
         var refbles = new ArrayList<Refble>();
-        
+
         for (var dest : assignment.getDests()) {
             if (dest instanceof Referenceable)
                 refbles.add((Referenceable) dest);
         }
-        
+
         for (var expr : assignment.getValues()) {
             if (expr instanceof Expression_TableConstructor) {
                 // if we assign a table we also pull in its fields
@@ -202,7 +202,8 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
                                 // extract the reference name from the node model
                                 var node = NodeModelUtils.getNode(value);
                                 var aliasTarget = NodeModelUtils.getTokenText(node);
-                                LOGGER.debug(String.format("Aliasing assignment: %s -> %s", refble.getName(), aliasTarget));
+                                LOGGER.debug(
+                                        String.format("Aliasing assignment: %s -> %s", refble.getName(), aliasTarget));
                                 aliases.put(aliasTarget, description);
                             }
                         }

@@ -10,7 +10,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
  */
 public class LuaUiModule extends AbstractLuaUiModule {
 
-	public LuaUiModule(AbstractUIPlugin plugin) {
-		super(plugin);
-	}
+    public LuaUiModule(AbstractUIPlugin plugin) {
+        super(plugin);
+    }
 }

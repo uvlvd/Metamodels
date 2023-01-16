@@ -45,7 +45,7 @@ public class LuaUtil {
 //    }
 
     public static Statement_Declaration getContainingDeclaration(final EObject obj) {
-        return  EcoreUtil2.<Statement_Declaration> getContainerOfType(obj, Statement_Declaration.class);
+        return EcoreUtil2.<Statement_Declaration> getContainerOfType(obj, Statement_Declaration.class);
     }
 
     /*

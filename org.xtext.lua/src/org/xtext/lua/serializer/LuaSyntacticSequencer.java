@@ -3,6 +3,5 @@
  */
 package org.xtext.lua.serializer;
 
-
 public class LuaSyntacticSequencer extends AbstractLuaSyntacticSequencer {
 }

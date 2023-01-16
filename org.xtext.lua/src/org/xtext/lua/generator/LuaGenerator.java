@@ -15,8 +15,8 @@ import org.eclipse.xtext.generator.IGeneratorContext;
  */
 public class LuaGenerator extends AbstractGenerator {
 
-	@Override
-	public void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
+    @Override
+    public void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 //		Iterator<Greeting> filtered = Iterators.filter(resource.getAllContents(), Greeting.class);
 //		Iterator<String> names = Iterators.transform(filtered, new Function<Greeting, String>() {
 //
@@ -26,5 +26,5 @@ public class LuaGenerator extends AbstractGenerator {
 //			}
 //		});
 //		fsa.generateFile("greetings.txt", "People to greet: " + IteratorExtensions.join(names, ", "));
-	}
+    }
 }

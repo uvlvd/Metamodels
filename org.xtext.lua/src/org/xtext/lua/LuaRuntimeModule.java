@@ -19,8 +19,8 @@ import org.xtext.lua.scoping.LuaResourceDescriptionStrategy;
 import org.xtext.lua.scoping.LuaScopeProvider;
 
 /**
- * Use this class to register components to be used at runtime / without the
- * Equinox extension registry.
+ * Use this class to register components to be used at runtime / without the Equinox extension
+ * registry.
  */
 public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 //	@Override
@@ -30,11 +30,11 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 ////		binder.bind(IDefaultResourceDescriptionStrategy.class).to(LuaResourceDescriptionStrategy.class);
 ////		binder.bind(ImportUriResolver.class).to(LuaImportUriResolver.class);
 //	}
-	
+
     public Class<? extends IDefaultResourceDescriptionStrategy> bindIDefaultResourceDescriptionStrategy() {
         return LuaResourceDescriptionStrategy.class;
     }
-    
+
     public Class<? extends ImportUriResolver> bindImportUriResolver() {
         return LuaImportUriResolver.class;
     }
@@ -45,21 +45,21 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
     }
 
     @Override
-	public Class<? extends IQualifiedNameProvider> bindIQualifiedNameProvider() {
-		return LuaQualifiedNameProvider.class;
-	}
+    public Class<? extends IQualifiedNameProvider> bindIQualifiedNameProvider() {
+        return LuaQualifiedNameProvider.class;
+    }
 
-	@Override
-	public Class<? extends IGlobalScopeProvider> bindIGlobalScopeProvider() {
-		return LuaGlobalScopeProvider.class;
-	}
+    @Override
+    public Class<? extends IGlobalScopeProvider> bindIGlobalScopeProvider() {
+        return LuaGlobalScopeProvider.class;
+    }
 
-	@Override
-	public Class<? extends IScopeProvider> bindIScopeProvider() {
-		return LuaScopeProvider.class;
-	}
+    @Override
+    public Class<? extends IScopeProvider> bindIScopeProvider() {
+        return LuaScopeProvider.class;
+    }
 
-	@Override
+    @Override
     public Class<? extends ILinkingService> bindILinkingService() {
         return LuaLinkingService.class;
     }

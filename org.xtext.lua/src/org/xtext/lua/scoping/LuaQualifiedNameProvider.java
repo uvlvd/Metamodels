@@ -3,6 +3,7 @@ package org.xtext.lua.scoping;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.naming.DefaultDeclarativeQualifiedNameProvider;
 import org.eclipse.xtext.naming.QualifiedName;
+import org.xtext.lua.LuaUtil;
 import org.xtext.lua.lua.Expression_TableConstructor;
 import org.xtext.lua.lua.Field_AddEntryToTable;
 import org.xtext.lua.lua.Refble;

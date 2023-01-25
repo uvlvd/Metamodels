@@ -26,6 +26,7 @@ import org.eclipse.xtext.scoping.impl.MultimapBasedSelectable;
 import org.eclipse.xtext.scoping.impl.SimpleLocalScopeProvider;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.eclipse.xtext.xbase.lib.IterableExtensions;
+import org.xtext.lua.LuaUtil;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.BlockWrapperWithArgs;
 import org.xtext.lua.lua.Expression_Function;

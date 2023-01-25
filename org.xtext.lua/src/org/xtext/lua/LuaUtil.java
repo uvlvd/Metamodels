@@ -1,54 +1,93 @@
-package org.xtext.lua.scoping;
+package org.xtext.lua;
+
+import java.util.Optional;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.xtext.lua.lua.Assignment_Destination;
+import org.xtext.lua.lua.Chunk;
+import org.xtext.lua.lua.Component;
 import org.xtext.lua.lua.Expression;
+import org.xtext.lua.lua.Expression_String;
+import org.xtext.lua.lua.NamedChunk;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Statement_Assignment;
 import org.xtext.lua.lua.Statement_Declaration;
+import org.xtext.lua.lua.Statement_Function_Declaration;
 
 public class LuaUtil {
     private static final Logger LOGGER = Logger.getLogger(LuaUtil.class.getPackageName());
 
-//    public static boolean isTableField(final Referenceable refble) {
-//        Expression _entryValue = refble.getEntryValue();
-//        return (_entryValue != null);
-//    }
-
-//    public static boolean isDeclaration(final Referenceable refble) {
-//        boolean _isTableField = LuaUtil.isTableField(refble);
-//        return (!_isTableField);
-//    }
+    /**
+     * 
+     * @param chunk
+     * @return The component which contains chunk
+     */
+    public static Component getComponentOfChunk(Chunk chunk) {
+        var parent = chunk.eContainer();
+        if (parent instanceof NamedChunk) {
+            var grandparent = parent.eContainer();
+            if (grandparent instanceof Component) {
+                return (Component) grandparent;
+            }
+        }
+        return null;
+    }
 
     /**
-     * Local Declarations are: - local variables - local functions - arguments of function- and
-     * for-blocks
+     * Return the source code representation of the given EObject
+     * 
+     * @param eObj
+     * @return
      */
-//    public static boolean isLocalDeclaration(final Referenceable refble) {
-//        final var parent = refble.eContainer();
-//        // arguments of for- or function-block
-//        if (parent instanceof BlockWrapper)
-//            return true;
-//
-//        // refble inside a multirefble
-//        if (parent instanceof MultiReferenceable) {
-//            return ((MultiReferenceable) parent).isLocal();
-//        }
-//
-//        return false;
-//    }
+    public static String eObjectToTokenText(EObject eObj) {
+        var node = NodeModelUtils.getNode(eObj);
+        if (node != null) {
+            return NodeModelUtils.getTokenText(node);
+        }
+        return "";
+    }
 
-//    public static boolean isGlobalDeclaration(final Referenceable refble) {
-//        return isDeclaration(refble) && !isLocalDeclaration(refble);
-//    }
+    /**
+     * Extract the string from a string expression as parsed by the grammar
+     * 
+     * @param expString
+     * @return The extracted string
+     */
+    // TODO this could be implemented differently in the grammar, so we don't
+    // need to strip here
+    public static String expressionStringToString(Expression_String expString) {
+        // this string still contains quotes
+        var rawString = expString.getValue();
+        if (rawString.length() > 2) {
+            return rawString.substring(1, rawString.length() - 1);
+        }
+        return "";
+    }
+
+    /**
+     * Find a function declaration by name in a chunk
+     * 
+     * @param declarationName
+     * @param chunk
+     * @return
+     */
+    public static Optional<Statement_Function_Declaration> getFunctionDeclarationByName(String declarationName,
+            Chunk chunk) {
+        var declarations = EcoreUtil2.getAllContentsOfType(chunk, Statement_Function_Declaration.class);
+        return declarations.stream()
+            .filter((decl) -> decl.getName()
+                .equals(declarationName))
+            .findFirst();
+    }
 
     public static Statement_Declaration getContainingDeclaration(final EObject obj) {
         return EcoreUtil2.<Statement_Declaration> getContainerOfType(obj, Statement_Declaration.class);
     }
 
-    /*
+    /**
      * This method can be used to resolve a value expression to its corresponding Referenceable in
      * an assignment
      * 
@@ -73,7 +112,7 @@ public class LuaUtil {
         return null;
     }
 
-    /*
+    /**
      * This method can be used to resolve a Referenceable to its corresponding value expression in
      * an assignment
      * 

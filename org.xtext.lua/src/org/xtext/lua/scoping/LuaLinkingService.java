@@ -70,8 +70,20 @@ public class LuaLinkingService extends DefaultLinkingService {
         LOGGER.debug(String.format("Mocking Referenceable with name %s", name));
         var mockFunctionDecl = LuaFactory.eINSTANCE.createStatement_Global_Function_Declaration();
         mockFunctionDecl.setName(name);
+
+        var insertIndex = mockBlock.getStatements()
+            .stream()
+            .filter((s) -> {
+                if (s instanceof Statement_Global_Function_Declaration) {
+                    return ((Statement_Global_Function_Declaration) s).getName()
+                        .compareTo(name) < 0;
+                }
+                return false;
+            })
+            .count();
+
         mockBlock.getStatements()
-            .add(mockFunctionDecl);
+            .add((int) insertIndex, mockFunctionDecl);
         return mockFunctionDecl;
     }
 

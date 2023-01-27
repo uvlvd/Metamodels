@@ -11,7 +11,6 @@ import org.xtext.lua.lua.Chunk;
 import org.xtext.lua.lua.Component;
 import org.xtext.lua.lua.Expression;
 import org.xtext.lua.lua.Expression_String;
-import org.xtext.lua.lua.NamedChunk;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Statement_Assignment;
 import org.xtext.lua.lua.Statement_Declaration;
@@ -21,19 +20,13 @@ public class LuaUtil {
     private static final Logger LOGGER = Logger.getLogger(LuaUtil.class.getPackageName());
 
     /**
+     * Retrieve into which an object belong
      * 
-     * @param chunk
-     * @return The component which contains chunk
+     * @param eObj An EObject inside of a Component
+     * @return The component which contains the eObj or null
      */
-    public static Component getComponentOfChunk(Chunk chunk) {
-        var parent = chunk.eContainer();
-        if (parent instanceof NamedChunk) {
-            var grandparent = parent.eContainer();
-            if (grandparent instanceof Component) {
-                return (Component) grandparent;
-            }
-        }
-        return null;
+    public static Component getComponent(EObject eObj) {
+        return EcoreUtil2.getContainerOfType(eObj, Component.class);
     }
 
     /**

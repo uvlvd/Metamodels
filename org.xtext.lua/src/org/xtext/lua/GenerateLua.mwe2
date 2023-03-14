@@ -38,7 +38,9 @@ Workflow {
 			// from https://github.com/eclipse/xtext-core/issues/1518
 			parserGenerator = parser.antlr.XtextAntlrGeneratorFragment2 {
   				options = {
+  					// TODO en/disable
   					backtrack = false
+//  					backtrack = true
   				}
 //  			// from https://blogs.itemis.com/en/debugging-xtext-grammars-what-to-do-when-your-language-is-ambiguous
 //				debugGrammar = true

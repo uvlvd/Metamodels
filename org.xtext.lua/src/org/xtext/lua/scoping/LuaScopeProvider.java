@@ -35,6 +35,7 @@ import org.xtext.lua.lua.Expression_VariableName;
 import org.xtext.lua.lua.Field_AddEntryToTable;
 import org.xtext.lua.lua.Refble;
 import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Statement;
 import org.xtext.lua.lua.Statement_Assignment;
 
 import com.google.common.base.Function;
@@ -73,7 +74,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     }
 
 //     TODO is this complete?
-    private List<Refble> getRefblesInBlock(Block block) {
+    private List<Refble> getRefblesInBlock(Block block, Statement filterStatement) {
         List<Refble> refbles = new ArrayList<Refble>();
 
         if (block.eContainer() instanceof BlockWrapperWithArgs) {
@@ -82,7 +83,9 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
             argsOfBlock.forEach(arg -> refbles.add(arg));
         }
         for (var statement : block.getStatements()) {
-            if (statement instanceof Statement_Assignment) {
+            if (statement.equals(filterStatement)) {
+                continue;
+            } else if (statement instanceof Statement_Assignment) {
                 refbles.addAll(getRefblesInAssignment((Statement_Assignment) statement));
             } else if (statement instanceof Refble) {
                 refbles.add((Refble) statement);
@@ -91,10 +94,10 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
         return refbles;
     }
 
-    private IScope getScopeOfBlock(Block block, EReference reference) {
+    private IScope getScopeOfBlock(Block block, Statement filterStatement, EReference reference) {
         var parentScope = getScope(block, reference);
 
-        var refblesInBlock = getRefblesInBlock(block);
+        var refblesInBlock = getRefblesInBlock(block, filterStatement);
 
         List<IEObjectDescription> descriptions = refblesInBlock.stream()
             .map(refble -> describeRefble(refble))
@@ -111,13 +114,16 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
             // nothing todo without context
             return IScope.NULLSCOPE;
         }
+        
 
         var parentBlock = EcoreUtil2.getContainerOfType(context.eContainer(), Block.class);
         if (parentBlock == null) {
             // if we have no parent anymore we delegate to the global scope
             return super.getGlobalScope(context.eResource(), reference);
         }
-        var blockScope = getScopeOfBlock(parentBlock, reference);
+        
+        var parentStatement = EcoreUtil2.getContainerOfType(context, Statement.class);
+        var blockScope = getScopeOfBlock(parentBlock, parentStatement, reference);
         return blockScope;
     }
 

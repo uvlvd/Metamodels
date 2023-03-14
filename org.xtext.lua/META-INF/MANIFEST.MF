@@ -28,3 +28,4 @@ Export-Package: org.xtext.lua,
  org.xtext.lua.serializer,
  org.xtext.lua.validation,
  org.xtext.lua.services
+Import-Package: org.apache.log4j

@@ -290,7 +290,10 @@ Expression_TableAccess:
 	indexableExpression=(Expression_VariableName)
 	(=>'['
 	indexExpression+=Expression
-	=>']')+;
+	=>']')+
+	(=>':'
+	functionName=LUA_NAME
+	=>calledFunctionArgs=Functioncall_Arguments)?;
 
 Expression_Nesting returns Expression:
 	=>'(' Expression ')';

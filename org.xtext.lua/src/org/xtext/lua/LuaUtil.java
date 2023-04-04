@@ -13,20 +13,29 @@ import org.xtext.lua.lua.Expression;
 import org.xtext.lua.lua.Expression_String;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Statement_Assignment;
-import org.xtext.lua.lua.Statement_Declaration;
 import org.xtext.lua.lua.Statement_Function_Declaration;
 
 public class LuaUtil {
     private static final Logger LOGGER = Logger.getLogger(LuaUtil.class.getPackageName());
 
     /**
-     * Retrieve into which an object belong
+     * Retrieve into which component an object belongs
      * 
      * @param eObj An EObject inside of a Component
      * @return The component which contains the eObj or null
      */
     public static Component getComponent(EObject eObj) {
         return EcoreUtil2.getContainerOfType(eObj, Component.class);
+    }
+
+    /**
+     * Retrieve into which component an object belongs
+     * 
+     * @param eObj An EObject inside of a Component
+     * @return The component which contains the eObj or null
+     */
+    public static Statement_Function_Declaration getDeclaration(EObject eObj) {
+        return EcoreUtil2.getContainerOfType(eObj, Statement_Function_Declaration.class);
     }
 
     /**
@@ -74,10 +83,6 @@ public class LuaUtil {
             .filter((decl) -> decl.getName()
                 .equals(declarationName))
             .findFirst();
-    }
-
-    public static Statement_Declaration getContainingDeclaration(final EObject obj) {
-        return EcoreUtil2.<Statement_Declaration> getContainerOfType(obj, Statement_Declaration.class);
     }
 
     /**

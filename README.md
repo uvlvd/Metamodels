@@ -20,5 +20,8 @@ In order to run this project, you'll need Eclipse Modeling Tools version 2022-09
 
 
 ## TODOs
+ - Add cross references and scoping
  - Fix the limitations mentioned above if possible.
  - Add more documentation
+ - Grammar cleanup
+ - Tests cleanup

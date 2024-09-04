@@ -32,7 +32,6 @@ Chunk:
 //	('#' -> '\n')
 //;
 
-
 Block: 
 	{Block} (stats+=Stat (=>';')?)* (lastStat=LastStat (=>';')?)? 
 ;
@@ -51,10 +50,10 @@ Stat returns Stat:
     {RepeatLoop}'repeat' block=Block 'until' condition=Exp |
     {IfThenElse} 'if' condition=Exp 'then' thenBlock=Block (elseIfs+=ElseIf)* ('else' elseBlock=Block)? 'end' |
     {NumericFor} 'for' LUA_NAME '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end' |
-    {GenericFor} 'for' NameList 'in' expList=ExpList 'do' block=Block 'end' |
+    {GenericFor} 'for' forArgs=NameList 'in' expList=ExpList 'do' block=Block 'end' |
     {FunctionDeclaration} 'function' funcName=FuncName body=FuncBody |
     {LocalFunctionDeclaration} 'local' 'function' LUA_NAME body=FuncBody |
-    {LocalNameListDeclaration} 'local' NameList ('=' expList=ExpList)? 
+    {LocalNameListDeclaration} 'local' vars=NameList ('=' expList=ExpList)? 
     | Lua52Stat
 ;
 
@@ -110,14 +109,12 @@ Lua52Stat returns Stat:
 //HeadTarget: FunctionCall | Assignment;	
 //Named: FunctionCall | Assignment ;
 //Head: PrefixExp;
-
 AssignmentOrFunctionCall returns Stat:
-	PrefixExp(
+	PrefixExp (
 		({FunctionCall.functionCall=current}) |
-    	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
+	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
 	)
 ;
-
 
 
 //Assignment:
@@ -138,48 +135,21 @@ LastStat:
 ;
 
 
-//Var returns Var: 
-//    PrefixExp
+Ref:
+	name=LUA_NAME
+;
+
+
+//Arg:
+//	name=LUA_NAME
 //;
-
-
-PrefixExp returns Exp:
-	 //{Exp} =>suffixExp=SuffixExp? | //TODO: is this needed?
-	 {Exp} name=LUA_NAME =>suffixExp=SuffixExp? | 
-	 //FunctionCall suffixExp=SuffixExp? | 
-	 '(' groupedExp=Exp ')' =>suffixExp=SuffixExp?
-;
-
-SuffixExp returns Exp:
-	Args =>suffixExp=SuffixExp? | // from FunctionCall in reference
-	':' name=LUA_NAME args=Args =>suffixExp=SuffixExp? | // from FunctionCall in reference
-	'[' indexExp=Exp ']' =>suffixExp=SuffixExp? | // from Var in reference
-	{Exp} '.' name=LUA_NAME =>suffixExp=SuffixExp? // from Var in reference
-;
-
-
-//FunctionCall: 
-//	functionCall=PrefixExp
-//;
-
-
-
-Args: 
-	{Args} '(' (params+=ExpList)? ')' | 
-	TableConstructor |
-	{Args} name=LUA_STRING 
-;
-
-NameList: 
-	LUA_NAME (',' LUA_NAME)*
-;
 
 // Expressions
 
 ExpList: 
 	// TODO: the previous alternative: (exps+=Exp ',')* exps+=Exp caused a non-LL(*) error due to recursive rule invocations, find out why
 	//(=>exps+=Exp ',')* exps+=Exp
-	//(exps+=Exp ',')* =>exps+=Exp 
+	//=>(exps+=Exp ',')* exps+=Exp 
 	 exps+=Exp ( =>',' exps+=Exp)*
 ;
 
@@ -240,10 +210,39 @@ ExpPrimary returns Exp:
 	{ExpNumberLiteral} value=NUMBER_LITERAL | 
 	{ExpStringLiteral} value=LUA_STRING | 
 	{ExpVarArgs} '...' |
-	Function |
+	FunctionDeclaration |
 	PrefixExp |
 	TableConstructor
 	// exp binop exp | unop exp from the reference are handled without left-recursion and describing operator precedences by Exp starting with ExpOr
+;
+
+
+// Just for readability/mapping to the reference: the rule chain starting from SuffixExp parses the prefix
+// expressions from the reference documentation.
+PrefixExp returns Exp:
+	SuffixExp
+;
+
+SuffixExp returns Exp:
+	Var =>(
+		':' {MemberFuncCall.object=current} funcName=LUA_NAME args=Args |
+		{FuncCall.object=current} args=Args |
+		'[' {VarArrayAccess.array=current} index=Exp ']' |
+		'.' {VarMemberAccess.object=current} memberName=LUA_NAME
+	)*
+;
+
+// PrefixExp now executed last in expression chain to avoid left-recursion
+Var returns Exp:
+	'(' Exp ')' |
+	{Var} var=LUA_NAME
+;
+
+Args: 
+	{ParamArgs} '(' (params=ExpList)? ')' | 
+	//{ParamArgs} '(' (params=[ExpList|NameList])? ')' | 
+	TableConstructor |
+	{LiteralStringArg} str=LUA_STRING 
 ;
 
 TableConstructor:
@@ -268,12 +267,16 @@ FuncName:
 	LUA_NAME ('.' LUA_NAME)* (':' LUA_NAME)?
 ;
 
-Function:
+NameList: 
+	LUA_NAME (',' LUA_NAME)*
+;
+
+FunctionDeclaration:
 	'function' FuncBody
 ;
 
 FuncBody:
-	'(' (ParList)? ')' Block 'end'
+	'(' (ParList)? ')' funcBlock=Block 'end'
 ;
 
 ParList:
@@ -281,32 +284,21 @@ ParList:
 	'...'
 ;
 
-	
+
+
+
+// ****************************************************
+// TERMINALS
+// ****************************************************
+
 // Identifiers can be any string of letters, digits, and underscores, but mustn't begin with a digit.
 terminal LUA_NAME returns ecore::EString:
 	('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
 
-//terminal LUA_STRING returns ecore::EString:
-//	("'"
-//		(
-//		'\\' ('a' | 'b' | 'f' | 'n' | 'r' | 't' | 'v' | '"' | "'" | '\\' | ('0'..'9' ('0'..'9' ('0'..'9'))))
-//		| !('\\' | "'")
-//		)* 
-//	"'")
-//	| ('"' 
-//		('\\' ('a' | 'b' | 'f' | 'n' | 'r' | 't' | 'v' | '"' | "'" | '\\' | ('0'..'9' ('0'..'9' ('0'..'9')))) | !('\\' | '"'))* 
-//	'"');
-
-// From Burgey
-//terminal LUA_STRING:
-//	'"' ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | '"'))* '"' |
-//	"'" ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | "'"))* "'"
-//;
 
 // Literal Strings can be defined between single or double quotes. They can also be defined using a long format enclosed by long brackets.
 // https://www.lua.org/manual/5.1/manual.html#2.1 ("2.1 – Lexical Conventions")
 // E.g. [[...]], [=[...]=]
-
 terminal LUA_STRING:
 	'"' ('\\' . | !('\\' | '"'))* '"' |
 	"'" ('\\' . | !('\\' | "'"))* "'"  
@@ -338,17 +330,38 @@ terminal LUA_STRING_LONG_CONTENT:
 ;
 */
 
+/**
+ *  From https://www.lua.org/manual/5.1/manual.html#2.1:
+ * 
+ * "A comment starts with a double hyphen (--) anywhere outside a string. If the text immediately after -- is not an opening long bracket, 
+ * the comment is a short comment, which runs until the end of the line. Otherwise, it is a long comment, which runs until the corresponding 
+ * closing long bracket. Long comments are frequently used to disable code temporarily."
+ * 
+ * This implies just one '[' suffices to start a multiline comment, but it seems two are needed.
+ */
+terminal COMMENT:
+	ML_COMMENT | SL_COMMENT
+;
 
+terminal ML_COMMENT:
+	'--' LUA_STRING_LONG
+;
+ 
+terminal fragment MATCH_UNTIL_LINE_BREAK:
+	!('\n'|'\r')* ('\r'? '\n')?
+;
 
-//terminal LUA_IMPORT_STRING returns ecore::EString:
-//	('a'..'z'|'A'..'Z'|'_'|'-'|'/'|'.')*
-//    ;
-// TODO: don't think this is correct, number constants like 10e30 should be also possible? and why does 10x30 work?????
-//terminal LUA_NUMBER returns ecore::EDouble:
-//	(('0'..'9')+ ('.' ('0'..'9')+ (('E' | 'e') ('-')? ('0'..'9')+)?)?) |
-//	('0x' ('0'..'9' | 'a'..'f')+)
-//;
-
+terminal SL_COMMENT:
+	'--' !'[' MATCH_UNTIL_LINE_BREAK |
+	'--[' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[=' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[==' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[===' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[====' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[=====' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[======' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[=======' !('['|'=') MATCH_UNTIL_LINE_BREAK 	
+;
 
 terminal NUMBER_LITERAL returns ecore::EDouble:
 	// rules for double values
@@ -374,86 +387,7 @@ terminal HEX_LITERAL returns ecore::EDouble:
 	) (('p'| 'P') ('+'|'-')? ('0'..'9')+)? // the exponent part, should be binary per definition but here we just allow any int
 ;
 
-
-// ****************************************************
-// TERMINALS
-// ****************************************************
-
-terminal COMMENT:
-	ML_COMMENT | SL_COMMENT
-;
-
-terminal ML_COMMENT:
-	'--' LUA_STRING_LONG
-;
-	
-//terminal ML_COMMENT:
-//	'--' '[['->']]';
-
-/**
- *  From https://www.lua.org/manual/5.1/manual.html#2.1:
- * 
- * "A comment starts with a double hyphen (--) anywhere outside a string. If the text immediately after -- is not an opening long bracket, 
- * the comment is a short comment, which runs until the end of the line. Otherwise, it is a long comment, which runs until the corresponding 
- * closing long bracket. Long comments are frequently used to disable code temporarily."
- * 
- * This implies just one '[' suffices to start a multiline comment, but it seems two are needed.
- */
- 
-terminal fragment MATCH_UNTIL_LINE_BREAK:
-	!('\n'|'\r')* ('\r'? '\n')?
-;
-
-
-terminal SL_COMMENT:
-
-	//'--' !'[' !('\n'|'\r')* ('\r'? '\n')? 
-	
-	//'--' '[' !('['|'='|'\n'|'\r')* ('\r'? '\n')? |
-	
-
-	
-//	'--' !'[' !'[' MATCH_UNTIL_LINE_BREAK |
-//	'--' '[' !('['|'=') MATCH_UNTIL_LINE_BREAK 
-
-	'--' !'[' MATCH_UNTIL_LINE_BREAK |
-	'--[' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[=' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[==' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[===' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[====' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[=====' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[======' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[=======' !('['|'=') MATCH_UNTIL_LINE_BREAK 
-	
-	/*
-	'--' !'[' MATCH_UNTIL_LINE_BREAK |
-	'--' '[' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--' '[' '=' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--' '[' '=' '=' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--' '[' '=' '=' '=' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--' '[' '=' '=' '=' '=' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--' '[' '=' '=' '=' '=' '=' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--' '[' '=' '=' '=' '=' '=' '=' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--' '[' '=' '=' '=' '=' '=' '=' '=' !('['|'=') MATCH_UNTIL_LINE_BREAK
-	*/
-	
-	
-;
-
-
-
-//terminal WS:
-//	(' ' | '\t')
-//;
-
 terminal WS:
 	(' ' | '\t' | '\r' | '\n')+; // Consume all white space, tabs and new line characters
 	
-terminal ANY_OTHER:
-	.
-;
 
-//terminal LINE_BREAK:
-//	('\r' | '\n' | '\r\n')
-//;

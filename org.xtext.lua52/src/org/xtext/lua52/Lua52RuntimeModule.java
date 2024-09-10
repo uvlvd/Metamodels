@@ -4,14 +4,51 @@
 package org.xtext.lua52;
 
 import org.eclipse.xtext.conversion.IValueConverterService;
+import org.eclipse.xtext.linking.ILinkingDiagnosticMessageProvider;
+import org.eclipse.xtext.linking.ILinkingService;
+import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
+import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.xtext.lua52.converters.LuaValueConverterService;
+import org.xtext.lua52.linking.LuaLinkingDiagnosticMessageProvider;
+import org.xtext.lua52.linking.LuaLinkingService;
+import org.xtext.lua52.linking.LuaSyntheticLinkingSupport;
+import org.xtext.lua52.scoping.Lua52QualifiedNameProvider;
 
 /**
  * Use this class to register components to be used at runtime / without the Equinox extension registry.
  */
 public class Lua52RuntimeModule extends AbstractLua52RuntimeModule {
+	
+	/**
+	 * Bind cusom value converter to handle the conversion of parsed Lua values, e.g. hex numbers.
+	 */
     @Override
     public Class<? extends IValueConverterService> bindIValueConverterService() {
         return LuaValueConverterService.class;
     }
+    
+    /**
+     * Bind custom linking message provider to disable error messages for unresolved references 
+     * in the context of assignments (left-hand side cross-references need to be ignored, since
+     * they denote declarations).
+     */
+    public Class<? extends ILinkingDiagnosticMessageProvider> bindILinkingDiagnosticMessageProvider() {
+		return LuaLinkingDiagnosticMessageProvider.class;
+	}
+    
+    @Override
+    public Class<? extends IQualifiedNameProvider> bindIQualifiedNameProvider() {
+        return Lua52QualifiedNameProvider.class;
+    }
+    
+    @Override
+    public Class<? extends ILinkingService> bindILinkingService() {
+        return LuaLinkingService.class;
+    }
+    
+    //public Class<? extends SyntheticLinkingSupport> bindSyntheticLinkingSupport() {
+	//	return LuaSyntheticLinkingSupport.class;
+	//}
+    
+    //SyntheticLinkingSupport support = new SyntheticLinkingSupport()
 }

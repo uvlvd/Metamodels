@@ -20,7 +20,7 @@ import org.xtext.lua52.PreprocessingUtils
 class Lua52ParsingTest {
 	@Inject
 	ParseHelper<Chunk> parseHelper
-	
+
 	def static String dump(EObject mod_, String indent) {
 	    var res = indent + mod_.toString.replaceFirst ('.*[.]impl[.](.*)Impl[^(]*', '$1 ')
 	
@@ -69,7 +69,7 @@ class Lua52ParsingTest {
 		val parsedAndPrintedExtremelyCanonical = removeComments(parsedAndPrinted)
 
 		val equivalence = origExtremelyCanonical.equals(parsedAndPrintedExtremelyCanonical)
-		if (equivalence) {
+		if (!equivalence) {
 			System.out.println("===== Original: =====")
 			System.out.println(original)
 			System.out.println("===== Parsed and serialized: =====")
@@ -138,6 +138,7 @@ class Lua52ParsingTest {
 
 		'''
 		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""))
 		check(result, SUT)
 	}
 	
@@ -229,15 +230,22 @@ class Lua52ParsingTest {
 	def void functionCallTest() {
 		val SUT = '''
 			-- tests function call without assignment
+			
 			f(a, b, c)
 			-- test with assignment
 			result = f(a, b, c)
 			
-			otherResult = a.t:x(2,3)
+			a["hello"]()()
 			
+			a = b or c and d
+			otherResult = a.t:x(2,3)
+
 			a = f(x).y
+			
+			f(x).y["test"]:func() = "hello" -- should fail
 		'''
 		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""))
 		check(result, SUT)
 	}
 	
@@ -449,12 +457,14 @@ class Lua52ParsingTest {
 	
 	// Test for stuff that does not yet work
 	@Test
-	def void todoTest() {
+	def void todoest() {
 		val SUT = '''
+			--assert(debug.getmetatable(x).__gc == F)
+			
 			--#! shebang line
-			a, b = 10, 11
-			print("hello world")
-			function func(a) return a+a end
+			--a, b = 10, 11
+			--print("hello world")
+			--function func(a) return a+a end
 			--1f(x)
 			
 			--do --[
@@ -502,4 +512,52 @@ class Lua52ParsingTest {
 		val result = parseHelper.parse(SUT)
 		check(result, SUT)
 	}
+	
+	// Tests for scoping
+	
+	@Test
+	def void scopingTest() { 
+		val SUT = '''
+			a = 1
+			b = a
+			
+			for num = 1, 10 do
+				a = a + num
+			end
+			
+			for i, j in {1,2,3}, {4,5,6} do
+				b = i+j
+			end
+			--test.member[1].func()[2].field = 1
+			--var = 1
+			--a = var
+			--a.b, a = 2, 3
+			--a = 10
+			--b = a
+			--test.member[1] = t.member[1]
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingMemberTest() { 
+		val SUT = '''
+			l = {}
+		    l.member, k, j = 10, 11, 12
+			a = {}
+			a.member = {}
+			a.member.secondMember = 10
+			b = a
+			c = a.member
+			d = a.member.secondMember
+			x, y = l.member, a.member
+			
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
 }

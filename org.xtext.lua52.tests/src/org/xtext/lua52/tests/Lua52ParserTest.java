@@ -16,19 +16,41 @@ import org.xtext.lua52.Lua52Parser;
 import org.xtext.lua52.PreprocessingUtils;
 
 public class Lua52ParserTest {
-	
-	/**
-	 * The path to the project folder that is to be tested, e.g. "C:\\lua-5.2.0-tests".
-	 */
-	private final static String SUT_PATH = "C:\\path\\to\\folder"; // subject under test, i.e. a Lua project (e.g. lua 5.2 test suite https://www.lua.org/tests/)
+	@Test
+	public void testMinimalParseTest() throws IOException {
+		final var apisix = "D:\\MA\\apisix\\apisix";
+		final var lua_test_suite_51 = "D:\\MA\\lua5.1-tests";
+		final var lua_test_suite_52 = "D:\\MA\\lua-5.2.0-tests";
+		
+		// neovim plugins
+		final var nvimDbee = "D:\\MA\\repos\\nvim_plugins\\nvim-dbee"; // has lots of go code
+		final var mason = "D:\\MA\\repos\\nvim_plugins\\mason.nvim"; // at least Lua 5.3
+		final var lualine = "D:\\MA\\repos\\nvim_plugins\\lualine.nvim";
+		final var telescope = "D:\\MA\\repos\\nvim_plugins\\telescope.nvim";
+		final var trouble = "D:\\MA\\repos\\nvim_plugins\\trouble.nvim";
+		
+		final var temp_testfolder = "D:\\MA\\repos\\temp";
+		
+		var resourceSet = new Lua52Parser().parse(Paths.get(lua_test_suite_52));
+		
+		var counter = new AtomicInteger();
+		resourceSet.getResources().forEach(r -> 
+			r.getAllContents().forEachRemaining(
+					modelElement -> counter.getAndIncrement()
+			)
+		);
+		
+
+		//System.out.println(resourceSet);
+		System.out.println(counter.get());
+	}
 	
 	@Test
-	/**
-	 * Tests the parsing of the project from SUT_PATH.
-	 * @throws IOException
-	 */
 	public void luaTestSuiteTest() throws IOException {
-		var resourceSet = new Lua52Parser().parse(Paths.get(SUT_PATH));
+		final var lua_test_suite_52 = "D:\\MA\\lua-5.2.0-tests"; // TODO: situate in project
+		final var apisix = "D:\\MA\\apisix\\apisix";
+		final var temp_testfolder = "D:\\MA\\repos\\temp";
+		var resourceSet = new Lua52Parser().parse(Paths.get(apisix));
 		
 		for (var r : resourceSet.getResources()) {
 			var outputStream = new ByteArrayOutputStream();

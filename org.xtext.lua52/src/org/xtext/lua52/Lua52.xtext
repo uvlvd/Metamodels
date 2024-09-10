@@ -21,6 +21,9 @@ generate lua52 "http://www.xtext.org/lua52/Lua52"
 // TODO: currently, something like a=10r30 is possible ("r30" is detected as a functioncall directly after the last right-side-expression of an assignment), not sure how to fix
 // TODO: Single-line comments start with -- NOT followed by a LUA_STRING_LONG (else its a multiline comment), this currently does not work
 
+//TODO: better testing, split into unit tests for grammar without scoping and scoping tests (see itemis/xtext-testint on github maybe?)
+//TODO: add typing?  https://dslmeinte.wordpress.com/2012/08/03/polymorphic-dispatch-in-xtend/
+
 // A shebang (#!) at the beginning of a lua script is possible in lua but can not (currently) be parsed by this grammar, i.e. if the first line starts with '#' is is considered a comment
 
 Chunk:
@@ -28,6 +31,7 @@ Chunk:
 	block=Block
 ;
 
+ 
 //terminal SPECIAL_COMMENT:
 //	('#' -> '\n')
 //;
@@ -45,16 +49,32 @@ Block:
  */
 Stat returns Stat:
 	AssignmentOrFunctionCall |
+	//FunctionCall |
+	//Assignment |
+	//FuncCallLhs |
+	//VarRhs |
+	//Assignment |
     {DoEndBlock} 'do' block=Block 'end' |
     {WhileLoop} 'while' condition=Exp 'do' block=Block 'end' |
     {RepeatLoop}'repeat' block=Block 'until' condition=Exp |
     {IfThenElse} 'if' condition=Exp 'then' thenBlock=Block (elseIfs+=ElseIf)* ('else' elseBlock=Block)? 'end' |
-    {NumericFor} 'for' LUA_NAME '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end' |
-    {GenericFor} 'for' forArgs=NameList 'in' expList=ExpList 'do' block=Block 'end' |
+    //{NumericFor} 'for' LUA_NAME '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end' |
+    //{GenericFor} 'for' forArgs=NameList 'in' expList=ExpList 'do' block=Block 'end' |
+    NumericFor |
+    GenericFor |
+    
     {FunctionDeclaration} 'function' funcName=FuncName body=FuncBody |
     {LocalFunctionDeclaration} 'local' 'function' LUA_NAME body=FuncBody |
     {LocalNameListDeclaration} 'local' vars=NameList ('=' expList=ExpList)? 
     | Lua52Stat
+;
+
+NumericFor returns BlockWrapperWithArgs:
+	'for' arg=LUA_NAME '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end'
+;
+
+GenericFor returns BlockWrapperWithArgs:
+	'for' args=NameList 'in' expList=ExpList 'do' block=Block 'end'
 ;
 
 /**
@@ -105,24 +125,28 @@ Lua52Stat returns Stat:
 		;
  * We need to differentiate between a FunctionCall and an Assignment, since the xTexts/ANTLRs lookahead is not able to reach the '=' to do so.
  * Ref. for the fix: https://dslmeinte.wordpress.com/2014/09/11/ambiguitiy-in-xtext-grammars-part-2/
+ * 
+ * Assignments contain a list of vars and an ExpList, this is used in the linking phase to distinguish
+ * cross-references from PrefixExps (right-hand side of an Assignment, inside ExpList i.e. ExpList is parent/container) from declarations
+ * (left-hand side of an Assignment, ExpList is NOT parent/container).
  */
-//HeadTarget: FunctionCall | Assignment;	
-//Named: FunctionCall | Assignment ;
-//Head: PrefixExp;
+//AssignmentOrFunctionCall returns Stat:
+//	PrefixExp (
+//		({FunctionCall.functionCall=current}) |
+//	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
+//	)
+//;
+
 AssignmentOrFunctionCall returns Stat:
-	PrefixExp (
+	PrefixLhs (
 		({FunctionCall.functionCall=current}) |
-	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
+	   	({Assignment.vars+=current} (',' vars+=PrefixLhs)* =>'=' expList=ExpList)
 	)
 ;
 
 
-//Assignment:
-//	varList=VarList '=' expList=ExpList
-//;
-
 //VarList returns VarList:
-//	vars+=Var (',' vars+=Var)*
+//	vars+=PrefixLhs (=>',' vars+=PrefixLhs)*
 //;
 
 ElseIf:
@@ -134,10 +158,6 @@ LastStat:
     {LastStat} 'break'
 ;
 
-
-Ref:
-	name=LUA_NAME
-;
 
 
 //Arg:
@@ -211,31 +231,64 @@ ExpPrimary returns Exp:
 	{ExpStringLiteral} value=LUA_STRING | 
 	{ExpVarArgs} '...' |
 	FunctionDeclaration |
-	PrefixExp |
+	//PrefixExp |
+	//VarRhs |
+	PrefixRhs |
 	TableConstructor
 	// exp binop exp | unop exp from the reference are handled without left-recursion and describing operator precedences by Exp starting with ExpOr
 ;
 
 
-// Just for readability/mapping to the reference: the rule chain starting from SuffixExp parses the prefix
-// expressions from the reference documentation.
-PrefixExp returns Exp:
-	SuffixExp
+
+
+// this is what currently works
+/* PrefixLhs, SuffixLhsExp and VarLhs define Functioncalls and variable assignments that may
+ * appear as a Statment (in the case of function calls) or on the left-hand side of an assignement/declaration. They
+ * contain a name attribute to to enable cross-references. The corresponding Rhs rules match
+ * the same words, but at other positiosn (e.g. righ-hand side of an assignment), and contain a
+ * reference to Lhs objects. 
+*/
+PrefixLhs:
+	SuffixLhsExp
 ;
 
-SuffixExp returns Exp:
-	Var =>(
-		':' {MemberFuncCall.object=current} funcName=LUA_NAME args=Args |
-		{FuncCall.object=current} args=Args |
-		'[' {VarArrayAccess.array=current} index=Exp ']' |
-		'.' {VarMemberAccess.object=current} memberName=LUA_NAME
+SuffixLhsExp returns Referenceable:
+	VarLhs =>(
+		':' {MemberFuncCallLhs.object=current} referencing=LUA_NAME args=Args |
+		//':' {MemberFuncCallLhs.object=current} referencing=[Refble|LUA_NAME] args=Args |
+		{FuncCallLhs.object=current} args=Args |
+		//{FuncCall.object=current} referencing=[Refble|LUA_NAME] args=Args (furtherArgs+=Args)* |
+		'[' {VarTableAccessLhs.array=current} index=Exp ']' 
+		| '.' {VarMemberAccessLhs.object=current} name=LUA_NAME
 	)*
 ;
 
-// PrefixExp now executed last in expression chain to avoid left-recursion
-Var returns Exp:
+VarLhs returns Referenceable:
 	'(' Exp ')' |
-	{Var} var=LUA_NAME
+	{Var} name=LUA_NAME
+;
+
+
+PrefixRhs returns Exp:
+	SuffixRhsExp
+;
+
+SuffixRhsExp returns Exp:
+	VarRhs =>(
+		':' {MemberFuncCallRhs.object=current} referencing=[Refble|LUA_NAME] args=Args |
+		{FuncCallRhs.object=current} args=Args |
+		'[' {VarTableAccessRhs.array=current} index=Exp ']' |
+		'.' {VarMemberAccessRhs.object=current} referencing=[Refble|LUA_NAME]
+	)*
+;
+
+VarRhs returns Exp:
+	'(' Exp ')' |
+	{VarRhs} referencing=[Refble|LUA_NAME]
+;
+
+MemberAccess:
+	LUA_NAME ('.' LUA_NAME)*
 ;
 
 Args: 
@@ -268,7 +321,7 @@ FuncName:
 ;
 
 NameList: 
-	LUA_NAME (',' LUA_NAME)*
+	names+=LUA_NAME (',' names+=LUA_NAME)*
 ;
 
 FunctionDeclaration:
@@ -285,7 +338,29 @@ ParList:
 ;
 
 
+/**
+ * The Ref rule is used as a cross-reference and name at the same time. 
+ * The distinction between cross-reference and (qualified) name is performed in the linking and scoping phases
+ * (See org.xtext.lua52.linking and org.xtext.lua52.scoping packages).
+ * 
+ * Any rules that contain cross-references or can be referenced to need to implement a
+ * feature ref=[Ref|LUA_NAME] (since the getRef() method is used to detect them in later phases).
+ */
+Referenceable:
+	name=LUA_NAME
+;
 
+// ****************************************************
+// SYNTHETIC
+// ****************************************************
+Refble:
+	Referenceable
+;
+
+BlockWrapperWithArgs:
+	NumericFor |
+	GenericFor
+;
 
 // ****************************************************
 // TERMINALS
@@ -293,7 +368,8 @@ ParList:
 
 // Identifiers can be any string of letters, digits, and underscores, but mustn't begin with a digit.
 terminal LUA_NAME returns ecore::EString:
-	('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
+	('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*
+;
 
 
 // Literal Strings can be defined between single or double quotes. They can also be defined using a long format enclosed by long brackets.
@@ -387,7 +463,9 @@ terminal HEX_LITERAL returns ecore::EDouble:
 	) (('p'| 'P') ('+'|'-')? ('0'..'9')+)? // the exponent part, should be binary per definition but here we just allow any int
 ;
 
+// Consume all white space, tabs and new line characters
 terminal WS:
-	(' ' | '\t' | '\r' | '\n')+; // Consume all white space, tabs and new line characters
+	(' ' | '\t' | '\r' | '\n')+
+; 
 	
 

@@ -1,47 +1,54 @@
 package org.xtext.lua.scoping;
 
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.xtext.linking.impl.LinkingHelper;
 import org.eclipse.xtext.naming.DefaultDeclarativeQualifiedNameProvider;
 import org.eclipse.xtext.naming.QualifiedName;
-import org.xtext.lua.LuaUtil;
-import org.xtext.lua.lua.Expression_TableConstructor;
-import org.xtext.lua.lua.Field_AddEntryToTable;
-import org.xtext.lua.lua.Refble;
-import org.xtext.lua.lua.Referenceable;
-import org.xtext.lua.lua.Statement_Assignment;
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
+import org.xtext.lua.lua.FuncCall;
+import org.xtext.lua.lua.LuaPackage.Literals;
+import org.xtext.lua.lua.MemberAccess;
+import org.xtext.lua.lua.Var;
+
+import com.google.inject.Inject;
+
 
 public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNameProvider {
-    @Override
+	
+  	
+	@Inject 
+	private LinkingHelper linkingHelper;
+	
+	@Override
     protected QualifiedName computeFullyQualifiedName(final EObject obj) {
-        // Table field use the qualified name calculation and resolve the parent
-        // multirefble
-        if (obj instanceof Field_AddEntryToTable) {
-            var computedFQN = this.computeFullyQualifiedNameFromNameAttribute(obj);
 
-            if (obj.eContainer() instanceof Expression_TableConstructor) {
-                var tableConstructor = (Expression_TableConstructor) obj.eContainer();
-                if (tableConstructor.eContainer() instanceof Statement_Assignment) {
-                    // find the refble that is associated with us in the parent multirefble
-                    var dest = LuaUtil.resolveValueToDest(tableConstructor);
-                    if (dest != null && dest instanceof Referenceable) {
-                        var myRefble = (Referenceable) dest;
-                        var myName = myRefble.getName() + "." + computedFQN.toString();
-                        return this.getConverter()
-                            .toQualifiedName(myName);
-                    }
-                }
-            }
-            return computedFQN;
-        } else if (obj instanceof Refble) {
-            var refble = (Refble) obj;
+		QualifiedName name = null;
+		
+		if (obj instanceof Var var) {
+	    	var refNode = NodeModelUtils.findNodesForFeature(var, Literals.VAR__NAME).get(0);
+	    	var refString = linkingHelper.getCrossRefNodeAsString(refNode, true);
+	    	name = this.getConverter().toQualifiedName(refString);
+		}
+		
+		if (obj instanceof MemberAccess memberAccess) {
+	    	var refNode = NodeModelUtils.findNodesForFeature(memberAccess, Literals.MEMBER_ACCESS__NAME).get(0);
+	    	var refString = linkingHelper.getCrossRefNodeAsString(refNode, true);
+	    	name = this.getConverter().toQualifiedName(refString);
+		}
+		
+		// TODO?
+		if (obj instanceof FuncCall funcCall) {
+			//var refNode = NodeModelUtils.findNodesForFeature(funcCall, Literals.FUNC_CALL__OBJECT).get(0);
+	    	//var refString = linkingHelper.getCrossRefNodeAsString(refNode, true);
+	    	//System.out.println("TODO: implement FuncCall fqn?");
+	    	//System.out.println(this.getConverter().toQualifiedName(refString));
+		}
+		
+		//System.out.println("Returning fqn '"  + name + "' for obj " + obj);
+		
 
-            // Othere refbles use simply their name
-            var name = refble.getName();
-            if (name != null) {
-                return this.getConverter()
-                    .toQualifiedName(name);
-            }
-        }
-        return null;
+
+        return name;
     }
+    	
 }

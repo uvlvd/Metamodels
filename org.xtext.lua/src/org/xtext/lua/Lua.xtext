@@ -1,408 +1,446 @@
-grammar org.xtext.lua.Lua
+grammar org.xtext.lua.Lua 
 	hidden(WS, COMMENT)
-
-// 	Now inlined because of INT not being matchable
-//	with org.eclipse.xtext.common.Terminals 
-import 'http://www.eclipse.org/emf/2002/Ecore' as ecore
+	
+import 'http://www.eclipse.org/emf/2002/Ecore' as ecore	
 generate lua "http://www.xtext.org/lua/Lua"
 
+
+/**
+ * Grammar is based on the reference grammar given at https://www.lua.org/manual/5.2/manual.html#9 "9 – The Complete Syntax of Lua"
+ * and based on the xText implementation of the Lua 5.1 grammar.
+ */
+
+// TODO: might need to re-insert FunctionCall and Assignment as classes for later scoping/linking steps.
+// TODO: document differences between reference grammar and the implemented one (LLk, i.e. no left recursion and no ambiguities).
+
+// TODO: Lua long string literals (also used for comments)
+// TODO: currently, something like a=10r30 is possible ("r30" is detected as a functioncall directly after the last right-side-expression of an assignment), not sure how to fix
+// TODO: Single-line comments start with -- NOT followed by a LUA_STRING_LONG (else its a multiline comment), this currently does not work
+
+//TODO: better testing, split into unit tests for grammar without scoping and scoping tests (see itemis/xtext-testint on github maybe?)
+//TODO: add typing?  https://dslmeinte.wordpress.com/2012/08/03/polymorphic-dispatch-in-xtend/
+
+// A shebang (#!) at the beginning of a lua script is possible in lua but can not (currently) be parsed by this grammar, i.e. if the first line starts with '#' is is considered a comment
+
 Chunk:
-	block=Block;
-
-// We introduce some typen into the inheritence hiearchy (uses multiple inheritence)
-Refble:
-	Referenceable
-	| Argument
-	| Field_AddEntryToTable
-	| Statement_Function_Declaration;
-
-// The synthetic are only used for merging resources before propagation.
-// BEGIN SYNTHETIC RULES
-NamedChunk:
-	'--namedchunk@' name=LUA_STRING
-	chunk=Chunk;
-
-Component:
-	{Component}
-	'component:'
-	name=LUA_STRING
-	=>'--chunks'
-	(=>chunks+=NamedChunk)*;
-
-ComponentSet:
-	{ComponentSet}
-	'components:'
-	(=>components+=Component)*;
-
-// END SYNTHETIC RULES
-Block:
-	{Block}
-	(statements+=Statement (=>';')?)*
-	(=>returnValue=LastStatement (=>';')?)?;
-
-// ****************************************************
-// LAST STATEMENT
-// ****************************************************
-LastStatement:
-	LastStatement_Return | LastStatement_Break | LastStatement_Return_WithValue;
-
-// The return statement is used to return values from a function or a chunk
-LastStatement_Return:
-	{LastStatement_Return}
-	'return';
-
-LastStatement_Return_WithValue:
-	'return' returnValues+=Expression (',' returnValues+=Expression)*;
-
-// The break statement is used to terminate the execution of a while, repeat, or for loop, skipping to the next statement after the loop
-LastStatement_Break:
-	'break' {LastStatement_Break};
-
-// ****************************************************
-// STATEMENT
-// ****************************************************
-Statement:
-	Statement_Block
-	| Statement_While
-	| Statement_Repeat
-	| Statement_If_Then_Else
-	| Statement_For
-	| Statement_Functioncall
-	| Statement_Function_Declaration
-	| Statement_Assignment;
-
-//	| Statement_TableAssignment;
-// Blockwrapping statements
-BlockWrapper:
-	{BlockWrapper} block=Block
-	| BlockWrapperWithArgs
-	| Statement_Block
-	| Statement_While
-	| Statement_Repeat
-	| Statement_If_Then_Else
-	| Statement_If_Then_Else_ElseIfPart;
-
-BlockWrapperWithArgs:
-	Function
-	| Statement_For;
-
-Statement_Declaration:
-	Statement_Function_Declaration
-	| Statement_Assignment;
-
-// A block can be explicitly delimited to produce a single statement. "do ... end"
-Statement_Block:
-	'do' block=Block 'end';
-
-// Control structure. "while ... do ... end"
-Statement_While:
-	'while' expression=Expression 'do' block=Block 'end';
-
-// Control structure. "repeat ... until ..."
-Statement_Repeat:
-	'repeat' block=Block 'until' expression=Expression;
-
-// Control structure. "if ... then ... elseif ... elseif ... else ... end"
-Statement_If_Then_Else:
-	'if' ifExpression=Expression 'then'
+	//SPECIAL_COMMENT?
 	block=Block
-	(elseIf+=Statement_If_Then_Else_ElseIfPart)*
-	('else' elseBlock=Block)?
-	'end';
+;
 
-Statement_If_Then_Else_ElseIfPart:
-	'elseif' elseifExpression=Expression 'then' block=Block;
+ 
+//terminal SPECIAL_COMMENT:
+//	('#' -> '\n')
+//;
 
-// The numeric for loop repeats a block of code while a control variable runs through an arithmetic progression "for ...=..., ... [,...] do ... end"
-Statement_For:
-	'for'
-	arguments+=Argument
-	(=>',' arguments+=Argument)*
-	(numeric?='=' | generic?='in')
-	argExpressions+=Expression
-	(=>',' argExpressions+=Expression)*
-	=>'do' block=Block 'end';
+Block: 
+	{Block} (stats+=Stat (=>';')?)* (lastStat=LastStat (=>';')?)? 
+;
 
-//    'function' name=QualifiedName function=Function 'end';
-Statement_Function_Declaration:
-	Statement_Local_Function_Declaration
-	| Statement_Global_Function_Declaration;
+/**
+ * We need to define actions here to differentiate between e.g. different loops:
+ * E.g.: If Stat contains the alternatives
+    'while' condition=Exp 'do' block=Block 'end' |
+    'repeat' block=Block 'until' condition=Exp
+ * without actions (i.e. {WhileLoop}, {RepeatLoop}) the serialization would create a while-loop when the original contained a repeat-loop.
+ */
+Stat returns Stat:
+	AssignmentOrFunctionCall |
+	//FunctionCall |
+	//Assignment |
+	//FuncCallLhs |
+	//VarRhs |
+	//Assignment |
+    {DoEndBlock} 'do' block=Block 'end' |
+    {WhileLoop} 'while' condition=Exp 'do' block=Block 'end' |
+    {RepeatLoop}'repeat' block=Block 'until' condition=Exp |
+    {IfThenElse} 'if' condition=Exp 'then' thenBlock=Block (elseIfs+=ElseIf)* ('else' elseBlock=Block)? 'end' |
+    //{NumericFor} 'for' LUA_NAME '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end' |
+    //{GenericFor} 'for' forArgs=NameList 'in' expList=ExpList 'do' block=Block 'end' |
+    NumericFor |
+    GenericFor |
+    
+    {FunctionDeclaration} 'function' funcName=FuncName body=FuncBody |
+    {LocalFunctionDeclaration} 'local' 'function' LUA_NAME body=FuncBody |
+    {LocalNameListDeclaration} 'local' vars=NameList ('=' expList=ExpList)? 
+    | Lua52Stat
+;
 
-Statement_Local_Function_Declaration:
-	=>'local' 'function' name=LUA_NAME function=Function 'end';
+NumericFor returns BlockWrapperWithArgs:
+	'for' arg=LUA_NAME '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end'
+;
 
-Statement_Global_Function_Declaration:
-	'function' name=QualifiedName function=Function 'end';
+GenericFor returns BlockWrapperWithArgs:
+	'for' args=NameList 'in' expList=ExpList 'do' block=Block 'end'
+;
 
-// Local variables can be declared anywhere inside a block. The declaration can include an initial assignment "local ... [= ...]"
-//Statement_Local_Variable_Declaration returns MultiReferenceable: 
-//    refbles+=Referenceable (=> ',' refbles+=Referenceable)*
-//    (=> '=' values+=Expression (=> ',' values+=Expression)*)?;
-Statement_Assignment:
-	Statement_Local_Assignment
-	| Statement_Global_Assignment;
+/**
+ * Initially, the idea was to create a new xText grammar for Lua5.2, extending the Lua5.1 grammar.
+ * Unfortunately, the AssignmentOrFunctionCall Production rule prevents the extension in a sensible way, since large parts of this grammar (Lua5.1)
+ * would need to be duplicated in the extension (see https://github.com/eclipse/xtext/issues/2593).
+ * 
+ * Should this issue be resolved in the future, the extension can be created as explained here: https://stackoverflow.com/questions/16442508/including-a-grammar-into-another-grammar.
+ * The extension grammar could then contain something along the lines of the following:
+ * 
+   @Override 
+	Stat:
+		super |
+    	{Goto} 'goto' label=LUA_NAME |
+		{Label} '::' label=LUA_NAME '::'
+	; 
+	//[...]
+ */
 
-// Assignment_Destination is only used in the assignments
-Assignment_Destination:
-	Referenceable
-	| Expression_TableAccess;
+Lua52Stat returns Stat:
+	{Stat} ';' |
+	{Goto} 'goto' label=LUA_NAME |
+	{Label} '::' label=LUA_NAME '::'
+;
 
-Statement_Local_Assignment:
-	=>'local'
-	dests+=Assignment_Destination
-	(=>',' dests+=Assignment_Destination)*
-	(=>'=' values+=Expression (=>',' values+=Expression)*)?;
+/**
+ * Explanation for AssignmentOrFunctionCall rule:
+ * Previously, we had something like this (as a result from removing left-recursion and ambiguities from the reference grammar):
+ 		Stat:
+ 			FunctionCall |
+ 			Assignment 
+ 		;
+ 		
+		Assignment:
+			varList=VarList '=' expList=ExpList
+		;              //    ^ this is the '=' that needs to be reached to differentiate between a PrefixExp matching a Var and a PrefixExp matching a FunctionCall.
+		
+		VarList returns VarList:
+			vars+=Var (',' vars+=Var)*
+		;
+		* 
+		FunctionCall: 
+			PrefixExp
+		;
+		* 
+		Var returns Var: 
+		    PrefixExp
+		;
+ * We need to differentiate between a FunctionCall and an Assignment, since the xTexts/ANTLRs lookahead is not able to reach the '=' to do so.
+ * Ref. for the fix: https://dslmeinte.wordpress.com/2014/09/11/ambiguitiy-in-xtext-grammars-part-2/
+ * 
+ * Assignments contain a list of vars and an ExpList, this is used in the linking phase to distinguish
+ * cross-references from PrefixExps (right-hand side of an Assignment, inside ExpList i.e. ExpList is parent/container) from declarations
+ * (left-hand side of an Assignment, ExpList is NOT parent/container).
+ */
+//AssignmentOrFunctionCall returns Stat:
+//	PrefixExp (
+//		({FunctionCall.functionCall=current}) |
+//	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
+//	)
+//;
 
-Statement_Global_Assignment:
-	dests+=Assignment_Destination
-	(=>',' dests+=Assignment_Destination)*
-	(=>'=' values+=Expression (=>',' values+=Expression)*)?;
+AssignmentOrFunctionCall returns Stat:
+	PrefixExp (
+		({FunctionCall.functionCall=current}) |
+	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
+	)
+;
 
-Statement_Functioncall:
-	Expression_Functioncall
-	| Expression_Import;
 
-// TODO should this be included somewhere?
-//Statement_TableAssignment:
-//	tableAccess=Expression_TableAccess
-//	=>'='
-//	values=Expression;
-// ****************************************************
-// EXPRESSIONS
-// ****************************************************
-// Delegate to the priority chain of operators by calling the rule for the lowest priority operator
-Expression:
-	Expression_Or;
+//VarList returns VarList:
+//	vars+=PrefixLhs (=>',' vars+=PrefixLhs)*
+//;
 
+ElseIf:
+	'elseif' condition=Exp 'then' block=Block
+;
+
+LastStat: 
+	{LastStat} 'return' (expList=ExpList)? |
+    {LastStat} 'break'
+;
+
+
+
+//Arg:
+//	name=LUA_NAME
+//;
+
+// Expressions
+
+ExpList: 
+	// TODO: the previous alternative: (exps+=Exp ',')* exps+=Exp caused a non-LL(*) error due to recursive rule invocations, find out why
+	//(=>exps+=Exp ',')* exps+=Exp
+	//=>(exps+=Exp ',')* exps+=Exp 
+	 exps+=Exp ( =>',' exps+=Exp)*
+;
+
+Exp:
+	ExpOr
+;
+ 
 // Or: left associative, priority 0
-Expression_Or returns Expression:
-	Expression_And ('or' {Expression_Or.left=current} right=Expression_And)*;
+ExpOr returns Exp:
+	ExpAnd ('or' {ExpOr.left=current} right=ExpAnd)*
+	//Exp_Primary ('or' {Exp_Or.left=current} right=Exp_Primary)*
+;
 
 // And: left associative, priority 1
-Expression_And returns Expression:
-	Expression_Compare ('and' {Expression_And.left=current} right=Expression_Compare)*;
+ExpAnd returns Exp:
+	ExpCompare ('and' {ExpAnd.left=current} right=ExpCompare)*;
 
 // Comparisons: left associative, priority 2
-Expression_Compare returns Expression:
-	Expression_Concatenation (('>' {Expression_Larger.left=current} right=Expression_Concatenation) |
-	('>=' {Expression_Larger_Equal.left=current} right=Expression_Concatenation) |
-	('<' {Expression_Smaller.left=current} right=Expression_Concatenation) |
-	('<=' {Expression_Smaller_Equal.left=current} right=Expression_Concatenation) |
-	('==' {Expression_Equal.left=current} right=Expression_Concatenation) |
-	('~=' {Expression_Not_Equal.left=current} right=Expression_Concatenation))*;
+ExpCompare returns Exp:
+	ExpConcat (('>' {ExpGt.left=current} right=ExpConcat) |
+	('>=' {ExpGeq.left=current} right=ExpConcat) |
+	('<' {ExpLt.left=current} right=ExpConcat) |
+	('<=' {ExpLeq.left=current} right=ExpConcat) |
+	('==' {ExpEq.left=current} right=ExpConcat) |
+	('~=' {ExpNeq.left=current} right=ExpConcat))*;
 
 // Concatenation: right associative, priority 3
-Expression_Concatenation returns Expression:
-	Expression_PlusMinus ('..' {Expression_Concatenation.left=current} right=Expression_Concatenation)?;
+ExpConcat returns Exp:
+	ExpAddSub ('..' {ExpConcat.left=current} right=ExpConcat)?;
 
 // addition/subtraction: left associative, priority 4
-Expression_PlusMinus returns Expression:
-	Expression_MultiplicationDivisionModulo (('+' {Expression_Plus.left=current}
-	right=Expression_MultiplicationDivisionModulo) |
-	('-' {Expression_Minus.left=current} right=Expression_MultiplicationDivisionModulo))*;
+ExpAddSub returns Exp:
+	ExpMultDivMod (('+' {ExpAdd.left=current} right=ExpMultDivMod) |
+	('-' {ExpSub.left=current} right=ExpMultDivMod))*;
 
 // multiplication/division, left associative, priority 5
-Expression_MultiplicationDivisionModulo returns Expression:
-	Expression_Unary (('*' {Expression_Multiplication.left=current} right=Expression_Unary) |
-	('/' {Expression_Division.left=current} right=Expression_Unary) |
-	('%' {Expression_Modulo.left=current} right=Expression_Unary))*;
+ExpMultDivMod returns Exp:
+	ExpUnary (('*' {ExpMult.left=current} right=ExpUnary) |
+	('/' {ExpDiv.left=current} right=ExpUnary) |
+	('%' {ExpMod.left=current} right=ExpUnary))*;
 
 // Unary operators: right associative, priority 6
-Expression_Unary returns Expression:
-	Expression_Exponentiation |
-	('not' {Expression_Negate} exp=Expression_Unary) |
-	('#' {Expression_Length} exp=Expression_Unary) |
-	('-' {Expression_Invert} exp=Expression_Unary);
+ExpUnary returns Exp:
+	ExpExponentiation |
+	('not' {ExpNegate} exp=ExpUnary) |
+	('#' {ExpLength} exp=ExpUnary) |
+	('-' {ExpInvert} exp=ExpUnary);
 
 // exponentiation: right associative, priority 7
-Expression_Exponentiation returns Expression:
-	Expression_Terminal
-	('^' {Expression_Exponentiation.left=current} right=Expression_Exponentiation)?;
+ExpExponentiation returns Exp:
+	ExpPrimary ('^' {ExpExponentiation.left=current} right=ExpUnary)?
+;
+ 
+ExpPrimary returns Exp:
+	{ExpNil} 'nil' | 
+	{ExpFalse} 'false' | 
+	{ExpTrue} 'true' | 
+	{ExpNumberLiteral} value=NUMBER_LITERAL | 
+	{ExpStringLiteral} value=LUA_STRING | 
+	{ExpVarArgs} '...' |
+	FunctionDeclaration |
+	PrefixExp |
+	//VarRhs |
+	TableConstructor
+	// exp binop exp | unop exp from the reference are handled without left-recursion and describing operator precedences by Exp starting with ExpOr
+;
 
-Expression_Terminal returns Expression:
-	Expression_Nil |
-	Expression_True |
-	Expression_False |
-	Expression_Number |
-	Expression_VarArgs |
-	Expression_String |
-	Expression_Function |
-	Expression_Nesting |
-	Expression_VariableName |
-	Expression_TableAccess |
-	Expression_TableConstructor |
-	Expression_Import |
-	Expression_Functioncall;
 
-Expression_Nil:
-	'nil' {Expression_Nil};
 
-Expression_True:
-	'true' {Expression_True};
 
-Expression_False:
-	'false' {Expression_False};
+// this is what currently works
+/* PrefixLhs, SuffixLhsExp and VarLhs define Functioncalls and variable assignments that may
+ * appear as a Statment (in the case of function calls) or on the left-hand side of an assignement/declaration. They
+ * contain a name attribute to to enable cross-references. The corresponding Rhs rules match
+ * the same words, but at other positiosn (e.g. righ-hand side of an assignment), and contain a
+ * reference to Lhs objects. 
+*/
 
-Expression_Number:
-	value=LUA_NUMBER;
+PrefixExp returns Exp:
+	VarOrParenthezized =>(
+		':' {MemberFuncCall.object=current} name=[Exp|LUA_NAME] args=Args |
+		//':' {MemberFuncCallLhs.object=current} referencing=[Refble|LUA_NAME] args=Args |
+		{FuncCall.object=current} args=Args |
+		//{FuncCall.object=current} referencing=[Refble|LUA_NAME] args=Args (furtherArgs+=Args)* |
+		'[' {TableAccess.array=current} index=Exp ']' 
+		| '.' {MemberAccess.object=current} name=[Exp|LUA_NAME]
+	)*
+;
 
-Expression_VarArgs:
-	'...' {Expression_VarArgs};
+VarOrParenthezized returns Exp:
+	'(' groupedExp=Exp ')' |
+	{Var} name=[Exp|LUA_NAME]
+;
 
-Expression_String hidden():
-	value=LUA_STRING;
 
-Expression_Function:
-	'function' function=Function 'end';
 
-// TODO can this returns be removed?
-Expression_TableConstructor returns Expression:
-	=>'{'
-	{Expression_TableConstructor} (fields+=Field ((',' | ';') fields+=Field)* (',' | ';')?)?
-	=>'}';
+MemberAccess:
+	LUA_NAME ('.' LUA_NAME)*
+;
 
-Expression_Import:
-	=>'require('
-	importURI=LUA_STRING
-	=>')';
+Args: 
+	{ParamArgs} '(' (params=ExpList)? ')' | 
+	//{ParamArgs} '(' (params=[ExpList|NameList])? ')' | 
+	TableConstructor |
+	{LiteralStringArg} str=LUA_STRING 
+;
 
-Expression_Functioncall:
-	Expression_Functioncall_Table
-	| Expression_Functioncall_Direct;
+TableConstructor:
+	{TableConstructor} '{' (fieldList=FieldList)? '}'
+;
 
-Expression_Functioncall_Direct:
-	calledFunction=[Refble|QualifiedNameWithoutTableAccess]
-	=>calledFunctionArgs=Functioncall_Arguments;
-
-Expression_Functioncall_Table:
-	calledTable=[Refble|QualifiedNameWithoutTableAccess]
-	=>':'
-	functionName=LUA_NAME
-	=>calledFunctionArgs=Functioncall_Arguments;
-
-Expression_VariableName:
-	{Expression_VariableName}
-	ref=[Refble|QualifiedName];
-
-// We only allow table accesses on variables
-Expression_TableAccess:
-//	indexableExpression=Indexable_Expression
-	indexableExpression=(Expression_VariableName)
-	(=>'['
-	indexExpression+=Expression
-	=>']')+
-	(=>':'
-	functionName=LUA_NAME
-	=>calledFunctionArgs=Functioncall_Arguments)?;
-
-Expression_Nesting returns Expression:
-	=>'(' Expression ')';
-
-//Indexable_Expression:
-//	Expression_VariableName
-//	| Expression_Functioncall
+//FieldList:
+//	fields+=Field (FIELD_SEP fields+=Field)* (FIELD_SEP)?
 //;
-// ****************************************************
-// FUNCTIONS
-// ****************************************************
-//Function returns BlockWrapper:
-Function:
-	=>'(' (arguments+=Argument (',' arguments+=Argument)* ','?)? (varArgs?='...')? ')' block=Block;
 
-// Some syntactic sugar: strings and field can be passed as parameters without bracket
-Functioncall_Arguments:
-	{Functioncall_Arguments}
-	((=>'(' (arguments+=Expression (',' arguments+=Expression)*)? ')') |
-	(arguments+=Expression_TableConstructor) |
-	(arguments+=Expression_String));
+FieldList:
+	fields+=Field (=>(','|';') fields+=Field)* (=>(','|';'))? 
+;
 
-// ****************************************************
-// TABLES/FIELDS
-// ****************************************************
 Field:
-	Field_AddEntryToTable_Brackets |
-	Field_AddEntryToTable |
-	Field_AppendEntryToTable;
+	'[' indexExp=Exp ']' '=' valueExp=Exp | 
+	LUA_NAME '=' valueExp=Exp | 
+	Exp
+;
 
-// Each field of the form "[exp1] = exp2" adds to the new table an entry with key exp1 and value exp2
-Field_AddEntryToTable_Brackets:
-	'[' indexExpression=Expression ']' '=' value=Expression;
+FuncName:
+	LUA_NAME ('.' LUA_NAME)* (':' LUA_NAME)?
+;
 
-// A field of the form "name = exp" is equivalent to ["name"] = exp
-Field_AddEntryToTable:
-	name=LUA_NAME '=' value=Expression;
+NameList: 
+	names+=LUA_NAME (',' names+=LUA_NAME)*
+;
 
-// fields of the form "exp" are equivalent to [i] = exp
-Field_AppendEntryToTable:
-	value=Expression;
+FunctionDeclaration:
+	'function' FuncBody
+;
 
-// Everything that is referenceable returns this class and uses the 'name' feature
+FuncBody:
+	'(' (ParList)? ')' funcBlock=Block 'end'
+;
+
+ParList:
+	NameList (',' '...')? |
+	'...'
+;
+
+
+/**
+ * The Ref rule is used as a cross-reference and name at the same time. 
+ * The distinction between cross-reference and (qualified) name is performed in the linking and scoping phases
+ * (See org.xtext.lua52.linking and org.xtext.lua52.scoping packages).
+ * 
+ * Any rules that contain cross-references or can be referenced to need to implement a
+ * feature ref=[Ref|LUA_NAME] (since the getRef() method is used to detect them in later phases).
+ */
 Referenceable:
-	name=QualifiedName;
+	name=LUA_NAME
+;
 
-Argument returns Referenceable:
-	name=LUA_NAME;
+// ****************************************************
+// SYNTHETIC
+// ****************************************************
+Refble:
+	Referenceable
+;
 
-QualifiedName:
-	LUA_NAME (=>'.' LUA_NAME)* (=>':' LUA_NAME)?;
-
-QualifiedNameWithoutTableAccess:
-	LUA_NAME (=>'.' LUA_NAME)*;
+BlockWrapperWithArgs:
+	NumericFor |
+	GenericFor
+;
 
 // ****************************************************
 // TERMINALS
 // ****************************************************
-terminal COMMENT:
-	ML_COMMENT | SL_COMMENT;
-
-terminal ML_COMMENT:
-	'--' '[['->']]';
-
-terminal SL_COMMENT:
-//	(' ' | '\t')* '--' !'[' (!('\r' | '\n'))* ('\r'? '\n');
-	'--' !'[' (!'\n')*;
-
-terminal WS:
-	(' ' | '\t' | '\r' | '\n')+; // Consume all white space, tabs and new line characters
 
 // Identifiers can be any string of letters, digits, and underscores, but mustn't begin with a digit.
 terminal LUA_NAME returns ecore::EString:
-	('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*;
+	('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*
+;
 
-//terminal LUA_STRING returns ecore::EString:
-//	("'"
-//		(
-//		'\\' ('a' | 'b' | 'f' | 'n' | 'r' | 't' | 'v' | '"' | "'" | '\\' | ('0'..'9' ('0'..'9' ('0'..'9'))))
-//		| !('\\' | "'")
-//		)* 
-//	"'")
-//	| ('"' 
-//		('\\' ('a' | 'b' | 'f' | 'n' | 'r' | 't' | 'v' | '"' | "'" | '\\' | ('0'..'9' ('0'..'9' ('0'..'9')))) | !('\\' | '"'))* 
-//	'"');
+
+// Literal Strings can be defined between single or double quotes. They can also be defined using a long format enclosed by long brackets.
+// https://www.lua.org/manual/5.1/manual.html#2.1 ("2.1 – Lexical Conventions")
+// E.g. [[...]], [=[...]=]
 terminal LUA_STRING:
-	'"' ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | '"'))* '"' |
-	"'" ('\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\' | "'"))* "'";
+	'"' ('\\' . | !('\\' | '"'))* '"' |
+	"'" ('\\' . | !('\\' | "'"))* "'"  
+	| LUA_STRING_LONG
+;
 
-//terminal LUA_IMPORT_STRING returns ecore::EString:
-//	('a'..'z'|'A'..'Z'|'_'|'-'|'/'|'.')*
-//    ;
-terminal LUA_NUMBER returns ecore::EDouble:
-	(('0'..'9')+ ('.' ('0'..'9')+ (('E' | 'e') ('-')? ('0'..'9')+)?)?) |
-	('0x' ('0'..'9' | 'a'..'f')+);
+/* TODO: this is a workaround, long strings should be implemented for an arbitrary number of equals-signs. Attempt below failed. */
+terminal LUA_STRING_LONG:
+	'[[' -> ']]'  |
+	'[=[' -> ']=]' |
+	'[==[' -> ']==]' |
+	'[===[' -> ']===]' |
+	'[====[' -> ']====]' |
+	'[=====[' -> ']=====]' |
+	'[======[' -> ']======]' |
+	'[=======[' -> ']=======]' 
+;
 
-// ****************************************************
-// INLINED COMMON TERMINALS
-// ****************************************************
-//grammar org.eclipse.xtext.common.Terminals hidden(WS, ML_COMMENT, SL_COMMENT)
-//import "http://www.eclipse.org/emf/2002/Ecore" as ecore
-//terminal ID: '^'?('a'..'z'|'A'..'Z'|'_') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*;
-//terminal INT returns ecore::EInt: ('0'..'9')+;
-//terminal STRING:
-//			'"' ( '\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\'|'"') )* '"' |
-//			"'" ( '\\' . /* 'b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\' */ | !('\\'|"'") )* "'"
-//		;
-//terminal ML_COMMENT : '/*' -> '*/';
-//terminal SL_COMMENT : '--' !('\n'|'\r'|'[[')* ('\r'? '\n')?;
-//terminal WS         : (' '|'\t'|'\r'|'\n')+;
-terminal ANY_OTHER:
-	.;
+// Attempt to implement long strings for arbitrary number of equal signs:
+/*
+terminal LUA_STRING_LONG:
+	'[' LUA_STRING_LONG_CONTENT ']'
+;
+
+terminal LUA_STRING_LONG_CONTENT:
+	//'[' -> ']' |
+	'=' LUA_STRING_LONG_CONTENT '='
+	| '[' (.)* ']'
+;
+*/
+
+/**
+ *  From https://www.lua.org/manual/5.1/manual.html#2.1:
+ * 
+ * "A comment starts with a double hyphen (--) anywhere outside a string. If the text immediately after -- is not an opening long bracket, 
+ * the comment is a short comment, which runs until the end of the line. Otherwise, it is a long comment, which runs until the corresponding 
+ * closing long bracket. Long comments are frequently used to disable code temporarily."
+ * 
+ * This implies just one '[' suffices to start a multiline comment, but it seems two are needed.
+ */
+terminal COMMENT:
+	ML_COMMENT | SL_COMMENT
+;
+
+terminal ML_COMMENT:
+	'--' LUA_STRING_LONG
+;
+ 
+terminal fragment MATCH_UNTIL_LINE_BREAK:
+	!('\n'|'\r')* ('\r'? '\n')?
+;
+
+terminal SL_COMMENT:
+	'--' !'[' MATCH_UNTIL_LINE_BREAK |
+	'--[' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[=' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[==' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[===' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[====' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[=====' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[======' !('['|'=') MATCH_UNTIL_LINE_BREAK |
+	'--[=======' !('['|'=') MATCH_UNTIL_LINE_BREAK 	
+;
+
+terminal NUMBER_LITERAL returns ecore::EDouble:
+	// rules for double values
+	(
+		('0'..'9')+ | //Int rule
+		('0'..'9')+ '.' ('0'..'9')* | // real rule with int part
+		'.' ('0'..'9')+ // real with only decimal places
+	)
+	(('e'|'E') ('+'|'-')? ('0'..'9')+)? // exponent part 
+	
+	// rules for hex values
+	| HEX_LITERAL
+;
+
+// hex rules differ from Lua 5.1 (allow uppercase 'X' and 'A'..'F', fractional part and exponent part)
+terminal HEX_LITERAL returns ecore::EDouble:
+	( ('0x' | '0X') 
+		(
+			('0'..'9' | 'a'..'f' | 'A'..'F')+ | //Int rule
+			('0'..'9' | 'a'..'f' | 'A'..'F')+ '.' ('0'..'9' | 'a'..'f' | 'A'..'F')* | // real rule with int part
+			'.' ('0'..'9' | 'a'..'f' | 'A'..'F')+ // real with only decimal places
+		)
+	) (('p'| 'P') ('+'|'-')? ('0'..'9')+)? // the exponent part, should be binary per definition but here we just allow any int
+;
+
+// Consume all white space, tabs and new line characters
+terminal WS:
+	(' ' | '\t' | '\r' | '\n')+
+; 
+	
+

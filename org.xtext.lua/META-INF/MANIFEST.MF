@@ -7,25 +7,23 @@ Bundle-Version: 1.0.0.qualifier
 Bundle-SymbolicName: org.xtext.lua; singleton:=true
 Bundle-ActivationPolicy: lazy
 Require-Bundle: org.eclipse.xtext,
- org.eclipse.equinox.common;bundle-version="3.5.0",
+ org.eclipse.xtext.xbase,
+ org.eclipse.equinox.common;bundle-version="3.16.0",
  org.eclipse.emf.ecore,
- org.eclipse.xtext.util,
+ org.eclipse.xtext.xbase.lib;bundle-version="2.34.0",
  org.eclipse.emf.common,
- org.antlr.runtime;bundle-version="[3.2.0,3.2.1)",
- org.eclipse.xtend.lib;bundle-version="2.14.0",
- org.apache.log4j;bundle-version="1.2.19",
- org.eclipse.xtext.xbase.lib;bundle-version="2.14.0"
-Bundle-RequiredExecutionEnvironment: JavaSE-11
-Export-Package: org.xtext.lua,
- org.xtext.lua.converters,
- org.xtext.lua.generator,
+ org.antlr.runtime;bundle-version="[3.2.0,3.2.1)"
+Bundle-RequiredExecutionEnvironment: JavaSE-17
+Export-Package: org.xtext.lua.lua.impl,
  org.xtext.lua.lua,
- org.xtext.lua.lua.impl,
+ org.xtext.lua.serializer,
  org.xtext.lua.lua.util,
- org.xtext.lua.parser.antlr,
+ org.xtext.lua.validation,
+ org.xtext.lua,
  org.xtext.lua.parser.antlr.internal,
  org.xtext.lua.scoping,
- org.xtext.lua.serializer,
- org.xtext.lua.validation,
+ org.xtext.lua.generator,
+ org.xtext.lua.parser.antlr,
  org.xtext.lua.services
-Import-Package: org.apache.log4j
+Import-Package: org.apache.commons.lang3;version="3.14.0",
+ org.apache.log4j

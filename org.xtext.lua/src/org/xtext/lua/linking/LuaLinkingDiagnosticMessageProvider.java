@@ -8,6 +8,7 @@ import org.eclipse.xtext.diagnostics.DiagnosticMessage;
 import org.eclipse.xtext.linking.ILinkingDiagnosticMessageProvider;
 import org.eclipse.xtext.linking.impl.IllegalNodeException;
 import org.eclipse.xtext.linking.impl.LinkingDiagnosticMessageProvider;
+import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
 import org.eclipse.xtext.linking.lazy.LazyLinker;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Var;
@@ -37,7 +38,8 @@ public class LuaLinkingDiagnosticMessageProvider extends LinkingDiagnosticMessag
 		//System.out.println(context.getContext());
 		if (context.getContext() instanceof Var var && parentContext instanceof Assignment) {
 			System.out.println("ignored: " + var);
-			return null;
+			return super.getUnresolvedProxyMessage(context);
+			//return null;
 		}
 		
 		
@@ -46,6 +48,7 @@ public class LuaLinkingDiagnosticMessageProvider extends LinkingDiagnosticMessag
 		if (msg != null) {
 			System.out.println("foo: " + context.getContext());
 		}
+		//return null;
 		return super.getUnresolvedProxyMessage(context);
 	}
 	

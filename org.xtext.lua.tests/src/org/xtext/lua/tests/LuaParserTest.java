@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.xtext.EcoreUtil2;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.xtext.lua.LuaParser;
@@ -45,6 +47,11 @@ public class LuaParserTest {
 		final var temp_testfolder = "D:\\MA\\repos\\temp";
 		var resourceSet = new LuaParser().parse(Paths.get(temp_testfolder));
 		
+		EcoreUtil.resolveAll(resourceSet);
+		// Check if all poxy object were resolved.
+		Assertions.assertTrue(EcoreUtil.UnresolvedProxyCrossReferencer.find(resourceSet).isEmpty());
+		
+		
 		for (var r : resourceSet.getResources()) {
 			var outputStream = new ByteArrayOutputStream();
 			r.save(outputStream, new HashMap<>());
@@ -60,6 +67,9 @@ public class LuaParserTest {
 			
 			Assertions.assertTrue(strsEqual);
 		}
+		
+
+
 		
 		printNumberOfModelElements(resourceSet);
 

@@ -17,7 +17,6 @@ public class LuaParser {
 		}
 		
 		var resourceSet = new LuaStandaloneSetup().createInjectorAndDoEMFRegistration().getInstance(XtextResourceSet.class);
-		resourceSet.getLoadOptions().put(XtextResource.OPTION_RESOLVE_ALL, Boolean.TRUE);
 		
 		try (var fileStream = Files.walk(directory)) {
 			fileStream

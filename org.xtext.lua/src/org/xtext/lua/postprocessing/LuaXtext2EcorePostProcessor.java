@@ -32,6 +32,7 @@ public class LuaXtext2EcorePostProcessor implements IXtext2EcorePostProcessor {
 
 			// add "name" attribute to Referenceable (which is the superclass of any Referenceable via the grammar),
 			// thus effectively adding the "name" attribute to any EObject extending Referenceable).
+			// TODO: only set the "name" attribute if no "name" attribute exists, e.g. goto-labels should already have one
 			if (clazz.getName().equals(Referenceable.class.getSimpleName())) {
 				addTransientNameAttributeFor(clazz);
 			}
@@ -49,7 +50,6 @@ public class LuaXtext2EcorePostProcessor implements IXtext2EcorePostProcessor {
 			}
 			*/
 		}
-
 	}
 	
 	private void addTransientNameAttributeFor(EClass clazz) {
@@ -73,7 +73,7 @@ public class LuaXtext2EcorePostProcessor implements IXtext2EcorePostProcessor {
 		nameAttribute.setName("name");
 		nameAttribute.setEType(EcorePackage.eINSTANCE.getEString());
 		nameAttribute.setTransient(true); // ignore on serialization
-		System.out.println(nameAttribute);
+		LOGGER.info("Added attribute: " + nameAttribute + ".");
 		clazz.getEStructuralFeatures().add(nameAttribute);
 	}
 

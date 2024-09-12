@@ -19,6 +19,10 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	@Override
 	public void installDerivedState(DerivedStateAwareResource resource, boolean preLinkingPhase) {
 		resource.getAllContents().forEachRemaining(obj -> {
+			// TODO: should probably check if name is already set, e.g. goto-labels should already have a name
+			//       given by the grammar
+			// TODO: throw exception if a name could not be set, we expect that names can be set
+			//System.out.println("bar");
 			if (obj instanceof Referenceable refble && obj instanceof Referencing) {
 				// TODO: could be extracted
 				var refNode = NodeModelUtils.findNodesForFeature(refble, Literals.REFERENCING__REF).get(0);

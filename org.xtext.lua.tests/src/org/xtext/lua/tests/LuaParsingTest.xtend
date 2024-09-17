@@ -14,6 +14,7 @@ import org.xtext.lua.lua.Chunk
 import org.eclipse.emf.ecore.EObject
 import java.io.ByteArrayOutputStream
 import org.xtext.lua.PreprocessingUtils
+import org.eclipse.xtext.resource.DerivedStateAwareResource
 
 @ExtendWith(InjectionExtension)
 @InjectWith(LuaInjectorProvider)
@@ -613,6 +614,19 @@ class LuaParsingTest {
 			d = a.member.secondMember
 			x, y = l.member, a.member
 			
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingTableAccessTest() { 
+		val SUT = '''
+			a = {}
+		    a["member"] = 1
+		    b = a["member"]
+		    c = a.member
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

@@ -7,7 +7,6 @@ import org.eclipse.xtext.conversion.IValueConverterService;
 import org.eclipse.xtext.linking.ILinkingDiagnosticMessageProvider;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.parsetree.reconstr.ITransientValueService;
-import org.eclipse.xtext.parsetree.reconstr.impl.DefaultTransientValueService;
 import org.eclipse.xtext.resource.DerivedStateAwareResource;
 import org.eclipse.xtext.resource.DerivedStateAwareResourceDescriptionManager;
 import org.eclipse.xtext.resource.IDerivedStateComputer;
@@ -53,7 +52,13 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	public Class<? extends ITransientValueService> bindITransientValueService() {
 		return LuaTransientValueService.class;
 	}
-
+	
+	//TODO: maybe not used
+	/*
+	public Class<? extends ICrossReferenceSerializer> bindICrossReferenceSerializer()  {
+		return LuaCrossReferenceSerializer.class;
+	}
+	*/
 
 	// public Class<? extends IXtext2EcorePostProcessor>
 	// configureIXtext2EcorePostProcessor() {

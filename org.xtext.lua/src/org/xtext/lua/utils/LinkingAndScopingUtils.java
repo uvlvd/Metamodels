@@ -1,32 +1,98 @@
 package org.xtext.lua.utils;
 
 import java.lang.reflect.Method;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.lua.Assignment;
+import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpList;
+import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Var;
 
 public final class LinkingAndScopingUtils {
 	
-	// TODO:this should be documented clearer. Furthermore
-	// ExpList appears in other contexts (e.g. GenericFor), we need to take this into account.
-	public static boolean isOnLhsOfAssignment(EObject o) {
-		var container = o.eContainer();
+	
+	//TODO: isAssignable function (replaces isOnLhsOfAssignment): refble needs to be leaf
+	//      of Featue path
+	
+	public static boolean isAssignable(EObject obj) {
+		if (obj instanceof Feature feature) {
+			final var isLeaf = !feature.eContents().stream().anyMatch(child -> child instanceof Feature);
+			if (isLeaf) { // only leafs of a feature path are assignable
+				return findAssignmentParent(feature).isPresent();
+			}
+		}
+		return false;
+	}
+	
+	public static Exp findAssignedExp(Feature feature) {
+		final var featurePathRootOpt = findFeaturePathRoot(feature);
+		if (featurePathRootOpt.isEmpty()) {
+			return null;
+		}
+		final var featurePathRoot = featurePathRootOpt.get();
 		
-		if (container == null) { // no parent
-			return false;
+		final var assignmentOpt = findAssignmentParent(featurePathRoot);
+		if (assignmentOpt.isPresent()) {
+			final var assignment = assignmentOpt.get();
+			// TODO: need to know root of feature path for refble to find it in vars
+            var index = assignment.getVars().indexOf(featurePathRoot);
+            if (index < 0) // should never happen
+            	throw new RuntimeException("Could not find feature path root (Variable) in assignment!");
+
+            final var exps = assignment.getExpList().getExps();
+            if (exps.size() > index)
+            	return assignment.getExpList().getExps().get(index);
+		}
+		// fall-through, e.g. if explist does not contain an exp for every declared var (i.e. value is 'nil')
+		return null;
+	}
+	
+	private static Optional<Assignment> findAssignmentParent(Feature feature) {
+		var parent = feature.eContainer();
+		
+		if (parent == null) { // no parent
+			return Optional.empty();
 		}
 		
-		if (container instanceof ExpList) {
-			return false;
+		if (parent instanceof Assignment assignment) {
+			return Optional.of(assignment);
 		}
 		
-		if (container instanceof Assignment) {
-			return true;
+		if (parent instanceof Feature featureParent) {
+			return findAssignmentParent(featureParent);
+		} 
+		
+		// object is on rhs or not part of an assignment/feature path.
+		return Optional.empty();
+	}
+	
+	// TODO: could conceivably also be a parenthesized Expression (exp).member...
+	private static Optional<Var> findFeaturePathRoot(Feature feature) {
+		var parent = feature.eContainer();
+		
+		if (parent == null) { // no parent
+			return Optional.empty();
 		}
 		
-		return isOnLhsOfAssignment(container);
+		if (parent instanceof Assignment assignment) {
+			if (feature instanceof Var var) {
+				return Optional.of(var);
+			} else {
+				throw new RuntimeException("Feature path root is not of type Var.");
+			}
+		}
+		
+		if (parent instanceof Feature parentFeature) {
+			return findFeaturePathRoot(parentFeature);
+		} 
+		
+		// object is on rhs or not part of an assignment/feature path.
+		return Optional.empty();
 	}
 	
 	

@@ -26,7 +26,9 @@ import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.Stat;
+import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
+import org.xtext.lua.utils.LinkingAndScopingUtils;
 
 import com.google.inject.Inject;
 import com.google.inject.Scope;
@@ -53,10 +55,14 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
             // nothing todo without context
             return IScope.NULLSCOPE;
         }
-        //if (context instanceof Referencing referencing) {
-        if (context instanceof Referencing referencing && ((context instanceof Var) || (context instanceof MemberAccess))) {
+    	
+    	
+    		
+    	
+        if (context instanceof Referencing referencing) {
+        //if (context instanceof Referencing referencing && ((context instanceof Var) || (context instanceof MemberAccess))) {
         	final var contextFqn = qualifiedNameProvider.getFullyQualifiedName(context);
-        	
+
         	//TODO: it seems that the lazy linking happens before the DerivedStateComputer
         	// 	installs the derived state, thus the name is null.
         	//  need to change that somewhere...
@@ -64,26 +70,32 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         		return IScope.NULLSCOPE;
         	}
         	
+        	// TODO: get parent/blockscope instead of accessing the rootElement
         	var rootElement = EcoreUtil2.getRootContainer(referencing);
         	var assignments = EcoreUtil2.getAllContentsOfType(rootElement, Assignment.class);
         	
         	
         	var candidates = assignments.stream()
-        								 .map(Assignment::eContents)
+        								 //.map(Assignment::eContents)
+        								 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
         								 .flatMap(List::stream)
-        								 .filter(obj -> !(obj instanceof ExpList && (obj instanceof Referenceable))) // filter non-lhs objects
-        								 .flatMap(obj -> {
+        								 //.filter(obj -> !(obj instanceof ExpList && (obj instanceof Referenceable))) // filter non-lhs objects
+        								 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
+        						//		 .flatMap(obj -> {
         									 //var refbles = EcoreUtil2.getAllContentsOfType(obj, Referenceable.class);
-        									 var refbles = EcoreUtil2.getAllContentsOfType(obj, Referenceable.class);
-        									 if (obj instanceof Var var)
-        										 refbles.add(var);
-        									 return refbles.stream();
-        								 })
+        					//				 var refbles = EcoreUtil2.getAllContentsOfType(obj, Referenceable.class);
+        					//				 if (obj instanceof Var var)
+        					//					 refbles.add(var);
+        					//				 System.out.println("foo " + refbles);
+        					//				 return refbles.stream();
+        					//			 })
         								 // TODO: remove, just needed as long as not all refbles are implemented
-        								 .filter(refble -> (refble instanceof Var) || (refble instanceof MemberAccess))
+        								 //.filter(refble -> (refble instanceof Var) || (refble instanceof MemberAccess))
         								 //.map(refble -> (Referenceable) refble)
         								 .filter(refble -> contextFqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble)))
         								 .toList();
+        	
+        	//System.out.println(candidates);
         	/*
         	var descriptions = candidates.stream()
    				 .map(candidate -> {

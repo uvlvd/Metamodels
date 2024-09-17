@@ -100,11 +100,11 @@ GenericFor returns BlockWrapperWithArgs:
 
 // TODO: needs to be sub-type of Referencing
 Goto:
-	//'goto' ref=[Referenceable|LUA_NAME]
-	'goto' label=LUA_NAME
+	//{Goto} 'goto' ref=[Referenceable|LUA_NAME]
+	{Goto} 'goto' label=LUA_NAME
 ;
 
-Label returns Referenceable:
+Label:
 	{Label} '::' name=LUA_NAME '::'
 ;
 
@@ -254,19 +254,31 @@ PrefixExp returns Referencing:
 ;
 
 SuffixExp returns Referencing:
-	{FunctionCall} args=Args =>suffixExp=SuffixExp? | // from FunctionCall in reference
-	{MemberFunctionCall} ':' ref=[Referenceable|LUA_NAME] args=Args =>suffixExp=SuffixExp? | // from FunctionCall in reference
-	{TableAccess} '[' indexExp=Exp ']' =>suffixExp=SuffixExp? | // from Var in reference
+	FunctionCall | // from FunctionCall in reference
+	MemberFunctionCall | // from FunctionCall in reference
+	TableAccess | // from Var in reference
 	MemberAccess
 	//{MemberAccess} '.' ref=[Var|LUA_NAME] =>suffixExp=SuffixExp? // from Var in reference
 ;
 
 Var:
-	ref=[Referenceable|LUA_NAME] =>suffixExp=SuffixExp?
+	{Var} ref=[Exp|LUA_NAME] =>suffixExp=SuffixExp?
+;
+
+FunctionCall:
+	({FunctionCall} args=Args =>suffixExp=SuffixExp?)
+;
+
+MemberFunctionCall:
+	 (':' {MemberFunctionCall} ref=[Exp|LUA_NAME] args=Args =>suffixExp=SuffixExp?)
+;
+
+TableAccess:
+	 ( '[' {TableAccess} indexExp=Exp ']' =>suffixExp=SuffixExp?)
 ;
 
 MemberAccess:
-	'.' ref=[Referenceable|LUA_NAME] =>suffixExp=SuffixExp?
+	('.' {MemberAccess} ref=[Exp|LUA_NAME] =>suffixExp=SuffixExp?)
 ;
 
 /*
@@ -277,15 +289,29 @@ MemberAccess:
  * that is the resulting EObjects carry a "name" attribute with the value null. This value is later set by the
  * LuaDerivedStateComputer class.
  */
-
-
 Referenceable:
 	name=LUA_NAME |
+	TableAccess |
+	MemberAccess |
+	Var |
+	Label
+;
+
+/*
+ * We use the synthetic rule Feature for rules that may define some kind of access on a variable/table as part of a feature path. 
+ * They may have a prefix and/or a suffix, e.g. a.member["tableAccess"].
+ */
+Feature:
+	FunctionCall | // is never leaf of a path (never on lhs of Assignment)
+	MemberFunctionCall | // is never leaf of a path (never on lhs of Assignment)
+	TableAccess |
 	MemberAccess |
 	Var 
 ;
 
-// Synthetic rule for all rules that contain a cross-reference
+/**
+ * Synthetic rule for all rules that contain a cross-reference
+ */
 Referencing:
 	ref=[Referenceable|LUA_NAME]
 ;

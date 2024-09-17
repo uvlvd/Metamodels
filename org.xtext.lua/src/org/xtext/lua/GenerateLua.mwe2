@@ -8,8 +8,8 @@ var rootPath = ".."
 
 Workflow {
 	
-	//component = XtextGenerator { //TODO: currently, we need a first pass with the XtextGenerator to create the model, then a second one with the extended generator to add the extra attributes
-	component = ExtendedXtextGenerator { // use extended generator to add EAttributes after parsing
+	component = XtextGenerator { //TODO: currently, we need a first pass with the XtextGenerator to create the model, then a second one with the extended generator to add the extra attributes
+	//component = ExtendedXtextGenerator { // use extended generator to add EAttributes after parsing
 		configuration = {
 			project = StandardProjectConfig {
 				baseName = "org.xtext.lua"

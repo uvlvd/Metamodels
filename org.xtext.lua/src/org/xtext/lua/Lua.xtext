@@ -61,8 +61,11 @@ Stat returns Stat:
     
     {FunctionDeclaration} 'function' funcName=FuncName body=FuncBody |
     {LocalFunctionDeclaration} 'local' 'function' LUA_NAME body=FuncBody |
-    {LocalNameListDeclaration} 'local' vars=NameList ('=' expList=ExpList)? 
-    | Lua52Stat
+    {LocalNameListDeclaration} 'local' vars=NameList ('=' expList=ExpList)? |
+    // since Lua 5.2
+    {EmptyStat} ';' |
+    Goto |
+    Label
 ;
 
 NumericFor returns BlockWrapperWithArgs:
@@ -90,11 +93,22 @@ GenericFor returns BlockWrapperWithArgs:
 	//[...]
  */
 
-Lua52Stat returns Stat:
-	{Stat} ';' |
-	{Goto} 'goto' label=LUA_NAME |
-	{Label} '::' label=LUA_NAME '::'
+//Lua52Stat returns Stat:
+//	{EmptyStat} ';' |
+//	{Label} '::' name=LUA_NAME '::'
+//;
+
+// TODO: needs to be sub-type of Referencing
+Goto:
+	//'goto' ref=[Referenceable|LUA_NAME]
+	'goto' label=LUA_NAME
 ;
+
+Label returns Referenceable:
+	{Label} '::' name=LUA_NAME '::'
+;
+
+
 
 /**
  * Explanation for AssignmentOrFunctionCall rule:
@@ -255,9 +269,20 @@ MemberAccess:
 	'.' ref=[Referenceable|LUA_NAME] =>suffixExp=SuffixExp?
 ;
 
+/*
+ * We use the synthetic rule Referenceable to implement cross-references in this grammar. 
+ * Referenceables have a feature/attribute called "name", that is used during the linking phase to resolve the cross-references.
+ * Some Rules (e.g. the Label rule referenced by goto) parse the "name" attribute, and return the Referenceable type.
+ * Others (e.g. Var) have no "name" attribute (instead, they have a ref cross-reference), but are sub-types of Referenceable,
+ * that is the resulting EObjects carry a "name" attribute with the value null. This value is later set by the
+ * LuaDerivedStateComputer class.
+ */
+
+
 Referenceable:
+	name=LUA_NAME |
 	MemberAccess |
-	Var
+	Var 
 ;
 
 // Synthetic rule for all rules that contain a cross-reference

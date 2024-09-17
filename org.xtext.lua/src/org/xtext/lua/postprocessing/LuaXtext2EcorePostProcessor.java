@@ -5,11 +5,17 @@ import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.EcorePackage;
+import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.GeneratedMetamodel;
 import org.eclipse.xtext.xtext.ecoreInference.IXtext2EcorePostProcessor;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
+import org.xtext.lua.lua.LuaPackage.Literals;
 
+//TODO: probably not needed anymore, name attributes are now declared in the grammar via super-type rule
+// (i.e. null for Referencing objects, since those have a ref cross-reference instead of the name attrib)
+// and set later via the derivedStateComputer.
 public class LuaXtext2EcorePostProcessor implements IXtext2EcorePostProcessor {
 	private static final Logger LOGGER = Logger.getLogger(LuaXtext2EcorePostProcessor.class);
 
@@ -22,6 +28,7 @@ public class LuaXtext2EcorePostProcessor implements IXtext2EcorePostProcessor {
 	 * We add the name attribute to all objects that should be referenceable here.
 	 */
 	private void process(EPackage p) {
+		LOGGER.info("Starting post-processing to add 'name' attribute to Referenceables without 'name'.");
 		var eClasses = p.getEClassifiers()
 						.stream()
 						.filter(classifier -> (classifier instanceof EClass))
@@ -34,6 +41,10 @@ public class LuaXtext2EcorePostProcessor implements IXtext2EcorePostProcessor {
 			// thus effectively adding the "name" attribute to any EObject extending Referenceable).
 			// TODO: only set the "name" attribute if no "name" attribute exists, e.g. goto-labels should already have one
 			if (clazz.getName().equals(Referenceable.class.getSimpleName())) {
+				
+				if (clazz.getEAllAttributes().stream().anyMatch(attr -> attr.getName().equals("name"))) {
+					System.out.println("Has attr name: " + clazz.getName());
+				}
 				addTransientNameAttributeFor(clazz);
 			}
 
@@ -67,6 +78,9 @@ public class LuaXtext2EcorePostProcessor implements IXtext2EcorePostProcessor {
 		 * 
 		 * This would then need to be implemented for the Referencing superclass in this.process().
 		 */
+		
+		
+		
 		LOGGER.info("Adding 'name' attribute to " + clazz.getName() + "...");
 		
 		var nameAttribute = EcoreFactory.eINSTANCE.createEAttribute();

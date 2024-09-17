@@ -6,6 +6,8 @@ package org.xtext.lua;
 import org.eclipse.xtext.conversion.IValueConverterService;
 import org.eclipse.xtext.linking.ILinkingDiagnosticMessageProvider;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
+import org.eclipse.xtext.parsetree.reconstr.ITransientValueService;
+import org.eclipse.xtext.parsetree.reconstr.impl.DefaultTransientValueService;
 import org.eclipse.xtext.resource.DerivedStateAwareResource;
 import org.eclipse.xtext.resource.DerivedStateAwareResourceDescriptionManager;
 import org.eclipse.xtext.resource.IDerivedStateComputer;
@@ -15,6 +17,7 @@ import org.xtext.lua.converters.LuaValueConverterService;
 import org.xtext.lua.linking.LuaLinkingDiagnosticMessageProvider;
 import org.xtext.lua.postprocessing.LuaDerivedStateComputer;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
+import org.xtext.lua.serialization.LuaTransientValueService;
 
 /**
  * Use this class to register components to be used at runtime / without the
@@ -43,7 +46,13 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	public Class<? extends IQualifiedNameProvider> bindIQualifiedNameProvider() {
 		return LuaQualifiedNameProvider.class;
 	}
-	
+	/**
+	 * LuaTransientValueService marks derived "name" attributes as transient s.t. they are ignored by the serialization.
+	 */
+	@Override
+	public Class<? extends ITransientValueService> bindITransientValueService() {
+		return LuaTransientValueService.class;
+	}
 
 
 	// public Class<? extends IXtext2EcorePostProcessor>
@@ -51,7 +60,11 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	// return LuaXtext2EcorePostProcessor.class;
 	// }
 	
-
+	/**
+	 * DerivedStateComputer, -Resource and -ResourceDescriptionManager are used to set "name" attributes where
+	 * "name" attribute is null (i.e. for Referencing objects that are also Referenceable).
+	 * 
+	 */
 	public Class<? extends IDerivedStateComputer> bindIDerivedStateComputer() {
 		return LuaDerivedStateComputer.class;
 	}

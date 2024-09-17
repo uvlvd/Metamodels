@@ -14,6 +14,8 @@ import com.google.inject.Injector;
  * Used to inject the custom IXtext2EcorePostProcessor to add attributes that cannot be 
  * defined in the grammar to some EObjects.
  */
+//TODO: probably not needed anymore, name attributes are declared in the grammar via super-type rule
+// and set by DerivedStateComputer
 //@SuppressWarnings("restriction")
 public class ExtendedXtextGenerator extends XtextGenerator {
   

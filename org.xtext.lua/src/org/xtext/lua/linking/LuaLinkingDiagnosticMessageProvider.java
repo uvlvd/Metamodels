@@ -37,8 +37,8 @@ public class LuaLinkingDiagnosticMessageProvider extends LinkingDiagnosticMessag
 		var parentContext = context.getContext().eContainer();
 		//System.out.println(context.getContext());
 		if (context.getContext() instanceof Var var && parentContext instanceof Assignment) {
-			System.out.println("ignored: " + var);
-			return super.getUnresolvedProxyMessage(context);
+			//System.out.println("ignored: " + var);
+			//return super.getUnresolvedProxyMessage(context);
 			//return null;
 		}
 		
@@ -46,10 +46,10 @@ public class LuaLinkingDiagnosticMessageProvider extends LinkingDiagnosticMessag
 		//return null; // TODO: for debug purposes, remove
 		var msg = super.getUnresolvedProxyMessage(context);
 		if (msg != null) {
-			System.out.println("foo: " + context.getContext());
+			//System.out.println("foo: " + context.getContext());
 		}
-		//return null;
-		return super.getUnresolvedProxyMessage(context);
+		return null;
+		//return super.getUnresolvedProxyMessage(context);
 	}
 	
 

@@ -3,20 +3,36 @@
  */
 package org.xtext.lua;
 
+import org.eclipse.emf.common.util.TreeIterator;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.xtext.conversion.IValueConverterService;
+import org.eclipse.xtext.diagnostics.IDiagnosticConsumer;
+import org.eclipse.xtext.linking.ILinker;
 import org.eclipse.xtext.linking.ILinkingDiagnosticMessageProvider;
+import org.eclipse.xtext.linking.ILinkingService;
+import org.eclipse.xtext.linking.impl.LinkingDiagnosticProducer;
+import org.eclipse.xtext.linking.lazy.LazyLinker;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
+import org.eclipse.xtext.nodemodel.INode;
 import org.eclipse.xtext.parsetree.reconstr.ITransientValueService;
 import org.eclipse.xtext.resource.DerivedStateAwareResource;
 import org.eclipse.xtext.resource.DerivedStateAwareResourceDescriptionManager;
 import org.eclipse.xtext.resource.IDerivedStateComputer;
 import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.resource.XtextResource;
+import org.eclipse.xtext.util.concurrent.IUnitOfWork;
 import org.xtext.lua.converters.LuaValueConverterService;
+import org.xtext.lua.linking.LuaLinker;
 import org.xtext.lua.linking.LuaLinkingDiagnosticMessageProvider;
+import org.xtext.lua.linking.LuaLinkingService;
 import org.xtext.lua.postprocessing.LuaDerivedStateComputer;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
 import org.xtext.lua.serialization.LuaTransientValueService;
+
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 
 /**
  * Use this class to register components to be used at runtime / without the
@@ -51,6 +67,16 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	@Override
 	public Class<? extends ITransientValueService> bindITransientValueService() {
 		return LuaTransientValueService.class;
+	}
+	
+	@Override
+	public Class<? extends ILinkingService> bindILinkingService() {
+		return LuaLinkingService.class;
+	}
+	
+	@Override
+	public Class<? extends ILinker> bindILinker() {
+		return LuaLinker.class;
 	}
 	
 	//TODO: maybe not used

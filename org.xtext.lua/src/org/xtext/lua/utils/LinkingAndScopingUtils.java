@@ -1,42 +1,57 @@
 package org.xtext.lua.utils;
 
-import java.lang.reflect.Method;
 import java.util.Optional;
-import java.util.stream.Stream;
 
+import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.xtext.EcoreUtil2;
+import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Exp;
-import org.xtext.lua.lua.ExpList;
+import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.Var;
 
 public final class LinkingAndScopingUtils {
-	
+	private static final Logger LOGGER = Logger.getLogger(LinkingAndScopingUtils.class);
 	
 	//TODO: isAssignable function (replaces isOnLhsOfAssignment): refble needs to be leaf
 	//      of Featue path
-	
+	/**
+	 * Returns true if the given object is part of the lhs of an assignment, i.e. gets assigned a value. </br>
+	 * E.g. a.member = 10 returns true for member, false for a
+	 * @param obj the object.
+	 */
 	public static boolean isAssignable(EObject obj) {
-		if (obj instanceof Feature feature) {
+		// only features that are Referenceable can be assignables (i.e. Vars, MemberAccess, TableAccess, ... but not FunctionCalls etc.)
+		if (obj instanceof Feature feature && obj instanceof Referenceable) {
 			final var isLeaf = !feature.eContents().stream().anyMatch(child -> child instanceof Feature);
 			if (isLeaf) { // only leafs of a feature path are assignable
-				return findAssignmentParent(feature).isPresent();
+				return findParentAssignment(feature).isPresent();
 			}
 		}
 		return false;
 	}
 	
+	/**
+	 * Returns the expression assigned to this feature. Use {@link #isAssignable(EObject)} to ensure
+	 * the given feature is an Assignable before calling this function.
+	 * @param feature the Feature (must be a Referenceable).
+	 * @return the value expression assigned to the feature.
+	 */
 	public static Exp findAssignedExp(Feature feature) {
+		if (!(feature instanceof Referenceable)) {
+			throw new RuntimeException("Cannot find assigned expression for non-referenceable feature!");
+		}
+		
 		final var featurePathRootOpt = findFeaturePathRoot(feature);
 		if (featurePathRootOpt.isEmpty()) {
 			return null;
 		}
 		final var featurePathRoot = featurePathRootOpt.get();
 		
-		final var assignmentOpt = findAssignmentParent(featurePathRoot);
+		final var assignmentOpt = findParentAssignment(featurePathRoot);
 		if (assignmentOpt.isPresent()) {
 			final var assignment = assignmentOpt.get();
 			// TODO: need to know root of feature path for refble to find it in vars
@@ -52,7 +67,10 @@ public final class LinkingAndScopingUtils {
 		return null;
 	}
 	
-	private static Optional<Assignment> findAssignmentParent(Feature feature) {
+	/**
+	 * Returns the Assignment object this feature is contained in.
+	 */
+	private static Optional<Assignment> findParentAssignment(Feature feature) {
 		var parent = feature.eContainer();
 		
 		if (parent == null) { // no parent
@@ -64,7 +82,7 @@ public final class LinkingAndScopingUtils {
 		}
 		
 		if (parent instanceof Feature featureParent) {
-			return findAssignmentParent(featureParent);
+			return findParentAssignment(featureParent);
 		} 
 		
 		// object is on rhs or not part of an assignment/feature path.
@@ -96,63 +114,53 @@ public final class LinkingAndScopingUtils {
 	}
 	
 	
+	
+	//TODO: update doc, how String representation looks for e.g. different types
 	/**
-	 * Checks if the given object's class contains a method called "getRef".
-	 * @param o the object.
-	 * @return true, if a method "getRef" was found in the object's class.
+	 * Attempts to resolve the given expression to a String. 
+	 * If successful, returns a String representation for the resolved expression.</br>
+	 * E.g. "str" -> "str", 1+1 -> "N_2"
+	 * @param tableAccess the TableAccess.
+	 * @return a String representation of the resolved index-expression, if any.
 	 */
-	public static boolean hasRef(final Object o) {
-		return Stream.of(o.getClass().getMethods())
-					 .map(Method::getName)
-					 .anyMatch(name -> name.equals("getName"));
-	}
-	
-	/*
-	public static List<? extends Refble> getAssignmentVarsFilteredByContext(final EObject context, final Assignment assignment) {
-		var result = new ArrayList<Refble>();
-		
-		if (context instanceof VarMemberAccess ctxMemberAccess) {
-			System.out.println("=== start " + ctxMemberAccess.getName());
-			for (var v : assignment.getVars()) {
-				if (v instanceof VarMemberAccess memberAccess) {
-					System.out.println(v);
-					System.out.println(ctxMemberAccess.eContents());
+	public static String tryResolveExpressionToString(Exp exp) {
+		String name = null;
+		// A StringLiteral is returned as a String
+		if (exp instanceof ExpStringLiteral stringLiteral) {
+			name = stringLiteralToString(stringLiteral);
+		} else if (exp instanceof Referencing ref) {
+			if (ref.getRef() == null) {
+				throw new RuntimeException("Attempting to resolve value expression, but a ref " + ref + " is not yet resolved!");
+			} else {
+				if (!ref.getRef().eIsProxy()) {
+					var assignedValue = ((Referencing) ref.getRef()).getRef();
+					if (assignedValue instanceof ExpStringLiteral stringLiteral) {
+						System.out.println("HELLLOOO: " + stringLiteral);
+						name = stringLiteralToString(stringLiteral);
+					}
 				}
+
 			}
-			System.out.println("=== end");
-		}
 
-		
-		//return result;
-		return assignment.getVars();
+		}
+		else {
+			// TODO
+			LOGGER.warn("TableAccess is not (yet) implemented for non-string indexExps!");
+			//throw new RuntimeException("TableAccess is not (yet) implemented for non-string indexExps!");
+		}
+		if (name == null) {
+			return "testName";
+		}
+		return name;
 	}
 	
-	private boolean checkChildren(final EObject context, final Referenceable v) {
-		var x = context.eAllContents();
+	private static String stringLiteralToString(ExpStringLiteral stringLiteral) {
+		return removeQuotesFromString(stringLiteral.getValue());
 	}
-	*/
 	
-	/*
-	//TODO: refactor, if possible, to not work with strings
-	public static List<Refble> getArgs(final BlockWrapperWithArgs wrapper) {
-		//System.out.println("foo");
-		//System.out.println(wrapper.getArgs());
-		var args = new ArrayList<Refble>();
-		
-		// handle single argument wrapper, e.g. numeric for
-		if (wrapper.getArg() != null) { 
-			args.add(wrapper.getArg());
-		}
-		
-		// handle multi-argument wrapper, e.g. generic for
-		var nameList = wrapper.getArgs();
-		if (nameList != null) {
-			args.addAll(nameList.getNames());
-		}
-
-		return args;
+	private static String removeQuotesFromString(String str) {
+		return str.substring(1, str.length() - 1);
 	}
-	*/
 	
 	
 }

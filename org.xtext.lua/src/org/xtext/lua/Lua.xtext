@@ -100,7 +100,7 @@ GenericFor returns BlockWrapperWithArgs:
 
 // TODO: needs to be sub-type of Referencing
 Goto:
-	//{Goto} 'goto' ref=[Referenceable|LUA_NAME]
+	//{Goto} 'goto' ref=[Label|LUA_NAME]
 	{Goto} 'goto' label=LUA_NAME
 ;
 
@@ -257,7 +257,7 @@ SuffixExp returns Referencing:
 	FunctionCall | // from FunctionCall in reference
 	MemberFunctionCall | // from FunctionCall in reference
 	TableAccess | // from Var in reference
-	MemberAccess
+	MemberAccess // from Var in reference
 	//{MemberAccess} '.' ref=[Var|LUA_NAME] =>suffixExp=SuffixExp? // from Var in reference
 ;
 
@@ -313,8 +313,21 @@ Feature:
  * Synthetic rule for all rules that contain a cross-reference
  */
 Referencing:
-	ref=[Referenceable|LUA_NAME]
+	//ref=[Referenceable|LUA_NAME]
+	ref=[Exp|LUA_NAME]
 ;
+
+/**
+ * Synthetic rule that adds a "assignedValue" cross-reference to Assignables. This assignedValue is later set in the
+ * DerivedStateComputer for all Assignments (i.e. if an Assignment is encountered, the assigned value
+ * from the rhs is set as the reference for each given assignable (variable) on the lhs.
+ */
+//HasValue returns Referencing:
+//	assignedValue=[Exp|LUA_NAME] |
+//	Var |
+//	MemberAccess |
+//	TableAccess
+//;
 
 /* 
 PrefixExp returns Exp:

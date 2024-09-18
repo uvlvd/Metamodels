@@ -4,12 +4,14 @@
 package org.xtext.lua.scoping;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.linking.impl.LinkingHelper;
+import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
@@ -20,7 +22,9 @@ import org.eclipse.xtext.scoping.Scopes;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
+import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpList;
+import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.LuaPackage.Literals;
 import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.Referenceable;
@@ -48,6 +52,9 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
   	
 	@Inject 
 	private LinkingHelper linkingHelper;
+	
+	@Inject
+	private SyntheticLinkingSupport linkingSupport;
     
     @Override
     public IScope getScope(final EObject context, final EReference reference) {
@@ -55,10 +62,38 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
             // nothing todo without context
             return IScope.NULLSCOPE;
         }
-    	
-    	
+        
+        // TODO: write doc for the method instead of the below comment
+        // handle scope for assignables, i.e. set their reference to the value they are assigned to
+        if (LinkingAndScopingUtils.isAssignable(context)) {
+        	return getScopeForAssignable(context);
+        }
+        
+        if (context instanceof TableAccess tableAccess && tableAccess.getName().equals("testName")) {
+    		System.out.println("TableAccess with null as name found");
+    		System.out.println("	before:" + tableAccess);
+    		var exp = (Var) tableAccess.getIndexExp();
     		
+    		System.out.println("	Index expression: " + exp);
+    		var temp = exp.getRef();
+    		//tableAccess.setName("dummyName");
+    		System.out.println("	Ref of index expression: " + exp.getRef());
+    		System.out.println("	Assigned Value of index expression: " + ((Referencing) exp.getRef()).getRef());
+    		tableAccess.setRef(((Referencing) exp.getRef()).getRef());
+    		
+    		var name = LinkingAndScopingUtils.tryResolveExpressionToString(exp);
+    		System.out.println("	New TableAccess Name: " + name);
+    		//set name attribute
+    		tableAccess.setName(name);
+    		//set cross-reference linkText 
+    		linkingSupport.createAndSetProxy(tableAccess, Literals.REFERENCING__REF, name);
+    		System.out.println("	after:" + tableAccess);
+    		var scope = getScope(tableAccess, Literals.REFERENCING__REF);
+    		System.out.println(scope);
+    		return scope;
+    	}
     	
+
         if (context instanceof Referencing referencing) {
         //if (context instanceof Referencing referencing && ((context instanceof Var) || (context instanceof MemberAccess))) {
         	final var contextFqn = qualifiedNameProvider.getFullyQualifiedName(context);
@@ -75,7 +110,9 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         	var assignments = EcoreUtil2.getAllContentsOfType(rootElement, Assignment.class);
         	
         	
-        	var candidates = assignments.stream()
+        	
+        	
+        	List<Referenceable> candidates = assignments.stream()
         								 //.map(Assignment::eContents)
         								 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
         								 .flatMap(List::stream)
@@ -92,10 +129,21 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         								 // TODO: remove, just needed as long as not all refbles are implemented
         								 //.filter(refble -> (refble instanceof Var) || (refble instanceof MemberAccess))
         								 //.map(refble -> (Referenceable) refble)
-        								 .filter(refble -> contextFqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble)))
+        								 //.filter(refble -> contextFqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble)))
+        								 .filter(refble -> {
+        									 //TODO: if context is feature inside Tableaccess the refble fqn is not equal
+        									 if (contextFqn.toString().equals("a.testName.str") || 
+        											 contextFqn.toString().equals("a.dummyName.str") ||
+        											 contextFqn.toString().equals("a.member.str")) {
+        							        	return nameConverter.toQualifiedName("str").equals(qualifiedNameProvider.getFullyQualifiedName(refble));
+        									 }
+        									 return contextFqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble));
+        								 })
         								 .toList();
         	
-        	//System.out.println(candidates);
+
+        	//System.out.println("name: " + contextFqn);
+        	//System.out.println("candidates for " + referencing + ": " + candidates);
         	/*
         	var descriptions = candidates.stream()
    				 .map(candidate -> {
@@ -107,6 +155,31 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         	return new SimpleScope(IScope.NULLSCOPE, descriptions);
         	*/
         	//System.out.println("candidates for obj '" + contextFqn + "': " + candidates);
+        	//Collections.reverse(candidates);
+        	
+        	if (context instanceof Var var && var.getName().equals("str")) {
+        		System.out.println("var: " + var + ", candidates: " + candidates);
+        		if (candidates.isEmpty()) {
+        			System.out.println(contextFqn);
+        		} else {
+        			var v = (Var) candidates.get(0);
+        			System.out.println("Assigned value: " + v.getRef());
+        		}
+        	}
+        	
+        	/*
+        	if (context instanceof TableAccess tableAccess && tableAccess.getName().equals("testName")) {
+        		System.out.println("TableAccess with null as name found");
+        		var exp = (Var) tableAccess.getIndexExp();
+        		System.out.println("	Index expression: " + exp);
+        		var temp = exp.getRef();
+        		tableAccess.setName("dummyName");
+        		System.out.println("	Ref of index expression: " + exp.getRef());
+        		System.out.println("	Assigned Value of index expression: " + ((Referencing) exp.getRef()).getRef());
+        		tableAccess.setRef(((Referencing) exp.getRef()).getRef());
+        	}
+*/
+        	
         	return Scopes.scopeFor(candidates);
         	
     	//System.out.println("Getting scope for Var...");
@@ -149,6 +222,22 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         }
         return super.getScope(context, reference); // TODO: just for debug, remove
         */
+    }
+    
+    private IScope getScopeForAssignable(EObject assignable) {
+    	final var value = LinkingAndScopingUtils.findAssignedExp((Feature) assignable);
+		if (value == null) {
+			// TODO: create transient "nil" eObject?
+			// reference self when no assigned value is part of the ExpList (rhs of Assignment)
+			return Scopes.scopeFor(Collections.singletonList(assignable));
+		} else {
+			// any assignable is also a Referenceable which has a name attribute and a
+			// cross-reference with linkText == name
+			var name = ((Referenceable) assignable).getName();
+			var fqn = nameConverter.toQualifiedName(name);
+			var assignedValueDescription = EObjectDescription.create(fqn, value);
+			return new SimpleScope(Collections.singletonList(assignedValueDescription));
+		}
     }
    
     

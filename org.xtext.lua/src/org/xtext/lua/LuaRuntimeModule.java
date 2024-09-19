@@ -14,6 +14,7 @@ import org.eclipse.xtext.linking.ILinkingDiagnosticMessageProvider;
 import org.eclipse.xtext.linking.ILinkingService;
 import org.eclipse.xtext.linking.impl.LinkingDiagnosticProducer;
 import org.eclipse.xtext.linking.lazy.LazyLinker;
+import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.nodemodel.INode;
 import org.eclipse.xtext.parsetree.reconstr.ITransientValueService;
@@ -28,6 +29,7 @@ import org.xtext.lua.linking.LuaLinker;
 import org.xtext.lua.linking.LuaLinkingDiagnosticMessageProvider;
 import org.xtext.lua.linking.LuaLinkingService;
 import org.xtext.lua.postprocessing.LuaDerivedStateComputer;
+import org.xtext.lua.scoping.LuaQualifiedNameConverter;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
 import org.xtext.lua.serialization.LuaTransientValueService;
 
@@ -60,6 +62,10 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	@Override
 	public Class<? extends IQualifiedNameProvider> bindIQualifiedNameProvider() {
 		return LuaQualifiedNameProvider.class;
+	}
+	
+	public Class<? extends IQualifiedNameConverter> bindIQualifiedNameConverter() {
+		return LuaQualifiedNameConverter.class;
 	}
 	/**
 	 * LuaTransientValueService marks derived "name" attributes as transient s.t. they are ignored by the serialization.

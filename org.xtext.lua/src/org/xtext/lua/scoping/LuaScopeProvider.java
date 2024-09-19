@@ -4,6 +4,7 @@
 package org.xtext.lua.scoping;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -58,6 +59,11 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 	@Inject
 	private SyntheticLinkingSupport linkingSupport;
     
+	
+	/**
+	 * NOTE: Always create IEObjectDescriptions using the qualifiedNameConverter when creating
+	 * Scopes, see {@link #createDescriptionsForCandidates(Collection)}.
+	 */
     @Override
     public IScope getScope(final EObject context, final EReference reference) {
         if (context == null) {
@@ -65,8 +71,6 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
             return IScope.NULLSCOPE;
         }
         
-        // TODO: write doc for the method instead of the below comment
-        // handle scope for assignables, i.e. set their reference to the value they are assigned to
         if (LinkingAndScopingUtils.isAssignable(context)) {
         	return getScopeForAssignable(context);
         }
@@ -85,14 +89,13 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 	        	var candidates = getCandidatesFromAssignablesFor(ta, nameConverter.toQualifiedName(candidatesName));
 	
 	        	return new SimpleScope(candidates.stream()
-	        									 .map(c -> EObjectDescription.create(LinkingAndScopingUtils.DUMMY_NAME, c))
-	        									 .toList());
+	        			.map(c -> EObjectDescription.create(LinkingAndScopingUtils.DUMMY_NAME, c))
+	        			.toList());
 	    	}
         }
     	
 
         if (context instanceof Referencing referencing) {
-        //if (context instanceof Referencing referencing && ((context instanceof Var) || (context instanceof MemberAccess))) {
         	final var contextFqn = qualifiedNameProvider.getFullyQualifiedName(context);
 
         	//TODO: it seems that the lazy linking happens before the DerivedStateComputer
@@ -104,10 +107,15 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         	
         	
         	var candidates = getCandidatesFromAssignablesFor(referencing, contextFqn);	
-        	return Scopes.scopeFor(candidates);
+
+        	if (referencing instanceof MemberAccess ma) {
+        		return new SimpleScope(createDescriptionsForMemberAccess(candidates));
+        	}
+
+        	return new SimpleScope(createDescriptionsForCandidates(candidates));
         }
     
-
+        // TODO: parentBlocks, Functions etc.
         var parentBlock = EcoreUtil2.getContainerOfType(context.eContainer(), Block.class);
         if (parentBlock == null) {
             // if we have no parent anymore we delegate to the global scope
@@ -135,21 +143,14 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         return super.getScope(context, reference); // TODO: just for debug, remove
         */
     }
-    
-    private List<Referenceable> getCandidatesFromAssignablesFor(EObject context, QualifiedName fqn) {
-    	var rootElement = EcoreUtil2.getRootContainer(context);
-    	var assignments = EcoreUtil2.getAllContentsOfType(rootElement, Assignment.class);
-    	
-    	return assignments.stream()
-				 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
-				 .flatMap(List::stream)
-				 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
-				 .filter(refble -> {
-					 return fqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble));
-				 })
-				 .toList();
-    }
-    
+
+    /**
+     * Returns the Scope for assignables. Assignables are Referenceables on the lhs of an Assignment,
+     * and the returned Scope contains a single candidate: the corresponding value expression on the rhs of the Assignment. </br>
+     * If there is no corresponding value expression (e.g. a, b = 1), the candidate is the assignable itself (in the e.g. b).
+     * @param assignable
+     * @return
+     */
     private IScope getScopeForAssignable(EObject assignable) {
     	final var value = LinkingAndScopingUtils.findAssignedExp((Feature) assignable);
 		if (value == null) {
@@ -167,6 +168,55 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 			return new SimpleScope(Collections.singletonList(assignedValueDescription));
 		}
     }
+
+    private List<Referenceable> getCandidatesFromAssignablesFor(EObject context, QualifiedName fqn) {
+    	var rootElement = EcoreUtil2.getRootContainer(context);
+    	var assignments = EcoreUtil2.getAllContentsOfType(rootElement, Assignment.class);
+    	return assignments.stream()
+				 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
+				 .flatMap(List::stream)
+				 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
+				 .filter(refble ->  fqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble)))
+				 .toList();
+    }
+    
+    /**
+     * For MemberAccess (e.g. a.member), we need to remove the quotes from the candidates name,
+     * since the candidates may be TableAccesses with StringLiterals as indexExp, which have leading and trailing quotes,
+     * see LuaQualifiedNameProvider). </br>
+     * 
+     * E.g. MemberAccess "member" in "a.member" has name "member", while candidate a["member"] has the name ""member"".
+     * @param candidates
+     * @return
+     */
+    private Collection<IEObjectDescription> createDescriptionsForMemberAccess(Collection<Referenceable> candidates) {
+    	return candidates.stream()
+				 .map(c -> 
+				 	EObjectDescription.create(
+						 LinkingAndScopingUtils.removeQuotesFromString(c.getName()),
+						 c
+					)
+				 )
+				 .toList();
+    }    
+    
+    /**
+     * We always need to create descriptions (instead of returning Scopes.scopeFor(candidates)), since the 
+     * candidates name might contain ".", which would fail to match the QualifiedName generated from the cross-reference
+     * in the DefaultLinkingService. This is because the qualifiedNameConverter uses "." to separate Strings, i.e.
+     * the generated cross-reference QualifiedName for "hello.world" would be "hello" "world, which would not match
+     * the candidate's name "hello.world". </br>
+     * 
+     * An alternative would be to extend the IQualifiedNameConverter.DefaultImpl and change/remove the delimiter.
+     * @param candidates The candidates.
+     * @return A list of EObjectDescriptions of the candidates, created by applying the qualifiedNameConverter to the candidate's name attribute.
+     */
+    private Collection<IEObjectDescription> createDescriptionsForCandidates(Collection<Referenceable> candidates) {
+    	return candidates.stream()
+    				.map(c -> EObjectDescription.create(nameConverter.toQualifiedName(c.getName()), c))
+    				.toList();
+    }
+
    
     
 }

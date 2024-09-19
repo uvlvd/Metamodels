@@ -47,9 +47,11 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 			// handle table access
 			if (obj instanceof TableAccess tableAccess) {
 				if (Config.TABLE_ACCESS_REFERENCES) {
-					// TODO: Cannot compute name for tableAccess at this point, since the other references need to be
-					// resolved first
+					// Effectively makes tableAccess Referenceable and Referencing
 					setTableAccessNameAndRef(tableAccess);
+				} else {
+					// Efectively makes tableAccess Referenceable
+					setTableAccessName(tableAccess);
 				}
 			}
 			// set "name" attribute for all other Referenceables: 
@@ -60,6 +62,15 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 			
 		});
 
+	}
+	
+	/**
+	 * Sets the TableAccess' "name" attribute if it's indexExp can be resolved.
+	 * @param tableAccess the TableAccess.
+	 */
+	private void setTableAccessName(TableAccess tableAccess) {
+		final var name = LinkingAndScopingUtils.tryResolveExpressionToString(tableAccess.getIndexExp());
+		tableAccess.setName(name);
 	}
 	
 	/**
@@ -111,7 +122,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 				refble.setName(null);
 			}
 			// discard synthetic reference from TableAccesses
-			if (obj instanceof TableAccess tableAccess) {
+			if (obj instanceof TableAccess tableAccess && Config.TABLE_ACCESS_REFERENCES) {
 				tableAccess.setRef(null);
 			}
 		});

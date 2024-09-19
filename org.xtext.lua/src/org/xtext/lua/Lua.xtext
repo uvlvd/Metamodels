@@ -237,14 +237,18 @@ ExpPrimary returns Exp:
 	{ExpNil} 'nil' | 
 	{ExpFalse} 'false' | 
 	{ExpTrue} 'true' | 
-	{ExpNumberLiteral} value=NUMBER_LITERAL | 
-	{ExpStringLiteral} value=LUA_STRING | 
+	ExpLiteral | 
 	{ExpVarArgs} '...' |
 	FunctionDeclaration |
 	PrefixExp |
 	//VarRhs |
 	TableConstructor
 	// exp binop exp | unop exp from the reference are handled without left-recursion and describing operator precedences by Exp starting with ExpOr
+;
+
+ExpLiteral:
+	{ExpNumberLiteral} value=NUMBER_LITERAL | 
+	{ExpStringLiteral} value=LUA_STRING 
 ;
 
 PrefixExp returns Referencing:
@@ -317,40 +321,6 @@ Referencing:
 	ref=[Exp|LUA_NAME]
 ;
 
-/**
- * Synthetic rule that adds a "assignedValue" cross-reference to Assignables. This assignedValue is later set in the
- * DerivedStateComputer for all Assignments (i.e. if an Assignment is encountered, the assigned value
- * from the rhs is set as the reference for each given assignable (variable) on the lhs.
- */
-//HasValue returns Referencing:
-//	assignedValue=[Exp|LUA_NAME] |
-//	Var |
-//	MemberAccess |
-//	TableAccess
-//;
-
-/* 
-PrefixExp returns Exp:
-	VarOrParenthezized =>(
-		':' {MemberFuncCall.object=current} name=[Exp|LUA_NAME] args=Args |
-		//':' {MemberFuncCallLhs.object=current} referencing=[Refble|LUA_NAME] args=Args |
-		{FuncCall.object=current} args=Args |
-		//{FuncCall.object=current} referencing=[Refble|LUA_NAME] args=Args (furtherArgs+=Args)* |
-		'[' {TableAccess.array=current} index=Exp ']' 
-		| '.' {MemberAccess.object=current} name=[Exp|LUA_NAME]
-	)*
-;
-
-VarOrParenthezized returns Exp:
-	'(' groupedExp=Exp ')' |
-	{Var} name=[Exp|LUA_NAME]
-;
-
-*/
-
-//MemberAccess:
-//	LUA_NAME ('.' LUA_NAME)*
-//;
 
 Args: 
 	{ParamArgs} '(' (params=ExpList)? ')' | 

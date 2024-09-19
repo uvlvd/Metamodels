@@ -5,8 +5,11 @@ import java.util.Optional;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.xtext.lua.Config;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Exp;
+import org.xtext.lua.lua.ExpLiteral;
+import org.xtext.lua.lua.ExpNumberLiteral;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.Referenceable;
@@ -129,8 +132,8 @@ public final class LinkingAndScopingUtils {
 	public static String tryResolveExpressionToString(Exp exp) {
 		String name = null;
 		// A StringLiteral is returned as a String
-		if (exp instanceof ExpStringLiteral stringLiteral) {
-			name = stringLiteralToString(stringLiteral);
+		if (exp instanceof ExpLiteral literal) {
+			name = resolveExpLiteralToString(literal);
 		} else if (exp instanceof Referencing ref) {
 			if (ref.getRef() == null) {
 				throw new RuntimeException("Attempting to resolve value expression, but a ref " + ref + " is not yet resolved!");
@@ -154,10 +157,29 @@ public final class LinkingAndScopingUtils {
 			LOGGER.warn("TableAccess is not (yet) implemented for non-string indexExps!");
 			//throw new RuntimeException("TableAccess is not (yet) implemented for non-string indexExps!");
 		}
-		if (name == null) {
-			return DUMMY_NAME;
+		if (Config.TABLE_ACCESS_REFERENCES) {
+			if (name == null) {
+				return DUMMY_NAME;
+			}
 		}
+
 		return name;
+	}
+	
+	private static String resolveExpLiteralToString(ExpLiteral expLiteral) {
+		if (expLiteral instanceof ExpStringLiteral stringLiteral) {
+			return stringLiteralToString(stringLiteral);
+		}
+		if (expLiteral instanceof ExpNumberLiteral numberLiteral) {
+			// TODO: this could make use of the NumberValueConverter, but then the whole
+			// expression resolution logic would need to be extracted to an injected bean
+			// (in order to inject the valueConverterService).
+			
+			// we remove the "." separators from the double String representation to avoid
+			// problems with the qualifiedNameConverter, which splits Strings on "."
+			return Double.toString(numberLiteral.getValue());
+		}
+		throw new RuntimeException("Error while resolving ExpLiteral to String.");
 	}
 	
 	private static Exp tryGetAssignedValueFrom(Referencing ref) {
@@ -175,11 +197,15 @@ public final class LinkingAndScopingUtils {
 	}
 	
 	private static String stringLiteralToString(ExpStringLiteral stringLiteral) {
-		return removeQuotesFromString(stringLiteral.getValue());
+		//return removeQuotesFromString(stringLiteral.getValue());
+		return stringLiteral.getValue();
 	}
 	
-	private static String removeQuotesFromString(String str) {
-		return str.substring(1, str.length() - 1);
+	public static String removeQuotesFromString(String str) {
+		if (str != null && str.startsWith("\"") && str.endsWith("\"")) {
+			return str.substring(1, str.length() - 1);
+		}
+		return str;
 	}
 	
 	

@@ -132,15 +132,29 @@ class LuaScopingTest {
 	}
 	
 	@Test
-	def void scopingTableAccessTest() { 
+	def void scopingTableAccessStringTest() { 
 		val SUT = '''
 			a = {}
 		    a["member"] = 1
-		    b = a["member"]
+		    --b = a["member"]
 		    c = a.member
-		    str = "member" --TODO
-		    str2 = "2"
-		    d = a[str .. str2]
+		   -- str = "member" --TODO
+		  --  str2 = "2"
+		  --  d = a[str]
+		  --  a["hello.world"] = 2
+		  --  b = a["hello.world"]
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingTableAccessNumberTest() { 
+		val SUT = '''
+			a = {}
+		    a[0] = 2
+		    b = a[0]
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

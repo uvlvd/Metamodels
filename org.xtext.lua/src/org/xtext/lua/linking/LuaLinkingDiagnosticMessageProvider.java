@@ -48,8 +48,8 @@ public class LuaLinkingDiagnosticMessageProvider extends LinkingDiagnosticMessag
 		if (msg != null) {
 			//System.out.println("foo: " + context.getContext());
 		}
-		return null;
-		//return super.getUnresolvedProxyMessage(context);
+		//return null;
+		return super.getUnresolvedProxyMessage(context);
 	}
 	
 

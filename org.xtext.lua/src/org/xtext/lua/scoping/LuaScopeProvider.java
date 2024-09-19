@@ -14,12 +14,14 @@ import org.eclipse.xtext.linking.impl.LinkingHelper;
 import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
+import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.Scopes;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
+import org.xtext.lua.Config;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Exp;
@@ -69,29 +71,24 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         	return getScopeForAssignable(context);
         }
         
-        if (context instanceof TableAccess tableAccess && tableAccess.getName().equals("testName")) {
-    		System.out.println("TableAccess with null as name found");
-    		System.out.println("	before:" + tableAccess);
-    		var exp = (Var) tableAccess.getIndexExp();
-    		
-    		System.out.println("	Index expression: " + exp);
-    		var temp = exp.getRef();
-    		//tableAccess.setName("dummyName");
-    		System.out.println("	Ref of index expression: " + exp.getRef());
-    		System.out.println("	Assigned Value of index expression: " + ((Referencing) exp.getRef()).getRef());
-    		tableAccess.setRef(((Referencing) exp.getRef()).getRef());
-    		
-    		var name = LinkingAndScopingUtils.tryResolveExpressionToString(exp);
-    		System.out.println("	New TableAccess Name: " + name);
-    		//set name attribute
-    		tableAccess.setName(name);
-    		//set cross-reference linkText 
-    		linkingSupport.createAndSetProxy(tableAccess, Literals.REFERENCING__REF, name);
-    		System.out.println("	after:" + tableAccess);
-    		var scope = getScope(tableAccess, Literals.REFERENCING__REF);
-    		System.out.println(scope);
-    		return scope;
-    	}
+        if (Config.TABLE_ACCESS_REFERENCES) {
+	        /**
+	         * For now, this is just a proof-of-concept. With this (and setting a name and ref for TableAccess in the DerivedStateComputer), 
+	         * TableAccess indexes could be resolved s.t. the TableAccess references a given table field.
+	         */
+	        if (LinkingAndScopingUtils.isTableAccessWithDummyName(context)) {
+	        	var ta = (TableAccess) context;
+	        	var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp());
+	        	
+	        	var taDummyFqn = qualifiedNameProvider.getFullyQualifiedName(ta);
+	        	var candidatesName = taDummyFqn.toString().replace(LinkingAndScopingUtils.DUMMY_NAME, name);
+	        	var candidates = getCandidatesFromAssignablesFor(ta, nameConverter.toQualifiedName(candidatesName));
+	
+	        	return new SimpleScope(candidates.stream()
+	        									 .map(c -> EObjectDescription.create(LinkingAndScopingUtils.DUMMY_NAME, c))
+	        									 .toList());
+	    	}
+        }
     	
 
         if (context instanceof Referencing referencing) {
@@ -100,101 +97,16 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 
         	//TODO: it seems that the lazy linking happens before the DerivedStateComputer
         	// 	installs the derived state, thus the name is null.
-        	//  need to change that somewhere...
+        	//  need to change that somewhere...?
         	if (contextFqn == null) {
         		return IScope.NULLSCOPE;
         	}
         	
-        	// TODO: get parent/blockscope instead of accessing the rootElement
-        	var rootElement = EcoreUtil2.getRootContainer(referencing);
-        	var assignments = EcoreUtil2.getAllContentsOfType(rootElement, Assignment.class);
         	
-        	
-        	
-        	
-        	List<Referenceable> candidates = assignments.stream()
-        								 //.map(Assignment::eContents)
-        								 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
-        								 .flatMap(List::stream)
-        								 //.filter(obj -> !(obj instanceof ExpList && (obj instanceof Referenceable))) // filter non-lhs objects
-        								 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
-        						//		 .flatMap(obj -> {
-        									 //var refbles = EcoreUtil2.getAllContentsOfType(obj, Referenceable.class);
-        					//				 var refbles = EcoreUtil2.getAllContentsOfType(obj, Referenceable.class);
-        					//				 if (obj instanceof Var var)
-        					//					 refbles.add(var);
-        					//				 System.out.println("foo " + refbles);
-        					//				 return refbles.stream();
-        					//			 })
-        								 // TODO: remove, just needed as long as not all refbles are implemented
-        								 //.filter(refble -> (refble instanceof Var) || (refble instanceof MemberAccess))
-        								 //.map(refble -> (Referenceable) refble)
-        								 //.filter(refble -> contextFqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble)))
-        								 .filter(refble -> {
-        									 //TODO: if context is feature inside Tableaccess the refble fqn is not equal
-        									 if (contextFqn.toString().equals("a.testName.str") || 
-        											 contextFqn.toString().equals("a.dummyName.str") ||
-        											 contextFqn.toString().equals("a.member.str")) {
-        							        	return nameConverter.toQualifiedName("str").equals(qualifiedNameProvider.getFullyQualifiedName(refble));
-        									 }
-        									 return contextFqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble));
-        								 })
-        								 .toList();
-        	
-
-        	//System.out.println("name: " + contextFqn);
-        	//System.out.println("candidates for " + referencing + ": " + candidates);
-        	/*
-        	var descriptions = candidates.stream()
-   				 .map(candidate -> {
-   					 var fqn = qualifiedNameProvider.getFullyQualifiedName(candidate); // TODO: throw error here if null, explaining that the LuaQualifiedNameProvider needs to be updated for all EObjects
-   			    	 System.out.println("desc: " + fqn);
-   					 return EObjectDescription.create(fqn, candidate);
-   				 })
-   				 .toList();
-        	return new SimpleScope(IScope.NULLSCOPE, descriptions);
-        	*/
-        	//System.out.println("candidates for obj '" + contextFqn + "': " + candidates);
-        	//Collections.reverse(candidates);
-        	
-        	if (context instanceof Var var && var.getName().equals("str")) {
-        		System.out.println("var: " + var + ", candidates: " + candidates);
-        		if (candidates.isEmpty()) {
-        			System.out.println(contextFqn);
-        		} else {
-        			var v = (Var) candidates.get(0);
-        			System.out.println("Assigned value: " + v.getRef());
-        		}
-        	}
-        	
-        	/*
-        	if (context instanceof TableAccess tableAccess && tableAccess.getName().equals("testName")) {
-        		System.out.println("TableAccess with null as name found");
-        		var exp = (Var) tableAccess.getIndexExp();
-        		System.out.println("	Index expression: " + exp);
-        		var temp = exp.getRef();
-        		tableAccess.setName("dummyName");
-        		System.out.println("	Ref of index expression: " + exp.getRef());
-        		System.out.println("	Assigned Value of index expression: " + ((Referencing) exp.getRef()).getRef());
-        		tableAccess.setRef(((Referencing) exp.getRef()).getRef());
-        	}
-*/
-        	
+        	var candidates = getCandidatesFromAssignablesFor(referencing, contextFqn);	
         	return Scopes.scopeFor(candidates);
-        	
-    	//System.out.println("Getting scope for Var...");
-    		//return getScopeForVar(var, reference);
         }
-        // TODO: the getScopeFor...() functions need to get a parentScope passed or they will match anything in the model
-   //     if (context instanceof Var var) {
-        	//System.out.println("Getting scope for Var...");
-      //  	return getScopeForVar(var, reference);
-    //    }
-        
-     //   if (context instanceof MemberAccess memberAccess) {
-        	//System.out.println("Getting scope for var MemberAccess...");
-     //   	return getScopeForMemberAccess(memberAccess, reference);
-      //  }        
+    
 
         var parentBlock = EcoreUtil2.getContainerOfType(context.eContainer(), Block.class);
         if (parentBlock == null) {
@@ -224,17 +136,33 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         */
     }
     
+    private List<Referenceable> getCandidatesFromAssignablesFor(EObject context, QualifiedName fqn) {
+    	var rootElement = EcoreUtil2.getRootContainer(context);
+    	var assignments = EcoreUtil2.getAllContentsOfType(rootElement, Assignment.class);
+    	
+    	return assignments.stream()
+				 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
+				 .flatMap(List::stream)
+				 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
+				 .filter(refble -> {
+					 return fqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble));
+				 })
+				 .toList();
+    }
+    
     private IScope getScopeForAssignable(EObject assignable) {
     	final var value = LinkingAndScopingUtils.findAssignedExp((Feature) assignable);
 		if (value == null) {
 			// TODO: create transient "nil" eObject?
-			// reference self when no assigned value is part of the ExpList (rhs of Assignment)
+			// For now, reference self when no assigned value is part of the ExpList (= rhs of Assignment)
 			return Scopes.scopeFor(Collections.singletonList(assignable));
 		} else {
 			// any assignable is also a Referenceable which has a name attribute and a
 			// cross-reference with linkText == name
 			var name = ((Referenceable) assignable).getName();
 			var fqn = nameConverter.toQualifiedName(name);
+			// we create a description with the name of the assignable and the value expression
+			// => the scope for the assignable contains only this description
 			var assignedValueDescription = EObjectDescription.create(fqn, value);
 			return new SimpleScope(Collections.singletonList(assignedValueDescription));
 		}

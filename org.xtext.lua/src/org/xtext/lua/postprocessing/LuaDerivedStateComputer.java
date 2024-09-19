@@ -14,6 +14,7 @@ import org.eclipse.xtext.resource.IDerivedStateComputer;
 import org.eclipse.xtext.scoping.IScopeProvider;
 import org.xtext.lua.lua.Var;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
+import org.xtext.lua.Config;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.LuaPackage.Literals;
@@ -45,27 +46,17 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 			
 			// handle table access
 			if (obj instanceof TableAccess tableAccess) {
-				// TODO: Cannot compute name for tableAccess at this point, since the other references need to be
-				// resolved first
-				setTableAccessNameAndRef(tableAccess);
-			} 
-			
+				if (Config.TABLE_ACCESS_REFERENCES) {
+					// TODO: Cannot compute name for tableAccess at this point, since the other references need to be
+					// resolved first
+					setTableAccessNameAndRef(tableAccess);
+				}
+			}
 			// set "name" attribute for all other Referenceables: 
 			else if (obj instanceof Referenceable refble) {
 				setLinkTextAsName(refble);
 			}
 			
-			/*
-			// Set reference from assignable to assigned value
-			if (LinkingAndScopingUtils.isAssignable(obj)) {
-				final var value = LinkingAndScopingUtils.findAssignedExp((Feature) obj);
-				if (value == null) {
-					// TODO: create transient "nil" eObject
-				} else {
-					((HasValue) obj).setAssignedValue(value);
-				}	
-			}
-			*/
 			
 		});
 

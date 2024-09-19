@@ -11,10 +11,13 @@ import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
+import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
 
 public final class LinkingAndScopingUtils {
 	private static final Logger LOGGER = Logger.getLogger(LinkingAndScopingUtils.class);
+	
+	public static final String DUMMY_NAME = "dummyName";
 	
 	//TODO: isAssignable function (replaces isOnLhsOfAssignment): refble needs to be leaf
 	//      of Featue path
@@ -132,10 +135,13 @@ public final class LinkingAndScopingUtils {
 			if (ref.getRef() == null) {
 				throw new RuntimeException("Attempting to resolve value expression, but a ref " + ref + " is not yet resolved!");
 			} else {
-				if (!ref.getRef().eIsProxy()) {
-					var assignedValue = ((Referencing) ref.getRef()).getRef();
+				//if (!ref.getRef().eIsProxy()) {
+					// TODO: assigned value might be "more levels down", i.e. we need to
+					// traverse until not Referencing anymore or some such
+				var assignedValue = tryGetAssignedValueFrom(ref);
+				if (assignedValue != null) {
+					//var assignedValue = ((Referencing) ref.getRef()).getRef();
 					if (assignedValue instanceof ExpStringLiteral stringLiteral) {
-						System.out.println("HELLLOOO: " + stringLiteral);
 						name = stringLiteralToString(stringLiteral);
 					}
 				}
@@ -149,9 +155,23 @@ public final class LinkingAndScopingUtils {
 			//throw new RuntimeException("TableAccess is not (yet) implemented for non-string indexExps!");
 		}
 		if (name == null) {
-			return "testName";
+			return DUMMY_NAME;
 		}
 		return name;
+	}
+	
+	private static Exp tryGetAssignedValueFrom(Referencing ref) {
+		if (ref.getRef().eIsProxy()) {
+			return null;
+		}
+		if (ref.getRef() instanceof Referencing refref) {
+			return tryGetAssignedValueFrom(refref);
+		}
+		return ref.getRef();
+	}
+	
+	public static boolean isTableAccessWithDummyName(EObject o) {
+		return o instanceof TableAccess ta && ta.getName().equals(DUMMY_NAME);
 	}
 	
 	private static String stringLiteralToString(ExpStringLiteral stringLiteral) {

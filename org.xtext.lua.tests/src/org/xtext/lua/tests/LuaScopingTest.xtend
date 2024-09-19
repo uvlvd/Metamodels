@@ -25,7 +25,7 @@ class LuaScopingTest {
 	
 	def static String dump(EObject mod_, String indent) {
 	    var res = indent + mod_.toString.replaceFirst ('.*[.]impl[.](.*)Impl[^(]*', '$1 ')
-	
+	 	//var res = indent + mod_.toString.replaceFirst ('.*[.]impl[.](.*) [^(]*', '$1 ')
 	    for (a :mod_.eCrossReferences) 
 	        res += ' ->' + a.toString().replaceFirst ('.*[.]impl[.](.*)Impl[^(]*', '$1 ')
 	    res += "\n"
@@ -139,7 +139,8 @@ class LuaScopingTest {
 		    b = a["member"]
 		    c = a.member
 		    str = "member" --TODO
-		    d = a[str]
+		    str2 = "2"
+		    d = a[str .. str2]
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

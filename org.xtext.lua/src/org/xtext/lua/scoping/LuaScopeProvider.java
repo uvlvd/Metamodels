@@ -23,6 +23,7 @@ import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.Scopes;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.lua.Config;
+import org.xtext.lua.linking.SyntheticExpNil;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Exp;
@@ -209,9 +210,13 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 			// TODO: create transient "nil" eObject?
 			// For now, reference self when no assigned value is part of the ExpList (= rhs of Assignment)
 			//return Scopes.scopeFor(Collections.singletonList(assignable));
-			var nilValue = luaFactory.createExpNil(); // TODO: make transient or serialization does not work
+			//var nilValue = luaFactory.createExpNil(); // TODO: make transient or serialization does not work
+			//var parentAssignment = LinkingAndScopingUtils.findParentAssignmentForAssignable((Feature) assignable);
+			var nilValue = new SyntheticExpNil();
+			//parentAssignment.ifPresent(a -> a.getExpList().getExps().add(nilValue));
 			var nilValueDescription = EObjectDescription.create(fqn, nilValue);
 			return new SimpleScope(Collections.singletonList(nilValueDescription));
+			//return IScope.NULLSCOPE; // TODO: use a e.g. syntheticObjectFactory to create a synthetic nil value
 		} else {
 			// any assignable is also a Referenceable which has a name attribute and a
 			// cross-reference with linkText == name

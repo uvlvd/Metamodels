@@ -78,7 +78,7 @@ public final class LinkingAndScopingUtils {
 	 * Returns the Assignment object this feature is contained in, if the feature is part
 	 * of the lhs of an Assignment.
 	 */
-	private static Optional<Assignment> findParentAssignmentForAssignable(Feature feature) {
+	public static Optional<Assignment> findParentAssignmentForAssignable(Feature feature) {
 		var parent = feature.eContainer();
 		
 		if (parent == null) { // no parent
@@ -137,7 +137,7 @@ public final class LinkingAndScopingUtils {
 		if (exp instanceof ExpLiteral literal) {
 			name = resolveExpLiteralToString(literal);
 		} else if (exp instanceof Referencing ref) {
-			if (ref.getRef() == null) {
+			if (ref.getRef() == null && !Config.TABLE_ACCESS_REFERENCES) {
 				throw new RuntimeException("Attempting to resolve value expression, but a ref " + ref + " is not yet resolved!");
 			} else {
 				//if (!ref.getRef().eIsProxy()) {

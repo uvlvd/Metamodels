@@ -281,7 +281,7 @@ SuffixExp returns Referencing:
 ;
 
 Var:
-	{Var} ref=[Exp|LUA_NAME] =>suffixExp=SuffixExp?
+	{Var} name=LUA_NAME =>suffixExp=SuffixExp?
 ;
 
 FunctionCall:
@@ -297,7 +297,7 @@ TableAccess:
 ;
 
 MemberAccess:
-	('.' {MemberAccess} ref=[Exp|LUA_NAME] =>suffixExp=SuffixExp?)
+	('.' {MemberAccess} name=LUA_NAME =>suffixExp=SuffixExp?)
 ;
 
 Args: 
@@ -430,7 +430,9 @@ Feature:
  */
 Referencing:
 	//ref=[Referenceable|LUA_NAME]
-	ref=[Exp|LUA_NAME] 
+	ref=[Exp|LUA_NAME]  |
+	MemberAccess |
+	Var 
 	//| FuncName
 ;
 

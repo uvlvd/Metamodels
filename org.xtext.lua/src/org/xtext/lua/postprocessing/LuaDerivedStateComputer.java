@@ -56,7 +56,8 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 			}
 			// set "name" attribute for all other Referenceables: 
 			else if (obj instanceof Referenceable refble) {
-				setLinkTextAsName(refble);
+				//setLinkTextAsName(refble);
+				setNameAsRef(refble);
 			}
 			
 			
@@ -92,8 +93,40 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	 * This assumes that the cross-reference is not null.
 	 * @param refble the Referenceable.
 	 */
-	private void setLinkTextAsName(Referenceable refble) {
+	private void setNameAsRef(Referenceable refble) {
 		System.out.println(refble);
+		String name = refble.getName();
+		if (name == null) {
+			throw new RuntimeException("Attempting to create 'ref' cross-reference from 'name' attribute for " + refble + ", but name is null.");
+		}
+		
+		if (refble instanceof Referencing referencing) {	
+			var refNodes = NodeModelUtils.findNodesForFeature(referencing, Literals.REFERENCING__REF);
+			System.out.println(referencing.getRef());
+			if (!refNodes.isEmpty()) {
+				LOGGER.warn("Attempting to create 'ref' cross-reference from 'name' attribute for for " + refble + ", but ref node is not present.");
+
+				var refNode = refNodes.get(0);
+				var linkText = linkingHelper.getCrossRefNodeAsString(refNode, true);
+				if (linkText != null) {
+					LOGGER.warn("Attempting to create 'ref' cross-reference from 'name' attribute for Referenceablefor " + refble + ", but 'ref' is already set.");
+				}
+			}
+			
+			linkingSupport.createAndSetProxy(referencing, Literals.REFERENCING__REF, name);
+		} else {
+			LOGGER.warn("Attempting to create 'ref' cross-reference from 'name' attribute for for " + refble + ", which is not Referencing.");
+			return;
+		}
+	}
+	
+	/**
+	 * Sets the "name" attribute of the given Referenceable to the link text from its cross-reference
+	 * if the "name" attribute is null. </br>
+	 * This assumes that the cross-reference is not null.
+	 * @param refble the Referenceable.
+	 */
+	private void setLinkTextAsName(Referenceable refble) {
 		String linkText = refble.getName();
 		if (linkText == null && refble instanceof Referencing referencing) {
 			var refNodes = NodeModelUtils.findNodesForFeature(referencing, Literals.REFERENCING__REF);

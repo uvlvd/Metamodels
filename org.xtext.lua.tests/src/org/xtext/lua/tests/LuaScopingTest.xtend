@@ -136,11 +136,11 @@ class LuaScopingTest {
 	def void scopingTableAccessStringTest() { 
 		val SUT = '''
 			a = {}
-		    --a["member"] = 1
+		    a["member"] = 1
 		    --b = a["member"]
 		    --c = a.member
 		    str = "member" 
-		    a[str] = 1 --TODO
+		    --a[str] = 1 --TODO
 		    f = a.member
 		    str2 = "2"
 		    d = a[str]
@@ -204,11 +204,21 @@ class LuaScopingTest {
 	@Test
 	def void scopingTempTest() { 
 		val SUT = '''
-			b = {}
-			b.temp = 1 
 			a = {}
-			a.b = b
-			c = a.b.temp
+			--a["member"] = 1
+			--b = a["member"]
+			--c = a.member
+			str = "member" 
+			a[str] = 1 --TODO
+			f = a.member
+		
+			--b = {}
+			--b.temp = 1 
+			--a = {}
+			--a.b = b
+			--c = a.b.temp
+			
+			
 			--func = function () return 0 end
 			--a = {}
 		   -- a[0] = 2

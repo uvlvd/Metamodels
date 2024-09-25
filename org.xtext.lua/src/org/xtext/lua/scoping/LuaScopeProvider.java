@@ -28,12 +28,15 @@ import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpList;
 import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.FunctionDeclaration;
+import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.LuaPackage.Literals;
 import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.Stat;
 import org.xtext.lua.lua.TableAccess;
+import org.xtext.lua.lua.TableConstructor;
 import org.xtext.lua.lua.Var;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
 
@@ -58,6 +61,9 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 	
 	@Inject
 	private SyntheticLinkingSupport linkingSupport;
+	
+	@Inject
+	private LuaFactory luaFactory = LuaFactory.eINSTANCE;
     
 	
 	/**
@@ -87,7 +93,12 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 	        	var taDummyFqn = qualifiedNameProvider.getFullyQualifiedName(ta);
 	        	var candidatesName = taDummyFqn.toString().replace(LinkingAndScopingUtils.DUMMY_NAME, name);
 	        	var candidates = getCandidatesFromAssignablesFor(ta, nameConverter.toQualifiedName(candidatesName));
-	
+	        	
+	        	// Set reference to indexExp if it could not be resolved
+	        	if (candidates.isEmpty()) {
+	        		return new SimpleScope(Collections.singletonList(EObjectDescription.create(LinkingAndScopingUtils.DUMMY_NAME, ta.getIndexExp())));
+	        	}
+
 	        	return new SimpleScope(candidates.stream()
 	        			.map(c -> EObjectDescription.create(LinkingAndScopingUtils.DUMMY_NAME, c))
 	        			.toList());
@@ -106,12 +117,46 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         	}
         	
         	
-        	var candidates = getCandidatesFromAssignablesFor(referencing, contextFqn);	
-
-        	if (referencing instanceof MemberAccess ma) {
-        		return new SimpleScope(createDescriptionsForMemberAccess(candidates));
-        	}
-
+        	List<Referenceable> candidates_old = getCandidatesFromAssignablesFor(referencing, contextFqn);	
+        	
+        	//var candClone = new ArrayList<>(candidates);
+        	//Collections.reverse(candClone);
+        	//System.out.println(candClone);
+        	
+        	//var funcCandidates = getCandidatesFromFunctionDefs();
+        	/*
+        	System.out.println("Searching for: " + contextFqn);
+        	var rootElement = EcoreUtil2.getRootContainer(context);
+        	var functionDeclarations = EcoreUtil2.getAllContentsOfType(rootElement, FunctionDeclaration.class);
+        	var funcCandidates = functionDeclarations.stream()
+    				 .map(funcDecl ->  funcDecl.getFuncName())
+    				 //.flatMap(List::stream)
+    				 //.filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
+    				 .filter(refble ->  {
+    					 //var fullFuncName = refble.getRefs().isEmpty() ? refble.getName() : ; 
+    					// var list = new ArrayList<String>();
+    					// list.addAll(refble.getRefs().stream().map(ref -> ((Referenceable)ref.getRef()).getName()).toList());
+    					// list.add(refble.getName());
+    					// var qn = list.stream().map(null)
+    					 
+    					 System.out.println("	refble: " + refble);
+    					 //var qn = qualifiedNameProvider.getFullyQualifiedName(refble);
+    					 var qn = nameConverter.toQualifiedName(refble);
+    					 System.out.println("   " + qn);
+    					 return contextFqn.equals(qn);
+    				 })
+    				 .toList();
+        	System.out.println(funcCandidates);
+        	*/
+        	var scopeRoot = EcoreUtil2.getRootContainer(referencing);
+        	var candidates = findCandidatesInPathForFqn(contextFqn, scopeRoot);
+        	
+        	//if (referencing instanceof MemberAccess ma) {
+        	//	return new SimpleScope(createDescriptionsForMemberAccess(candidates));
+        	//}
+        	
+        	//return new SimpleScope(createDescriptionsForCandidates(candidates_old));
+        	
         	return new SimpleScope(createDescriptionsForCandidates(candidates));
         }
     
@@ -147,21 +192,30 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     /**
      * Returns the Scope for assignables. Assignables are Referenceables on the lhs of an Assignment,
      * and the returned Scope contains a single candidate: the corresponding value expression on the rhs of the Assignment. </br>
-     * If there is no corresponding value expression (e.g. a, b = 1), the candidate is the assignable itself (in the e.g. b).
+     * If there is no corresponding value expression (e.g. a, b = 1), a new ExpNil is created and set as reference (in the e.g. b).
      * @param assignable
      * @return
      */
     private IScope getScopeForAssignable(EObject assignable) {
+    	final var name = ((Referenceable) assignable).getName();
+		if (name == null) { // name might be null, e.g. for TableAccess with unresolvable indexExpression
+			// TODO: return placeholder object or implement trivial recovery
+			return IScope.NULLSCOPE;
+		}
+		
+    	final var fqn = nameConverter.toQualifiedName(name);
     	final var value = LinkingAndScopingUtils.findAssignedExp((Feature) assignable);
 		if (value == null) {
 			// TODO: create transient "nil" eObject?
 			// For now, reference self when no assigned value is part of the ExpList (= rhs of Assignment)
-			return Scopes.scopeFor(Collections.singletonList(assignable));
+			//return Scopes.scopeFor(Collections.singletonList(assignable));
+			var nilValue = luaFactory.createExpNil(); // TODO: make transient or serialization does not work
+			var nilValueDescription = EObjectDescription.create(fqn, nilValue);
+			return new SimpleScope(Collections.singletonList(nilValueDescription));
 		} else {
 			// any assignable is also a Referenceable which has a name attribute and a
 			// cross-reference with linkText == name
-			var name = ((Referenceable) assignable).getName();
-			var fqn = nameConverter.toQualifiedName(name);
+
 			// we create a description with the name of the assignable and the value expression
 			// => the scope for the assignable contains only this description
 			var assignedValueDescription = EObjectDescription.create(fqn, value);
@@ -178,6 +232,124 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 				 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
 				 .filter(refble ->  fqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble)))
 				 .toList();
+    }
+    
+    // find table contents for "context = table" assignment:
+    /*
+     * 1. find last declaration of table before the context line
+     * 2. find first declaration of table after context line (if any)
+     * 3. build table from all declarations between 1. and 2.
+     * 4. ????
+     * 5. profit.
+     */
+    
+    private Collection<IEObjectDescription> findCandidatesForFeature(Feature context, EObject scopeRoot) {
+    	var candidates = new ArrayList<IEObjectDescription>();
+    	
+    	var contextFqn = qualifiedNameProvider.getFullyQualifiedName(context);
+    	var assignments = EcoreUtil2.getAllContentsOfType(scopeRoot, Assignment.class);
+    	// function findCandidatesInPathByFqn(fqn) that searches for feature candidates by fqn:
+    	// 1. find all candidates with contextFqn.startsWith(candidateFqn)
+    	// 2. filter by: candidate.pointsToTable() || contextFqn.equals(candidateFqn)
+    	// 3. forall candidates if pointsToTable: 
+        //    3.1 newFqnHead = candidate.getRef().getFqn()  // quit here if cannot be resolved
+    	//    3.2 contextFqnTail = contextFqn.remove(candidateFqn)
+    	//    3.3 furtherCandidates = findCandidatesInPathByFqn(newFqnHead + contextFqnTail)
+    	// 	  3.4 add result as description with (candidate.getFqn() + contextFqnTail, furtherCandidate)
+    	// 4. return candidates
+    	assignments.stream()
+				 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
+				 .flatMap(List::stream)
+				 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
+				 .filter(refble ->  contextFqn.equals(qualifiedNameProvider.getFullyQualifiedName(refble)))
+				 .toList();
+    	
+    	return candidates;
+    }
+    
+    private Collection<Referenceable> getAssignablesFor(final EObject scopeRoot) {
+    	var assignments = EcoreUtil2.getAllContentsOfType(scopeRoot, Assignment.class);
+    	return assignments.stream()
+				 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
+				 .flatMap(List::stream)
+				 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
+				 .toList();
+    }
+    
+	// function findCandidatesInPathForFqn(fqn) that searches for feature candidates by fqn:
+	// 1. Add all candidates with contextFqn.equals(candidateFqn) to result
+    // 2.1 find all candidates with contextFqn.startsWith(candidateFqn)
+	// 2.2 filter by: candidate.pointsToTable() 
+	// 3. forall candidates if pointsToTable: 
+    //    3.1 newFqnHead = candidate.getRef().getFqn()  // quit here if cannot be resolved
+	//    3.2 contextFqnTail = contextFqn.remove(candidateFqn)
+	//    3.3 furtherCandidates = findCandidatesInPathByFqn(newFqnHead + contextFqnTail)
+	// 	  3.4 add result as description with (candidate.getFqn() + contextFqnTail, furtherCandidate)
+	// 4. return candidates
+    private Collection<Referenceable> findCandidatesInPathForFqn(final QualifiedName contextFqn, final EObject scopeRoot) {
+    	var assignables = getAssignablesFor(scopeRoot);
+    	
+    	var result = new ArrayList<Referenceable>();
+    	for (final var assignable : assignables) {
+    		final var assignableFqn = qualifiedNameProvider.getFullyQualifiedName(assignable);
+    		
+    		if (contextFqn.equals(assignableFqn)) { // add all assignables with equal fqn
+    			result.add(assignable);
+    		} else if (contextFqn.toString().startsWith(assignableFqn.toString())) {
+        		final var assignedValue = LinkingAndScopingUtils.tryGetAssignedValueFrom((Referencing) assignable); // value of assignable (is not Referencing)
+        		final var assignedRef = (((Referencing) assignable).getRef()); // rhs of assignable (might be a Referencing)
+    			
+        		if (assignedValue instanceof TableConstructor && assignedRef instanceof Referencing) {
+        			//var fqnHead = qualifiedNameProvider.getFullyQualifiedName(assignedValue);
+        			var newFqnHead = qualifiedNameProvider.getFullyQualifiedName(assignedRef);
+        			var newFqnTail = getFqnTail(contextFqn, assignableFqn.getSegmentCount());
+        			var newFqn = concatFqns(newFqnHead, newFqnTail);
+        			
+        			result.addAll(findCandidatesInPathForFqn(newFqn, scopeRoot)
+        				.stream()
+        				.toList()
+        			);
+        			
+        		}
+    		}
+    	}
+
+    	return result;
+
+    }
+    
+    private QualifiedName getFqnTail(QualifiedName forFqn, int startIndex) {
+    	var resultSegments = new ArrayList<String>();
+    	for (var i = 0; i < forFqn.getSegmentCount(); i++) {
+    		if (i >= startIndex) {
+    			resultSegments.add(forFqn.getSegment(i));
+    		}
+    	}
+    	
+    	if (resultSegments.isEmpty()) {
+    		throw new RuntimeException("Cannot get tail for " + forFqn + " with startIndex " + startIndex + "!");
+    	}
+    	
+    	var result = nameConverter.toQualifiedName(resultSegments.get(0));
+    	for (int i = 1; i < resultSegments.size(); i++) {
+    		result = result.append(resultSegments.get(i));
+    	}
+
+    	return result;
+    }
+    
+    private QualifiedName concatFqns(QualifiedName fqn1, QualifiedName fqn2) {
+    	var resultSegments = new ArrayList<>(fqn1.getSegments());
+    	resultSegments.addAll(fqn2.getSegments());
+    	
+    	if (resultSegments.isEmpty()) return null;
+    	
+    	var result = nameConverter.toQualifiedName(resultSegments.get(0));
+    	for (var i = 1; i < resultSegments.size(); i++) {
+    		result = result.append(resultSegments.get(i));
+    	}
+
+    	return result;
     }
     
     /**
@@ -203,9 +375,10 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     /**
      * We always need to create descriptions (instead of returning Scopes.scopeFor(candidates)), since the 
      * candidates name might contain ".", which would fail to match the QualifiedName generated from the cross-reference
-     * in the DefaultLinkingService. This is because the qualifiedNameConverter uses "." to separate Strings, i.e.
-     * the generated cross-reference QualifiedName for "hello.world" would be "hello" "world, which would not match
-     * the candidate's name "hello.world". </br>
+     * in the DefaultLinkingService.</br>
+     * This is because the qualifiedNameConverter uses "." to separate Strings, i.e.
+     * the generated cross-reference QualifiedName for "hello.world" would be "hello" "world", which would not match
+     * the candidate's name "hello.world".</br></br>
      * 
      * An alternative would be to extend the IQualifiedNameConverter.DefaultImpl and change/remove the delimiter.
      * @param candidates The candidates.

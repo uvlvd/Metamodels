@@ -21,6 +21,7 @@ public class LuaLinkingDiagnosticMessageProvider extends LinkingDiagnosticMessag
 	@Override
 	public DiagnosticMessage getUnresolvedProxyMessage(
 			ILinkingDiagnosticMessageProvider.ILinkingDiagnosticContext context) {
+		/*
 		//System.out.println("LuaLinkingDiagnosticMessageProvider");
 		String linkText = null;
 		try {
@@ -48,6 +49,8 @@ public class LuaLinkingDiagnosticMessageProvider extends LinkingDiagnosticMessag
 		if (msg != null) {
 			//System.out.println("foo: " + context.getContext());
 		}
+		*/
+		
 		//return null;
 		return super.getUnresolvedProxyMessage(context);
 	}

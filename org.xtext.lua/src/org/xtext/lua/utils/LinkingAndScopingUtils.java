@@ -34,7 +34,8 @@ public final class LinkingAndScopingUtils {
 		if (obj instanceof Feature feature && obj instanceof Referenceable) {
 			final var isLeaf = !feature.eContents().stream().anyMatch(child -> child instanceof Feature);
 			if (isLeaf) { // only leafs of a feature path are assignable
-				return findParentAssignment(feature).isPresent();
+				// check if an Assignment is parent and leaf is on lhs
+				return findParentAssignmentForAssignable(feature).isPresent();
 			}
 		}
 		return false;
@@ -57,7 +58,7 @@ public final class LinkingAndScopingUtils {
 		}
 		final var featurePathRoot = featurePathRootOpt.get();
 		
-		final var assignmentOpt = findParentAssignment(featurePathRoot);
+		final var assignmentOpt = findParentAssignmentForAssignable(featurePathRoot);
 		if (assignmentOpt.isPresent()) {
 			final var assignment = assignmentOpt.get();
 			// TODO: need to know root of feature path for refble to find it in vars
@@ -74,9 +75,10 @@ public final class LinkingAndScopingUtils {
 	}
 	
 	/**
-	 * Returns the Assignment object this feature is contained in.
+	 * Returns the Assignment object this feature is contained in, if the feature is part
+	 * of the lhs of an Assignment.
 	 */
-	private static Optional<Assignment> findParentAssignment(Feature feature) {
+	private static Optional<Assignment> findParentAssignmentForAssignable(Feature feature) {
 		var parent = feature.eContainer();
 		
 		if (parent == null) { // no parent
@@ -88,10 +90,10 @@ public final class LinkingAndScopingUtils {
 		}
 		
 		if (parent instanceof Feature featureParent) {
-			return findParentAssignment(featureParent);
+			return findParentAssignmentForAssignable(featureParent);
 		} 
 		
-		// object is on rhs or not part of an assignment/feature path.
+		// object is on rhs (i.e. the parent is an ExpList) or not part of an assignment/feature path.
 		return Optional.empty();
 	}
 	
@@ -182,12 +184,16 @@ public final class LinkingAndScopingUtils {
 		throw new RuntimeException("Error while resolving ExpLiteral to String.");
 	}
 	
-	private static Exp tryGetAssignedValueFrom(Referencing ref) {
-		if (ref.getRef().eIsProxy()) {
+	// TODO: may lead to StackOverflow, limit depth?
+	public static Exp tryGetAssignedValueFrom(Referencing ref) {
+		if (ref.getRef() == null || ref.getRef().eIsProxy()) {
 			return null;
 		}
-		if (ref.getRef() instanceof Referencing refref) {
-			return tryGetAssignedValueFrom(refref);
+		if (ref.getRef().equals(ref)) { // reference to self means no value was assigned (i.e. the value is 'nil')
+			return null;
+		}
+		if (ref.getRef() instanceof Referencing refsRef) {
+			return tryGetAssignedValueFrom(refsRef);
 		}
 		return ref.getRef();
 	}

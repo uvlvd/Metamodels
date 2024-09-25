@@ -28,6 +28,7 @@ import org.xtext.lua.converters.LuaValueConverterService;
 import org.xtext.lua.linking.LuaLinker;
 import org.xtext.lua.linking.LuaLinkingDiagnosticMessageProvider;
 import org.xtext.lua.linking.LuaLinkingService;
+import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.postprocessing.LuaDerivedStateComputer;
 import org.xtext.lua.scoping.LuaQualifiedNameConverter;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
@@ -67,6 +68,11 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	public Class<? extends IQualifiedNameConverter> bindIQualifiedNameConverter() {
 		return LuaQualifiedNameConverter.class;
 	}
+	
+	public LuaFactory bindLuaFactoryToInstance() {
+		return LuaFactory.eINSTANCE;
+	}
+	
 	/**
 	 * LuaTransientValueService marks derived "name" attributes as transient s.t. they are ignored by the serialization.
 	 */

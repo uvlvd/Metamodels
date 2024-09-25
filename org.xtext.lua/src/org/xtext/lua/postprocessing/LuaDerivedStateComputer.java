@@ -93,6 +93,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	 * @param refble the Referenceable.
 	 */
 	private void setLinkTextAsName(Referenceable refble) {
+		System.out.println(refble);
 		String linkText = refble.getName();
 		if (linkText == null && refble instanceof Referencing referencing) {
 			var refNodes = NodeModelUtils.findNodesForFeature(referencing, Literals.REFERENCING__REF);

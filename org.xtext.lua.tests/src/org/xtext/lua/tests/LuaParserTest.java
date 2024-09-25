@@ -45,7 +45,7 @@ public class LuaParserTest {
 		final var lua_test_suite_52 = "D:\\MA\\lua-5.2.0-tests"; // TODO: situate in project
 		final var apisix = "D:\\MA\\apisix\\apisix";
 		final var temp_testfolder = "D:\\MA\\repos\\temp";
-		var resourceSet = new LuaParser().parse(Paths.get(temp_testfolder));
+		var resourceSet = new LuaParser().parse(Paths.get(apisix));
 		
 		checkPercentageOfResolvedProxies(resourceSet);
 		

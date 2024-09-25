@@ -24,10 +24,11 @@ class LuaScopingTest {
 	
 	
 	def static String dump(EObject mod_, String indent) {
-	    var res = indent + mod_.toString.replaceFirst ('.*[.]impl[.](.*)Impl[^(]*', '$1 ')
-	 	//var res = indent + mod_.toString.replaceFirst ('.*[.]impl[.](.*) [^(]*', '$1 ')
+	    //var res = indent + mod_.toString.replaceFirst ('.*[.]impl[.](.*)Impl[^(]*', '$1 ')
+	 	var res = indent + mod_.toString.replaceFirst ('.*[.]impl[.](.*)Impl[@](.*)[^(]*', '$1 $2')
 	    for (a :mod_.eCrossReferences) 
-	        res += ' ->' + a.toString().replaceFirst ('.*[.]impl[.](.*)Impl[^(]*', '$1 ')
+	        //res += ' ->' + a.toString().replaceFirst ('.*[.]impl[.](.*)Impl[^(]*', '$1 ')
+	        res += ' ->' + a.toString().replaceFirst ('.*[.]impl[.](.*)Impl[@](.*)[^(]*', '$1 $2')
 	    res += "\n"
 	    for (f :mod_.eContents) {
 	        res += f.dump (indent+"    ")
@@ -135,14 +136,16 @@ class LuaScopingTest {
 	def void scopingTableAccessStringTest() { 
 		val SUT = '''
 			a = {}
-		    a["member"] = 1
+		    --a["member"] = 1
 		    --b = a["member"]
-		    c = a.member
-		   -- str = "member" --TODO
-		  --  str2 = "2"
-		  --  d = a[str]
-		  --  a["hello.world"] = 2
-		  --  b = a["hello.world"]
+		    --c = a.member
+		    str = "member" 
+		    a[str] = 1 --TODO
+		    f = a.member
+		    str2 = "2"
+		    d = a[str]
+		    a["hello.world"] = 2
+		    b = a["hello.world"]
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
@@ -155,6 +158,65 @@ class LuaScopingTest {
 			a = {}
 		    a[0] = 2
 		    b = a[0]
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingFunctionDeclarationTest() { 
+		val SUT = '''
+			a = {}
+			function func() end
+			function a.func2() end
+			b = func
+			c = a.func2
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingMissingValueInExpressionTest() { 
+		val SUT = '''
+			a, b = 1 -- b should reference a newly created ExpNil
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingLastAssignmentTest() { 
+		val SUT = '''
+			a = 1
+			a = 2
+			a = 3
+			b = a -- b should reference a from a=3
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingTempTest() { 
+		val SUT = '''
+			b = {}
+			b.temp = 1 
+			a = {}
+			a.b = b
+			c = a.b.temp
+			--func = function () return 0 end
+			--a = {}
+		   -- a[0] = 2
+		   -- b = a[func()]
+		   -- a[func()] = 1
+		   -- str = "member"
+		   -- a[str] = 1
+		   -- c = a.member
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

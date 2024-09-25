@@ -60,6 +60,7 @@ Stat returns Stat:
     GenericFor |
     
     {FunctionDeclaration} 'function' funcName=FuncName body=FuncBody |
+    //FunctionOrMethodDeclaration  |
     {LocalFunctionDeclaration} 'local' 'function' LUA_NAME body=FuncBody |
     {LocalNameListDeclaration} 'local' vars=NameList ('=' expList=ExpList)? |
     // since Lua 5.2
@@ -75,6 +76,13 @@ NumericFor returns BlockWrapperWithArgs:
 GenericFor returns BlockWrapperWithArgs:
 	'for' args=NameList 'in' expList=ExpList 'do' block=Block 'end'
 ;
+
+/* 
+FunctionOrMethodDeclaration:
+	{FunctionDeclaration} 'function' funcName=FuncName body=FuncBody  |
+	{MethodDeclaration} 'function' funcName=MethodName body=FuncBody  
+;	 
+*/
 
 /**
  * Initially, the idea was to create a new xText grammar for Lua5.2, extending the Lua5.1 grammar.
@@ -234,21 +242,28 @@ ExpExponentiation returns Exp:
 ;
  
 ExpPrimary returns Exp:
-	{ExpNil} 'nil' | 
-	{ExpFalse} 'false' | 
-	{ExpTrue} 'true' | 
+	ExpTerminal |
 	ExpLiteral | 
-	{ExpVarArgs} '...' |
-	FunctionDeclaration |
+	ExpVarArgs |
+	ExpFunctionDeclaration |
 	PrefixExp |
-	//VarRhs |
 	TableConstructor
 	// exp binop exp | unop exp from the reference are handled without left-recursion and describing operator precedences by Exp starting with ExpOr
+;
+
+ExpTerminal:
+	{ExpNil} 'nil' | 
+	{ExpFalse} 'false' | 
+	{ExpTrue} 'true' 
 ;
 
 ExpLiteral:
 	{ExpNumberLiteral} value=NUMBER_LITERAL | 
 	{ExpStringLiteral} value=LUA_STRING 
+;
+
+ExpVarArgs:
+	{ExpVarArgs} '...' 
 ;
 
 PrefixExp returns Referencing:
@@ -259,7 +274,7 @@ PrefixExp returns Referencing:
 
 SuffixExp returns Referencing:
 	FunctionCall | // from FunctionCall in reference
-	MemberFunctionCall | // from FunctionCall in reference
+	MethodCall | // from FunctionCall in reference
 	TableAccess | // from Var in reference
 	MemberAccess // from Var in reference
 	//{MemberAccess} '.' ref=[Var|LUA_NAME] =>suffixExp=SuffixExp? // from Var in reference
@@ -273,8 +288,8 @@ FunctionCall:
 	({FunctionCall} args=Args =>suffixExp=SuffixExp?)
 ;
 
-MemberFunctionCall:
-	 (':' {MemberFunctionCall} ref=[Exp|LUA_NAME] args=Args =>suffixExp=SuffixExp?)
+MethodCall:
+	 (':' {MethodCall} ref=[Exp|LUA_NAME] args=Args =>suffixExp=SuffixExp?)
 ;
 
 TableAccess:
@@ -284,43 +299,6 @@ TableAccess:
 MemberAccess:
 	('.' {MemberAccess} ref=[Exp|LUA_NAME] =>suffixExp=SuffixExp?)
 ;
-
-/*
- * We use the synthetic rule Referenceable to implement cross-references in this grammar. 
- * Referenceables have a feature/attribute called "name", that is used during the linking phase to resolve the cross-references.
- * Some Rules (e.g. the Label rule referenced by goto) parse the "name" attribute, and return the Referenceable type.
- * Others (e.g. Var) have no "name" attribute (instead, they have a ref cross-reference), but are sub-types of Referenceable,
- * that is the resulting EObjects carry a "name" attribute with the value null. This value is later set by the
- * LuaDerivedStateComputer class.
- */
-Referenceable:
-	name=LUA_NAME |
-	TableAccess |
-	MemberAccess |
-	Var |
-	Label
-;
-
-/*
- * We use the synthetic rule Feature for rules that may define some kind of access on a variable/table as part of a feature path. 
- * They may have a prefix and/or a suffix, e.g. a.member["tableAccess"].
- */
-Feature:
-	FunctionCall | // is never leaf of a path (never on lhs of Assignment)
-	MemberFunctionCall | // is never leaf of a path (never on lhs of Assignment)
-	TableAccess |
-	MemberAccess |
-	Var 
-;
-
-/**
- * Synthetic rule for all rules that contain a cross-reference
- */
-Referencing:
-	//ref=[Referenceable|LUA_NAME]
-	ref=[Exp|LUA_NAME]
-;
-
 
 Args: 
 	{ParamArgs} '(' (params=ExpList)? ')' | 
@@ -351,11 +329,54 @@ FuncName:
 	LUA_NAME ('.' LUA_NAME)* (':' LUA_NAME)?
 ;
 
+//FuncName:
+//	{FuncName} name=LUA_NAME |
+//	{FuncName} refs+=Referencing ('.' refs+=Referencing)* '.' name=LUA_NAME |
+//	{MethodName} refs+=Referencing ('.' refs+=Referencing)* ':' name=LUA_NAME
+//;
+
+/* 
+FuncName:
+	{FuncName} name=LUA_NAME |
+	{FuncNamePrefix} (ref=[Var|LUA_NAME] '.') next=FuncName |
+	
+	// TODO: das ist quatsch, da darf kein ref drin sein
+	//   - evtl. doch zwischen FunctionDeclaration und MethodDeclaration unterscheiden?
+	{MethodName} (ref=[Var|LUA_NAME] ':') name=LUA_NAME
+
+;
+*/
+
+/* 
+FuncName:
+	{FuncName} name=LUA_NAME |
+	ref=[Var|LUA_NAME] next=FuncNamePrefix
+;
+
+FuncNamePrefix:
+	'.' next=FuncNamePrefix |
+	{FuncName} name=LUA_NAME
+;
+*/
+
+/* 
+FuncNameHead returns FuncName:
+	{FuncName} name=LUA_NAME |
+	ref=[Var|LUA_NAME] next=FuncNamePath
+;
+
+FuncNamePath returns FuncName:
+	'.' ref=[Var|LUA_NAME] next=FuncNamePath |
+	{FuncName} '.' name=LUA_NAME |
+	{MethodName} ':' name=LUA_NAME
+;
+*/
+
 NameList: 
 	names+=LUA_NAME (',' names+=LUA_NAME)*
 ;
 
-FunctionDeclaration:
+ExpFunctionDeclaration:
 	'function' FuncBody
 ;
 
@@ -365,7 +386,8 @@ FuncBody:
 
 ParList:
 	NameList (',' '...')? |
-	'...'
+	// {VarArgs} '...'
+	ExpVarArgs
 ;
 
 
@@ -373,6 +395,45 @@ ParList:
 // ****************************************************
 // SYNTHETIC
 // ****************************************************
+
+/*
+ * We use the synthetic rule Referenceable to implement cross-references in this grammar. 
+ * Referenceables have a feature/attribute called "name", that is used during the linking phase to resolve the cross-references.
+ * Some Rules (e.g. the Label rule referenced by goto) parse the "name" attribute, and return the Referenceable type.
+ * Others (e.g. Var) have no "name" attribute (instead, they have a ref cross-reference), but are sub-types of Referenceable,
+ * that is the resulting EObjects carry a "name" attribute with the value null. This value is later set by the
+ * LuaDerivedStateComputer class.
+ */
+Referenceable:
+	name=LUA_NAME |
+	TableAccess |
+	MemberAccess |
+	Var |
+	Label 
+	//| FuncName 
+;
+
+/*
+ * We use the synthetic rule Feature for rules that may define some kind of access on a variable/table as part of a feature path. 
+ * They may have a prefix and/or a suffix, e.g. a.member["tableAccess"].
+ */
+Feature:
+	FunctionCall | // should never be leaf of a path (never on lhs of Assignment)
+	MethodCall | // should never be leaf of a path (never on lhs of Assignment)
+	TableAccess |
+	MemberAccess |
+	Var 
+;
+
+/**
+ * Synthetic rule for all rules that contain a cross-reference
+ */
+Referencing:
+	//ref=[Referenceable|LUA_NAME]
+	ref=[Exp|LUA_NAME] 
+	//| FuncName
+;
+
 
 BlockWrapperWithArgs:
 	NumericFor |

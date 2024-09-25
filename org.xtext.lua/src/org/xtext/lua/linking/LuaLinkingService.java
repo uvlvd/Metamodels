@@ -10,6 +10,7 @@ import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.linking.impl.DefaultLinkingService;
 import org.eclipse.xtext.linking.impl.IllegalNodeException;
+import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.nodemodel.INode;
 import org.eclipse.xtext.scoping.IScope;
@@ -18,6 +19,8 @@ import org.xtext.lua.lua.Chunk;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.TableAccess;
+import org.xtext.lua.lua.LuaPackage.Literals;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
 import org.eclipse.emf.common.util.URI;
 
@@ -30,9 +33,14 @@ public class LuaLinkingService extends DefaultLinkingService {
   	@Inject
     private IQualifiedNameConverter nameConverter;
   	
+	@Inject
+	private SyntheticLinkingSupport linkingSupport;
+  	
 	@Override
 	public List<EObject> getLinkedObjects(EObject context, EReference ref, INode node) throws IllegalNodeException {		
+        
 		var linkedObjects = super.getLinkedObjects(context, ref, node);
+		
 		return linkedObjects;
 	}
 	

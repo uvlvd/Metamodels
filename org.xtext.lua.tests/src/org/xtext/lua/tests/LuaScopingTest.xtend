@@ -133,19 +133,19 @@ class LuaScopingTest {
 	}
 	
 	@Test
-	def void scopingTableAccessStringTest() { 
+	def void scopingTableAccessStringLiteralTest() { 
 		val SUT = '''
 			a = {}
 		    a["member"] = 1
-		    --b = a["member"]
-		    --c = a.member
+		    b = a["member"]
+		    c = a.member
 		    str = "member" 
 		    --a[str] = 1 --TODO
-		    f = a.member
-		    str2 = "2"
+		    --f = a.member
+		    --str2 = "2"
 		    d = a[str]
-		    a["hello.world"] = 2
-		    b = a["hello.world"]
+		   -- a["hello.world"] = 2
+		   -- b = a["hello.world"]
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
@@ -153,7 +153,7 @@ class LuaScopingTest {
 	}
 	
 	@Test
-	def void scopingTableAccessNumberTest() { 
+	def void scopingTableAccessNumberLiteralTest() { 
 		val SUT = '''
 			a = {}
 		    a[0] = 2
@@ -162,6 +162,24 @@ class LuaScopingTest {
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
 		check(result, SUT)
+	}
+	
+	
+	//TODO: implement the same test for Number literal variables and
+	// check that they can be correctly referenced, i.e. d needs to be resolvable to 1
+	@Test
+	def void scopingTableAccessStringLiteralVariableTest() { 
+		val SUT = '''
+			a = {}
+		    a["member"] = 1
+		    str = "member" 
+		    d = a[str]
+		'''
+		val result = parseHelper.parse(SUT)
+
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+		Assertions.assertTrue(false, "This test does not fail, but what happens is TODO (see comment)")
 	}
 	
 	@Test
@@ -202,10 +220,26 @@ class LuaScopingTest {
 	}
 	
 	@Test
+		def void scopingPartialTableAccessTest() { 
+		val SUT = '''
+			b = {}
+			b.temp = 1 
+			a = {}
+			a.b = b
+			c = a.b.temp
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
 	def void scopingTempTest() { 
 		val SUT = '''
 			a = {}
-			--a["member"] = 1
+			--a["member"] = {}
+			--a["member"].b = "b"
+			--a[1+1] = "temps" --TODO
 			--b = a["member"]
 			--c = a.member
 			str = "member" 

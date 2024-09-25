@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.Config;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Exp;
@@ -32,13 +33,55 @@ public final class LinkingAndScopingUtils {
 	public static boolean isAssignable(EObject obj) {
 		// only features that are Referenceable can be assignables (i.e. Vars, MemberAccess, TableAccess, ... but not FunctionCalls etc.)
 		if (obj instanceof Feature feature && obj instanceof Referenceable) {
+			// a Var that is part of a TableAccess cannot be an Assignable (e.g. the var in table[var])
+			if (isPartOfAnyTableAccessIndexExp(feature)) {
+				return false;
+			}
+			
 			final var isLeaf = !feature.eContents().stream().anyMatch(child -> child instanceof Feature);
-			if (isLeaf) { // only leafs of a feature path are assignable
+			if (isLeafOfFeaturePath(feature)) { // only leafs of a feature path are assignable
+			//if (isLeaf) {
 				// check if an Assignment is parent and leaf is on lhs
 				return findParentAssignmentForAssignable(feature).isPresent();
 			}
 		}
 		return false;
+	}
+	
+	private static boolean isLeafOfFeaturePath(Feature feature) {
+		var featureChildren = feature.eContents().stream().filter(child -> child instanceof Feature).toList();
+		if (feature instanceof TableAccess ta) {
+			// since a table access itself can be a leaf, but may also contain Features in its indexExp,
+			// we may only consider children that are not part of the indexExp as a continuation of the feature path.
+			return !featureChildren.stream().anyMatch(child -> !isPartOfTableAccessIndexExp(child, ta));
+		}
+		return featureChildren.isEmpty();
+	}
+	
+	private static boolean isPartOfAnyTableAccessIndexExp(EObject obj) {
+		if (obj instanceof TableAccess) return false; // getContainerOfType(obj, type) returns true if obj ist instance of type
+		
+		// check if obj has a parent that is TableAccess 
+		var parentTableAccess = EcoreUtil2.getContainerOfType(obj, TableAccess.class);
+		if (parentTableAccess == null) return false;
+		
+		return isPartOfTableAccessIndexExp(obj, parentTableAccess);
+		/*
+		// check if obj is single index exp of closest parent table access
+		var indexExp = parentTableAccess.getIndexExp();
+		if (indexExp == obj) return true;
+		
+		// check if obj is part of index exp of closest parent table access
+		return parentTableAccess.getIndexExp().eContents().contains(obj);
+		*/
+	}
+	
+	private static boolean isPartOfTableAccessIndexExp(EObject obj, TableAccess ta) {
+		var indexExp = ta.getIndexExp();
+		// check if obj is single index exp of table access
+		if (indexExp == obj) return true;
+		// check if obj is part of index exp of table access
+		return ta.getIndexExp().eContents().contains(obj);
 	}
 	
 	/**

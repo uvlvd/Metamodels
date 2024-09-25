@@ -94,23 +94,17 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	 * @param refble the Referenceable.
 	 */
 	private void setNameAsRef(Referenceable refble) {
-		System.out.println(refble);
 		String name = refble.getName();
 		if (name == null) {
 			throw new RuntimeException("Attempting to create 'ref' cross-reference from 'name' attribute for " + refble + ", but name is null.");
 		}
 		
-		if (refble instanceof Referencing referencing) {	
+		if (refble instanceof Referencing referencing) {
+			// TODO: The grammar should never produce Referenceables that already have their "ref" cross-reference set.
+			//       => This check could be removed once the grammar is not changed anymore for some optimization.
 			var refNodes = NodeModelUtils.findNodesForFeature(referencing, Literals.REFERENCING__REF);
-			System.out.println(referencing.getRef());
 			if (!refNodes.isEmpty()) {
 				LOGGER.warn("Attempting to create 'ref' cross-reference from 'name' attribute for for " + refble + ", but ref node is not present.");
-
-				var refNode = refNodes.get(0);
-				var linkText = linkingHelper.getCrossRefNodeAsString(refNode, true);
-				if (linkText != null) {
-					LOGGER.warn("Attempting to create 'ref' cross-reference from 'name' attribute for Referenceablefor " + refble + ", but 'ref' is already set.");
-				}
 			}
 			
 			linkingSupport.createAndSetProxy(referencing, Literals.REFERENCING__REF, name);

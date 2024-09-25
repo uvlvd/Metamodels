@@ -78,6 +78,8 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
             return IScope.NULLSCOPE;
         }
         
+        
+        // TODO: do not assign rhs to variables that have been already declared (e.g. a[str] = 1: str should reference str declaration, not 1)
         if (LinkingAndScopingUtils.isAssignable(context)) {
         	return getScopeForAssignable(context);
         }
@@ -91,13 +93,14 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 	        	var ta = (TableAccess) context;
 	        	var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp());
 	        	
+	        	
 	        	var taDummyFqn = qualifiedNameProvider.getFullyQualifiedName(ta);
 	        	var candidatesName = taDummyFqn.toString().replace(LinkingAndScopingUtils.DUMMY_NAME, name);
 	        	var candidates = getCandidatesFromAssignablesFor(ta, nameConverter.toQualifiedName(candidatesName));
 	        	
 	        	// Set reference to indexExp if it could not be resolved
 	        	if (candidates.isEmpty()) {
-	        		return new SimpleScope(Collections.singletonList(EObjectDescription.create(LinkingAndScopingUtils.DUMMY_NAME, ta.getIndexExp())));
+	        		//return new SimpleScope(Collections.singletonList(EObjectDescription.create(LinkingAndScopingUtils.DUMMY_NAME, ta.getIndexExp())));
 	        	}
 
 	        	return new SimpleScope(candidates.stream()
@@ -118,7 +121,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         	}
         	
         	
-        	List<Referenceable> candidates_old = getCandidatesFromAssignablesFor(referencing, contextFqn);	
+        	//List<Referenceable> candidates_old = getCandidatesFromAssignablesFor(referencing, contextFqn);	
         	
         	//var candClone = new ArrayList<>(candidates);
         	//Collections.reverse(candClone);
@@ -149,12 +152,14 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     				 .toList();
         	System.out.println(funcCandidates);
         	*/
+      	
         	var scopeRoot = EcoreUtil2.getRootContainer(referencing);
         	var candidates = findCandidatesInPathForFqn(contextFqn, scopeRoot);
         	
-        	//if (referencing instanceof MemberAccess ma) {
-        	//	return new SimpleScope(createDescriptionsForMemberAccess(candidates));
-        	//}
+        	if (referencing instanceof MemberAccess ma) {
+        		return new SimpleScope(createDescriptionsForMemberAccess(candidates));
+        	}
+        	
         	
         	//return new SimpleScope(createDescriptionsForCandidates(candidates_old));
         	
@@ -296,7 +301,32 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     	
     	var result = new ArrayList<Referenceable>();
     	for (final var assignable : assignables) {
+    		
+    		//QualifiedName assignableFqn = null;
+    		
+    		if (assignable instanceof TableAccess ta && ta.getName().equals(LinkingAndScopingUtils.DUMMY_NAME)) {
+    			
+    			// TODO: this already leads to the error:  ERROR xt.linking.lazy.LazyLinkingResource  - Cyclic resolution of lazy links : Referencing.ref->Referencing.ref in resource '__synthetic0.lua'.
+    			//var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp());
+    			
+    			
+    			//if (name == null) continue;
+    			
+    			//var taDummyFqn = qualifiedNameProvider.getFullyQualifiedName(ta);
+	        	//var candidatesName = taDummyFqn.toString().replace(LinkingAndScopingUtils.DUMMY_NAME, name);
+	        	//assignableFqn = nameConverter.toQualifiedName(candidatesName);
+	        	//System.out.println("foo: " + assignableFqn);
+    			
+    			//assignable.setName(name);
+    			continue;
+    			
+
+    		}// else {
+    		//	assignableFqn = qualifiedNameProvider.getFullyQualifiedName(assignable);
+    		//}
+    		
     		final var assignableFqn = qualifiedNameProvider.getFullyQualifiedName(assignable);
+    		//System.out.println("foo: " + assignableFqn);
     		
     		if (contextFqn.equals(assignableFqn)) { // add all assignables with equal fqn
     			result.add(assignable);

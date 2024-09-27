@@ -360,77 +360,22 @@ end
 	def void scopingTemp2Test() { 
 		val SUT = '''
 
-    local mt = {
-        __index = function(t, key)
-            local cached = t._cache[key]
-            if cached ~= nil then
-                return cached
-            end
-            }
-
-            if type(key) ~= "string" then
-                error("invalid argument, expect string value", 2)
-            end
-      
-            local val
-            local method = var_methods[key]
-    
-            if method then
-                val = method()
---[[   
-            elseif core_str.has_prefix(key, "cookie_") then
-                local cookie = t.cookie
-                if cookie then
-                    local err
-                    val, err = cookie:get(sub_str(key, 8))
-                    if err then
-                        log.warn("failed to fetch cookie value by key: ",
-                                 key, " error: ", err)
-                    end
-                end
-
-            elseif core_str.has_prefix(key, "arg_") then
-                local arg_key = sub_str(key, 5)
-                local args = request.get_uri_args()[arg_key]
-                if args then
-                    if type(args) == "table" then
-                        val = args[1]
-                    else
-                        val = args
-                    end
-                end
-
-            elseif core_str.has_prefix(key, "post_arg_") then
-                -- only match default post form
-                local content_type = request.header(nil, "Content-Type")
-                if content_type ~= nil and core_str.has_prefix(content_type,
-                        "application/x-www-form-urlencoded") then
-                    local arg_key = sub_str(key, 10)
-                    local args = request.get_post_args()[arg_key]
-                    if args then
-                        if type(args) == "table" then
-                            val = args[1]
-                        else
-                            val = args
-                        end
-                    end
-                end
-
-            elseif core_str.has_prefix(key, "uri_param_") then
-                -- `uri_param_<name>` provides access to the uri parameters when using
-                -- radixtree_uri_with_parameter
-                if t._ctx.curr_req_matched then
-                    local arg_key = sub_str(key, 11)
-                    val = t._ctx.curr_req_matched[arg_key]
-                end
-                ]]
-                
---fine
-            elseif core_str.has_prefix(key, "http_") then
-                key = key:lower() -- ERROR: Stack-overflow
-                key = re_gsub(key, "-", "_", "jo")
-                val = get_var(key, t._request)
-}} 
+		a = {
+		      send = function(self, ...)
+		          if select('#', ...) == 1 and type(select(1, ...)) == "string" then
+		              -- fast path
+		              return self.sock:send(...)
+		          end
+		  
+		          -- luasocket's send only accepts a single string
+		          return self.sock:send(flatten({...}))
+		      end,
+		  
+		      getreusedtimes = function ()
+		          return 0
+		      end
+		      }
+		      
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

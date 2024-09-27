@@ -378,7 +378,7 @@ NameList:
 ;
 
 ExpFunctionDeclaration:
-	'function' FuncBody
+	{ExpFunctionDeclaration} 'function' body=FuncBody
 ;
 
 FuncBody:
@@ -387,7 +387,7 @@ FuncBody:
 
 ParList:
 	NameList (',' '...')? |
-	// {VarArgs} '...'
+	//{VarArgs} '...'
 	ExpVarArgs
 ;
 

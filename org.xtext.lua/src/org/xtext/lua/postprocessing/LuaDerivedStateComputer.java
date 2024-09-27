@@ -46,6 +46,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 			
 			// handle table access
 			if (obj instanceof TableAccess tableAccess) {
+				
 				if (Config.TABLE_ACCESS_REFERENCES) {
 					// Effectively makes tableAccess Referenceable and Referencing
 					setTableAccessNameAndRef(tableAccess);
@@ -53,6 +54,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 					// Efectively makes tableAccess Referenceable
 					setTableAccessName(tableAccess);
 				}
+				
 			}
 			// set "name" attribute for all other Referenceables: 
 			else if (obj instanceof Referenceable refble) {

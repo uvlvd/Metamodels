@@ -78,33 +78,44 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
             return IScope.NULLSCOPE;
         }
         
+        var scopeRoot = EcoreUtil2.getRootContainer(context);
         
         // TODO: do not assign rhs to variables that have been already declared (e.g. a[str] = 1: str should reference str declaration, not 1)
         if (LinkingAndScopingUtils.isAssignable(context)) {
         	return getScopeForAssignable(context);
         }
         
-        if (Config.TABLE_ACCESS_REFERENCES) {
+        
+        //if (Config.TABLE_ACCESS_REFERENCES) {
+        if (false) {
 	        /**
 	         * For now, this is just a proof-of-concept. With this (and setting a name and ref for TableAccess in the DerivedStateComputer), 
 	         * TableAccess indexes could be resolved s.t. the TableAccess references a given table field.
 	         */
 	        if (LinkingAndScopingUtils.isTableAccessWithDummyName(context)) {
+	        	System.out.println("foo");
 	        	var ta = (TableAccess) context;
 	        	var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp());
 	        	
 	        	
 	        	var taDummyFqn = qualifiedNameProvider.getFullyQualifiedName(ta);
-	        	var candidatesName = taDummyFqn.toString().replace(LinkingAndScopingUtils.DUMMY_NAME, name);
+	        	var candidatesName = taDummyFqn.toString().replace(LinkingAndScopingUtils.DERIVED_DUMMY_NAME, name);
 	        	var candidates = getCandidatesFromAssignablesFor(ta, nameConverter.toQualifiedName(candidatesName));
-	        	
+    			//if (name != null) {
+    			//	ta.setName(name);
+    			//	ta.setRef(ta.getRef());
+    			//	
+    			//}
+
+	        	//var candidates = findCandidatesInPathForFqn(qualifiedNameProvider.getFullyQualifiedName(ta), scopeRoot);
+	        	//var candidates = findCandidatesInPathForFqn(nameConverter.toQualifiedName(candidatesName), scopeRoot);
 	        	// Set reference to indexExp if it could not be resolved
 	        	if (candidates.isEmpty()) {
 	        		//return new SimpleScope(Collections.singletonList(EObjectDescription.create(LinkingAndScopingUtils.DUMMY_NAME, ta.getIndexExp())));
 	        	}
 
 	        	return new SimpleScope(candidates.stream()
-	        			.map(c -> EObjectDescription.create(LinkingAndScopingUtils.DUMMY_NAME, c))
+	        			.map(c -> EObjectDescription.create(LinkingAndScopingUtils.DERIVED_DUMMY_NAME, c))
 	        			.toList());
 	    	}
         }
@@ -153,8 +164,8 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         	System.out.println(funcCandidates);
         	*/
       	
-        	var scopeRoot = EcoreUtil2.getRootContainer(referencing);
-        	var candidates = findCandidatesInPathForFqn(contextFqn, scopeRoot);
+        	
+        	var candidates = findCandidatesInPathForFqn(contextFqn, context, scopeRoot);
         	
         	if (referencing instanceof MemberAccess ma) {
         		return new SimpleScope(createDescriptionsForMemberAccess(candidates));
@@ -206,22 +217,17 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     	final var name = ((Referenceable) assignable).getName();
 		if (name == null) { // name might be null, e.g. for TableAccess with unresolvable indexExpression
 			// TODO: return placeholder object or implement trivial recovery
+			// TODO: name should not be null anymore, since TableAccesses get a dummy name?
 			return IScope.NULLSCOPE;
 		}
 		
     	final var fqn = nameConverter.toQualifiedName(name);
     	final var value = LinkingAndScopingUtils.findAssignedExp((Feature) assignable);
 		if (value == null) {
-			// TODO: create transient "nil" eObject?
-			// For now, reference self when no assigned value is part of the ExpList (= rhs of Assignment)
-			//return Scopes.scopeFor(Collections.singletonList(assignable));
-			//var nilValue = luaFactory.createExpNil(); // TODO: make transient or serialization does not work
-			//var parentAssignment = LinkingAndScopingUtils.findParentAssignmentForAssignable((Feature) assignable);
+			// create synthetic nil value if ExpList does not contains value for assignable
 			var nilValue = new SyntheticExpNil();
-			//parentAssignment.ifPresent(a -> a.getExpList().getExps().add(nilValue));
 			var nilValueDescription = EObjectDescription.create(fqn, nilValue);
 			return new SimpleScope(Collections.singletonList(nilValueDescription));
-			//return IScope.NULLSCOPE; // TODO: use a e.g. syntheticObjectFactory to create a synthetic nil value
 		} else {
 			// any assignable is also a Referenceable which has a name attribute and a
 			// cross-reference with linkText == name
@@ -277,14 +283,27 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     	return candidates;
     }
     
-    private Collection<Referenceable> getAssignablesFor(final EObject scopeRoot) {
+    private Collection<Referenceable> getAssignablesFromFor(final EObject scopeRoot, final EObject context) {
     	var assignments = EcoreUtil2.getAllContentsOfType(scopeRoot, Assignment.class);
     	return assignments.stream()
+    			 .filter(assignment -> !EcoreUtil2.getAllContentsOfType(assignment, context.getClass()).contains(context))
 				 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
 				 .flatMap(List::stream)
 				 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
 				 .toList();
     }
+    
+    
+    
+    
+    // TODO:
+    //  - made some quick changes to avoid returning parent assignment assignables when searching for assignables
+    //  - need to check the arguments of the recursive call of the method below, where context is passed (check if context is the correct argument)
+    //  - check grammar: serialization does not work anymore
+    //  - re-inserted the recursion in the method below, I think the stackoverflow error was fixed before that
+    //    or does not appear without it
+    
+    
     
 	// function findCandidatesInPathForFqn(fqn) that searches for feature candidates by fqn:
 	// 1. Add all candidates with contextFqn.equals(candidateFqn) to result
@@ -296,29 +315,41 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 	//    3.3 furtherCandidates = findCandidatesInPathByFqn(newFqnHead + contextFqnTail)
 	// 	  3.4 add result as description with (candidate.getFqn() + contextFqnTail, furtherCandidate)
 	// 4. return candidates
-    private Collection<Referenceable> findCandidatesInPathForFqn(final QualifiedName contextFqn, final EObject scopeRoot) {
-    	var assignables = getAssignablesFor(scopeRoot);
+    private Collection<Referenceable> findCandidatesInPathForFqn(QualifiedName contextFqn, final EObject context, final EObject scopeRoot) {
+    	var assignables = getAssignablesFromFor(scopeRoot, context);
     	
     	var result = new ArrayList<Referenceable>();
     	for (final var assignable : assignables) {
     		
     		//QualifiedName assignableFqn = null;
     		
-    		if (assignable instanceof TableAccess ta && ta.getName().equals(LinkingAndScopingUtils.DUMMY_NAME)) {
+    		if (LinkingAndScopingUtils.isTableAccessWithDummyName(assignable)) {
+    			var ta = (TableAccess) assignable;
     			
     			// TODO: this already leads to the error:  ERROR xt.linking.lazy.LazyLinkingResource  - Cyclic resolution of lazy links : Referencing.ref->Referencing.ref in resource '__synthetic0.lua'.
     			//var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp());
-    			
+    			//System.out.println()
     			
     			//if (name == null) continue;
     			
     			//var taDummyFqn = qualifiedNameProvider.getFullyQualifiedName(ta);
 	        	//var candidatesName = taDummyFqn.toString().replace(LinkingAndScopingUtils.DUMMY_NAME, name);
-	        	//assignableFqn = nameConverter.toQualifiedName(candidatesName);
+	        	//var assignableFqn = nameConverter.toQualifiedName(candidatesName);
+	        	//System.out.println(assignable);
 	        	//System.out.println("foo: " + assignableFqn);
     			
-    			//assignable.setName(name);
-    			continue;
+    			//System.out.println("booo");
+    			//ta.setName(LinkingAndScopingUtils.SYNTHETIC_NAME);
+    			//var val = ta.getRef();
+    			//System.out.println(val);
+    			//var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp());
+    			//if (name != null) {
+    			//	ta.setName(name);
+    				//ta.setRef(ta.getRef());
+    				//ta.setRef(val);
+    			//}
+    			
+    			//continue;
     			
 
     		}// else {
@@ -330,9 +361,13 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     		
     		if (contextFqn.equals(assignableFqn)) { // add all assignables with equal fqn
     			result.add(assignable);
-    		} else if (contextFqn.toString().startsWith(assignableFqn.toString())) {
-        		final var assignedValue = LinkingAndScopingUtils.tryGetAssignedValueFrom((Referencing) assignable); // value of assignable (is not Referencing)
+    		//} else if (contextFqn.toString().startsWith(assignableFqn.toString())) {
+    		} else if (contextFqn.startsWith(assignableFqn)) {
+    			
+    			final var assignedValue = LinkingAndScopingUtils.tryGetAssignedValueFrom((Referencing) assignable); // value of assignable (is not Referencing)
         		final var assignedRef = (((Referencing) assignable).getRef()); // rhs of assignable (might be a Referencing)
+        		
+
     			
         		if (assignedValue instanceof TableConstructor && assignedRef instanceof Referencing) {
         			//var fqnHead = qualifiedNameProvider.getFullyQualifiedName(assignedValue);
@@ -340,12 +375,13 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         			var newFqnTail = getFqnTail(contextFqn, assignableFqn.getSegmentCount());
         			var newFqn = concatFqns(newFqnHead, newFqnTail);
         			
-        			result.addAll(findCandidatesInPathForFqn(newFqn, scopeRoot)
+        			result.addAll(findCandidatesInPathForFqn(newFqn, context, scopeRoot)
         				.stream()
         				.toList()
         			);
         			
         		}
+        		
     		}
     	}
 

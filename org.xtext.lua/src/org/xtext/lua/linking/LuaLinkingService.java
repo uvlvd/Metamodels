@@ -2,18 +2,24 @@ package org.xtext.lua.linking;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.linking.impl.DefaultLinkingService;
 import org.eclipse.xtext.linking.impl.IllegalNodeException;
 import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
+import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.nodemodel.INode;
+import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.scoping.IScope;
+import org.eclipse.xtext.scoping.impl.SimpleScope;
+import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Chunk;
 import org.xtext.lua.lua.Feature;
@@ -35,13 +41,46 @@ public class LuaLinkingService extends DefaultLinkingService {
   	
 	@Inject
 	private SyntheticLinkingSupport linkingSupport;
+	
+	@Inject
+	private IQualifiedNameProvider qualifiedNameProvider;
+	
+	private AtomicBoolean isTableAccessNamesResolved = new AtomicBoolean(false);
   	
 	@Override
-	public List<EObject> getLinkedObjects(EObject context, EReference ref, INode node) throws IllegalNodeException {		
-        
+	public List<EObject> getLinkedObjects(EObject context, EReference ref, INode node) throws IllegalNodeException {
+		
+		// first, try to resolve all table access names and references to avoid cyclic reference resolution
+		// (could probably also be handled in some other way in the scopeProvider implementation)
+		// TODO: would probably be better is this could somehow be executed as a "first step" of the linking via an api method
+		if (isTableAccessNamesResolved.compareAndSet(false, true)) {
+			resolveAllTableAccessNamesAndRefsInContextRoot(context);
+			
+		}
+
 		var linkedObjects = super.getLinkedObjects(context, ref, node);
 		
 		return linkedObjects;
+	}
+	
+	private void resolveAllTableAccessNamesAndRefsInContextRoot(EObject context) {
+		var scopeRoot = EcoreUtil2.getRootContainer(context);
+		var tas = EcoreUtil2.getAllContentsOfType(scopeRoot, TableAccess.class);
+		for (var ta : tas) {
+			if (LinkingAndScopingUtils.isTableAccessWithDummyName(ta)) {
+				ta.setName(LinkingAndScopingUtils.LINKING_DUMMY_NAME);
+				var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp());
+				if (name != null) {
+					ta.setName(name);
+					linkingSupport.createAndSetProxy(ta, Literals.REFERENCING__REF, name);
+					ta.setRef(ta.getRef());
+				} else {
+					// TODO: set dummy name+reference (e.g. using trivial recovery)
+					//var nilValue = new SyntheticExpNil();
+					//ta.setRef(nilValue);
+				}
+			}
+		}
 	}
 	
 	private List<EObject> createOrGetSyntheticLinkedObjects(EObject context) {

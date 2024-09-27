@@ -21,7 +21,10 @@ import org.xtext.lua.lua.Var;
 public final class LinkingAndScopingUtils {
 	private static final Logger LOGGER = Logger.getLogger(LinkingAndScopingUtils.class);
 	
-	public static final String DUMMY_NAME = "dummyName";
+	// dummy name set for TableAccess if the indexExp cannot be resolved in DerivedStateComputer
+	public static final String DERIVED_DUMMY_NAME = "derived_dummy_name";
+	// dummy name set for TableAccess if the indexExp cannot be resolved during Linking
+	public static final String LINKING_DUMMY_NAME = "linking_dummy_name";
 	
 	//TODO: isAssignable function (replaces isOnLhsOfAssignment): refble needs to be leaf
 	//      of Featue path
@@ -183,28 +186,22 @@ public final class LinkingAndScopingUtils {
 			if (ref.getRef() == null && !Config.TABLE_ACCESS_REFERENCES) {
 				throw new RuntimeException("Attempting to resolve value expression, but a ref " + ref + " is not yet resolved!");
 			} else {
-				//if (!ref.getRef().eIsProxy()) {
-					// TODO: assigned value might be "more levels down", i.e. we need to
-					// traverse until not Referencing anymore or some such
 				var assignedValue = tryGetAssignedValueFrom(ref);
 				if (assignedValue != null) {
-					//var assignedValue = ((Referencing) ref.getRef()).getRef();
-					if (assignedValue instanceof ExpStringLiteral stringLiteral) {
-						name = stringLiteralToString(stringLiteral);
+					if (assignedValue instanceof ExpLiteral literal) {
+						name = resolveExpLiteralToString(literal);
 					}
 				}
-
 			}
-
 		}
 		else {
 			// TODO
-			LOGGER.warn("TableAccess is not (yet) implemented for non-string indexExps!");
+			LOGGER.warn("TableAccess is not (yet) implemented for non-string indexExps like " + exp);
 			//throw new RuntimeException("TableAccess is not (yet) implemented for non-string indexExps!");
 		}
 		if (Config.TABLE_ACCESS_REFERENCES) {
 			if (name == null) {
-				return DUMMY_NAME;
+				return DERIVED_DUMMY_NAME;
 			}
 		}
 
@@ -227,22 +224,36 @@ public final class LinkingAndScopingUtils {
 		throw new RuntimeException("Error while resolving ExpLiteral to String.");
 	}
 	
-	// TODO: may lead to StackOverflow, limit depth?
 	public static Exp tryGetAssignedValueFrom(Referencing ref) {
+		return tryGetAssignedValueFrom(ref, 0, 1000);
+	}
+	
+	
+	// TODO: may lead to StackOverflow, limit depth?
+	private static Exp tryGetAssignedValueFrom(Referencing ref, int currDepth, final int maxDepth) {
+		if (currDepth > maxDepth) {
+			LOGGER.error("Reached max depth while attempting to get assigned value from " + ref);
+			return null;
+		}
 		if (ref.getRef() == null || ref.getRef().eIsProxy()) {
+			//System.out.println("ref's "+ ref + " ref null?: " + ref.getRef());
 			return null;
 		}
 		if (ref.getRef().equals(ref)) { // reference to self means no value was assigned (i.e. the value is 'nil')
+			//System.out.println("ref to self?: " + ref.getRef());
 			return null;
 		}
 		if (ref.getRef() instanceof Referencing refsRef) {
-			return tryGetAssignedValueFrom(refsRef);
+			//System.out.println("get next ref: " + ref.getRef());
+			return tryGetAssignedValueFrom(refsRef, ++currDepth, maxDepth);
+			//return tryGetAssignedValueFrom(refsRef, 0, maxDepth);
 		}
+		//System.out.println("ref found: " + ref.getRef());
 		return ref.getRef();
 	}
 	
 	public static boolean isTableAccessWithDummyName(EObject o) {
-		return o instanceof TableAccess ta && ta.getName().equals(DUMMY_NAME);
+		return o instanceof TableAccess ta && ta.getName().equals(DERIVED_DUMMY_NAME);
 	}
 	
 	private static String stringLiteralToString(ExpStringLiteral stringLiteral) {

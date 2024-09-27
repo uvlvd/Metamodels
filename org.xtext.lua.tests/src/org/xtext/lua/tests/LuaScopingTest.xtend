@@ -165,21 +165,37 @@ class LuaScopingTest {
 	}
 	
 	
-	//TODO: implement the same test for Number literal variables and
-	// check that they can be correctly referenced, i.e. d needs to be resolvable to 1
+	
+	/**
+	 *  d should be resolvable to 1, e.g.
+	 *  d -> a (in line 4), which contains [str], which points to a["member"], which points to 1.
+	 */
 	@Test
 	def void scopingTableAccessStringLiteralVariableTest() { 
 		val SUT = '''
 			a = {}
 		    a["member"] = 1
 		    str = "member" 
-		    d = a[str]
+		    d = a[str] 
 		'''
 		val result = parseHelper.parse(SUT)
 
 		System.out.println(dump(result, ""));
 		check(result, SUT)
-		Assertions.assertTrue(false, "This test does not fail, but what happens is TODO (see comment)")
+	}
+	
+	@Test
+	def void scopingTableAccessNumberLiteralVariableTest() { 
+		val SUT = '''
+			a = {}
+		    a[0] = 1
+		    str = 0 
+		    d = a[str] 
+		'''
+		val result = parseHelper.parse(SUT)
+
+		System.out.println(dump(result, ""));
+		check(result, SUT)
 	}
 	
 	@Test
@@ -190,6 +206,8 @@ class LuaScopingTest {
 			function a.func2() end
 			b = func
 			c = a.func2
+			t = function(key) key = key:lower() end
+				
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
@@ -233,6 +251,7 @@ class LuaScopingTest {
 		check(result, SUT)
 	}
 	
+	
 	@Test
 	def void scopingTempTest() { 
 		val SUT = '''
@@ -245,6 +264,7 @@ class LuaScopingTest {
 			str = "member" 
 			a[str] = 1 --TODO
 			f = a.member
+			--d = a[str]
 		
 			--b = {}
 			--b.temp = 1 
@@ -261,6 +281,156 @@ class LuaScopingTest {
 		   -- str = "member"
 		   -- a[str] = 1
 		   -- c = a.member
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	
+	// TODO: never allow a rhs to reference its own lhs, 
+	// needs to be lhs of other Assignment
+	@Test
+	def void scopingTemp3Test() { 
+		val SUT = '''
+			
+
+
+    for i = 2, narg do
+        local is_key = false
+        if key_finder then
+            is_key = key_finder(i, narg)
+        end
+
+        local n, err = read_len(sk)
+        if not n then
+            return nil, err
+        end
+
+        local s
+        if not is_key and n > MAX_VALUE_LEN then
+            -- avoid recording big value
+            local p, err = sk:read(MAX_VALUE_LEN)
+            if not p then
+                return nil, err
+            end
+
+            local ok, err = sk:drain(n - MAX_VALUE_LEN + 2)
+            if not ok then
+                return nil, err
+            end
+
+            s = ffi_str(p, MAX_VALUE_LEN) .. "...(" .. n .. " bytes)"
+        else
+            local p, err = sk:read(n + 2)
+            if not p then
+                return nil, err
+            end
+
+            s = ffi_str(p, n)
+
+            if is_key and matcher.keys[s] then
+                matcher = matcher.keys[s]
+                key_finder = nil
+            end
+        end
+
+        cmd_line[i] = s
+    end
+
+    if matcher then
+        if matcher.keys then
+            -- try to match any key of this command
+            matcher = matcher.keys["*"]
+        end
+
+        if matcher then
+            sleep(matcher.delay)
+        end
+    end
+
+end
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingTemp2Test() { 
+		val SUT = '''
+
+    local mt = {
+        __index = function(t, key)
+            local cached = t._cache[key]
+            if cached ~= nil then
+                return cached
+            end
+            }
+
+            if type(key) ~= "string" then
+                error("invalid argument, expect string value", 2)
+            end
+      
+            local val
+            local method = var_methods[key]
+    
+            if method then
+                val = method()
+--[[   
+            elseif core_str.has_prefix(key, "cookie_") then
+                local cookie = t.cookie
+                if cookie then
+                    local err
+                    val, err = cookie:get(sub_str(key, 8))
+                    if err then
+                        log.warn("failed to fetch cookie value by key: ",
+                                 key, " error: ", err)
+                    end
+                end
+
+            elseif core_str.has_prefix(key, "arg_") then
+                local arg_key = sub_str(key, 5)
+                local args = request.get_uri_args()[arg_key]
+                if args then
+                    if type(args) == "table" then
+                        val = args[1]
+                    else
+                        val = args
+                    end
+                end
+
+            elseif core_str.has_prefix(key, "post_arg_") then
+                -- only match default post form
+                local content_type = request.header(nil, "Content-Type")
+                if content_type ~= nil and core_str.has_prefix(content_type,
+                        "application/x-www-form-urlencoded") then
+                    local arg_key = sub_str(key, 10)
+                    local args = request.get_post_args()[arg_key]
+                    if args then
+                        if type(args) == "table" then
+                            val = args[1]
+                        else
+                            val = args
+                        end
+                    end
+                end
+
+            elseif core_str.has_prefix(key, "uri_param_") then
+                -- `uri_param_<name>` provides access to the uri parameters when using
+                -- radixtree_uri_with_parameter
+                if t._ctx.curr_req_matched then
+                    local arg_key = sub_str(key, 11)
+                    val = t._ctx.curr_req_matched[arg_key]
+                end
+                ]]
+                
+--fine
+            elseif core_str.has_prefix(key, "http_") then
+                key = key:lower() -- ERROR: Stack-overflow
+                key = re_gsub(key, "-", "_", "jo")
+                val = get_var(key, t._request)
+}} 
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

@@ -289,7 +289,8 @@ FunctionCall:
 ;
 
 MethodCall:
-	 (':' {MethodCall} ref=[Exp|LUA_NAME] args=Args =>suffixExp=SuffixExp?)
+	 //(':' {MethodCall} ref=[Exp|LUA_NAME] args=Args =>suffixExp=SuffixExp?)
+	 (':' {MethodCall} name=LUA_NAME args=Args =>suffixExp=SuffixExp?)
 ;
 
 TableAccess:

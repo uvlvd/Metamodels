@@ -82,11 +82,12 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
 	}
 	
 	private String getTableAccessQualifiedName(TableAccess ta) {
-		var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp());
+		//var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp());
+		var name = ta.getName();
 		if (name != null) {
 			return "[" +  name + "]";
 		}
-		return "";
+		return ""; // TODO: might want to return dummy name here, instead of in LinkingAndScopingUtils.tryResolveExpressionToString
 	}
     	
 }

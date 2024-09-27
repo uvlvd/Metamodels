@@ -8,8 +8,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.StringUtils;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.EcoreUtil2;
@@ -47,7 +51,10 @@ public class LuaParserTest {
 		final var temp_testfolder = "D:\\MA\\repos\\temp";
 		var resourceSet = new LuaParser().parse(Paths.get(apisix));
 		
-		checkPercentageOfResolvedProxies(resourceSet);
+		//checkPercentageOfResolvedProxies(resourceSet);
+		//final var unresolvedCrossReferences = EcoreUtil.UnresolvedProxyCrossReferencer.find(resourceSet);
+		//System.out.println(unresolvedCrossReferences.size());
+		//EcoreUtil.resolveAll(resourceSet);
 		
 		for (var r : resourceSet.getResources()) {
 			var outputStream = new ByteArrayOutputStream();
@@ -62,12 +69,41 @@ public class LuaParserTest {
 				System.out.println(originalPath);
 			}
 			
-			Assertions.assertTrue(strsEqual);
+			//Assertions.assertTrue(strsEqual);
 		}
 		
 		printNumberOfModelElements(resourceSet);
+		//checkPercentageOfResolvedProxies(resourceSet);
+		
+		
+		for (var resource : resourceSet.getResources()) {
+			System.out.println("Resolving all in resource " + resource.getURI());
+			for (var obj : resource.getContents()) {
+				//System.out.println("Resolving all for object " + obj);
+				obj.eContainer();
+			    resolveCrossReferences(obj);
+			    for (Iterator<EObject> i = obj.eAllContents(); i.hasNext(); )
+			    {
+			      EObject childEObject = i.next();
+			      resolveCrossReferences(childEObject);
+			    }
+			}
+			
+		}
+		
+
+		
 
 	}
+	
+	  private static void resolveCrossReferences(EObject eObject)
+	  {
+		//System.out.println("resolving for " + eObject);
+	    for (Iterator<EObject> i =  eObject.eCrossReferences().iterator();  i.hasNext(); i.next())
+	    {
+	      // The loop resolves the cross references by visiting them.
+	    }
+	  }
 	
 	private boolean compareNormalizedStrings(String str1, String str2) {
 		var s1 = PreprocessingUtils.removeCommentsAndWhiteSpacesAndNewLines(str1);

@@ -250,7 +250,22 @@ class LuaScopingTest {
 		System.out.println(dump(result, ""));
 		check(result, SUT)
 	}
-	
+		
+	// TODO: the result of this test should correspond to its goal, i.e.
+	// it should fail if the the second assignment is not referenced by the b = a
+	@Test
+	def void scopingAssignmentPrecedenceTest() { 
+		val SUT = '''
+		a = "this is a candidate"
+		a = "this should be the chosen candidate"
+		b = a
+		a = "this is not a candidate"
+		      
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
 	
 	@Test
 	def void scopingTempTest() { 
@@ -355,31 +370,6 @@ end
 		System.out.println(dump(result, ""));
 		check(result, SUT)
 	}
-	
-	@Test
-	def void scopingTemp2Test() { 
-		val SUT = '''
 
-		a = {
-		      send = function(self, ...)
-		          if select('#', ...) == 1 and type(select(1, ...)) == "string" then
-		              -- fast path
-		              return self.sock:send(...)
-		          end
-		  
-		          -- luasocket's send only accepts a single string
-		          return self.sock:send(flatten({...}))
-		      end,
-		  
-		      getreusedtimes = function ()
-		          return 0
-		      end
-		      }
-		      
-		'''
-		val result = parseHelper.parse(SUT)
-		System.out.println(dump(result, ""));
-		check(result, SUT)
-	}
 	
 }

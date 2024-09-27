@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
@@ -201,14 +202,19 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     
     private Collection<Referenceable> getAssignablesFromFor(final EObject scopeRoot, final EObject context) {
     	var assignments = EcoreUtil2.getAllContentsOfType(scopeRoot, Assignment.class);
-    	return assignments.stream()
-    			 // ignore the assignment that the context object is part of (e.g.: a = a, the lhs a is not a candidate for the rhs a)
-    			 .filter(assignment -> !EcoreUtil.isAncestor(assignment, context))
+    	List<Referenceable> assignables = assignments.stream()
+    			 // ignore the assignment that the context object is part of (e.g.: a = a, the lhs a is not a candidate for the rhs a),
+    			 // as well as all assignments that occur in statements after the context's statement 
+    			 .takeWhile(assignment -> !EcoreUtil.isAncestor(assignment, context))
     			 // the rest of this stream pipeline gets the Referenceable objects from the lhs of the assignments
 				 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
 				 .flatMap(List::stream)
 				 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
-				 .toList();
+				 // collect to new ArrayList s.t. resulting Collection is mutable and can be reversed
+				 .collect(Collectors.toCollection(() -> new ArrayList<Referenceable>()));
+    	// reverse result s.t. the last assignment before the currently considered context is the first element in the resulting candidate list
+    	Collections.reverse(assignables);
+    	return assignables;
     }
     
 	// function findCandidatesInPathForFqn(fqn) that searches for feature candidates by fqn:

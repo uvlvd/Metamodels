@@ -14,6 +14,7 @@ import org.eclipse.xtext.util.PolymorphicDispatcher;
 import org.eclipse.xtext.util.Strings;
 import org.xtext.lua.linking.LuaLinkingService;
 import org.xtext.lua.lua.Arg;
+import org.xtext.lua.lua.ExpList;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.FunctionDeclaration;
@@ -64,15 +65,19 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
 		// we do not consider parent names for function call arguments
 		var isParamArg = EcoreUtil2.getContainerOfType(obj, ParamArgs.class) != null;
 		if (isParamArg) {
-			return qualifiedNameFromConverter;
+			// TODO: need to return full path of param, not just the last part of name 
+			// (equal to the stopAtTableAccess)
+			//return qualifiedNameFromConverter;
 		} 
 	
 		
-		var stopAtTableAccess = obj instanceof Referencing;
+		var isReferencing = obj instanceof Referencing;
 		while (obj.eContainer() != null 
 				// TODO: document! We use names separated by "." as fqn, but for variables in TableAccesses we need to stop at the TableAccess "border"
 				// so a["member"] is a.member but a[str] is a.str_content (i.e. content of the str var)
-				&& !(stopAtTableAccess && (obj.eContainer() instanceof TableAccess))) {
+				&& !(isReferencing && (obj.eContainer() instanceof TableAccess))
+				// stop at ExpList for paramArgs
+				&& !(isParamArg && (obj.eContainer() instanceof ExpList))) {
 			obj = obj.eContainer();
 			QualifiedName parentsQualifiedName = getFullyQualifiedName(obj);
 			if (parentsQualifiedName != null)

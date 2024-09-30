@@ -78,6 +78,8 @@ public class LuaLinkingService extends DefaultLinkingService {
 					// TODO: set dummy name+reference (e.g. using trivial recovery)
 					//var nilValue = new SyntheticExpNil();
 					//ta.setRef(nilValue);
+					
+					// TODO: the dummy also needs to be inserted for memberAccesses on functioncalls, e.g. func().member
 				}
 			}
 		}

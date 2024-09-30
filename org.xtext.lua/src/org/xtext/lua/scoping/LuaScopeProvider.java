@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.util.EcoreUtil;
@@ -35,6 +36,7 @@ import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.LuaPackage.Literals;
+import org.xtext.lua.postprocessing.LuaXtext2EcorePostProcessor;
 import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
@@ -54,6 +56,8 @@ import com.google.inject.Scope;
  * on how and when to use it.
  */
 public class LuaScopeProvider extends AbstractLuaScopeProvider {
+	private static final Logger LOGGER = Logger.getLogger(LuaScopeProvider.class);
+	
 	@Inject
 	private IQualifiedNameProvider qualifiedNameProvider;
 	
@@ -257,7 +261,15 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     		
     		if (contextFqn.equals(referenceableFqn)) { // add all assignables with equal fqn
     			result.add(referenceable);
-    		} else if (contextFqn.startsWith(referenceableFqn) && referenceable instanceof Referencing) {
+    		} else if (contextFqn.startsWith(referenceableFqn)) {
+    			if (!(referenceable instanceof Referencing)) {
+    				// TODO: this will be logged e.g. when a function return value is accessed, e.g. see scopingFunctionDeclarationTest a.x.memberFunc()["member"]
+    				LOGGER.warn("Skipped resolution of sub-part of feature path for non-referencing " 
+    							+ referenceable + " with fqn " 
+    						    + referenceableFqn + 
+    						    " for contextFqn " + contextFqn);
+    				continue;
+    			}
     			// search candidates in partial feature paths, 
     			// e.g.: b.member = 1; a.x = b; c = a.x.member; here, the candidates for a.x.member need to consider b.member
         		final var assignedRef = (((Referencing) referenceable).getRef()); // rhs of assignable (might be a Referencing)

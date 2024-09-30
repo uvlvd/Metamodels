@@ -509,7 +509,8 @@ Referencing:
 
 BlockWrapperWithArgs:
 	NumericFor |
-	GenericFor
+	GenericFor |
+	FuncBody
 ;
 
 // ****************************************************

@@ -30,7 +30,7 @@ import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import com.google.inject.Inject;
 
 public class LuaDerivedStateComputer implements IDerivedStateComputer {
-	private static final Logger LOGGER = Logger.getLogger(LuaXtext2EcorePostProcessor.class);
+	private static final Logger LOGGER = Logger.getLogger(LuaDerivedStateComputer.class);
 	
 	@Inject 
 	private LinkingHelper linkingHelper;

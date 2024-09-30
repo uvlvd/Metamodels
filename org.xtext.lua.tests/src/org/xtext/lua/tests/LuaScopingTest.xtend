@@ -258,16 +258,15 @@ class LuaScopingTest {
 		val SUT = '''
 			a = {}
 			function a.f() end
-		--	f = function () end
-			l = a.f()
-		--	k = f()
 			
-		--	function func() end
-		--	function a.func2() end
-		--	b = func
-		--	c = a.func2
-		--	t = function(key) key = key:lower() end
-				
+			b = {}
+			function b.memberFunc() return {["member"] = 1} end
+			
+			a.x = b
+			a.x.memberFunc()
+			
+			--a.x.memberFunc()["member"]
+			
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
@@ -281,8 +280,24 @@ class LuaScopingTest {
 		a = {}
 		for i = 1, 10 do
 		   a[i] = i
-		   print(i)
 		end
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingParamArgsTest() { 
+		val SUT = '''
+		function func(arg)
+		end
+		
+		a = {}
+		a.b = "test"
+		
+		func(a)
+		func(a.b)
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

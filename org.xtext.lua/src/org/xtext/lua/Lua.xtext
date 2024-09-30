@@ -71,11 +71,13 @@ Stat returns Stat:
 ;
 
 NumericFor returns BlockWrapperWithArgs:
-	'for' arg=LUA_NAME '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end'
+	//{NumericFor} 'for' arg=LUA_NAME '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end'
+	{NumericFor} 'for' arg=Arg '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end'
 ;
 
 GenericFor returns BlockWrapperWithArgs:
-	'for' args=NameList 'in' expList=ExpList 'do' block=Block 'end'
+	//{GenericFor} 'for' args=NameList 'in' expList=ExpList 'do' block=Block 'end'
+	{GenericFor} 'for' args=ArgList 'in' expList=ExpList 'do' block=Block 'end'
 ;
 
 FunctionDeclaration:
@@ -448,6 +450,13 @@ ParList:
 	ExpVarArgs
 ;
 
+Arg:
+	name = LUA_NAME
+;
+
+ArgList: 
+	args+=Arg (',' args+=Arg)*
+;
 
 
 // ****************************************************
@@ -470,7 +479,8 @@ Referenceable:
 	//FuncName |
 	FunctionDeclaration |
 	Exp |
-	Label 
+	Label | 
+	Arg
 ;
 
 /*

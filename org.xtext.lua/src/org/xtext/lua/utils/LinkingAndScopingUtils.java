@@ -1,5 +1,6 @@
 package org.xtext.lua.utils;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -12,13 +13,16 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.Config;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
+import org.xtext.lua.lua.BlockWrapperWithArgs;
 import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpLiteral;
 import org.xtext.lua.lua.ExpNumberLiteral;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.FunctionDeclaration;
+import org.xtext.lua.lua.GenericFor;
 import org.xtext.lua.lua.LastStat;
+import org.xtext.lua.lua.NumericFor;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.Stat;
@@ -287,15 +291,26 @@ public final class LinkingAndScopingUtils {
 				.findAny();
 	}
 	
-	public static Collection<Referenceable> getReferenceablesFromStat(Stat stat) {
+	public static Collection<Referenceable> getReferenceablesFromStat(Stat stat, EObject context) {
 		if (stat instanceof Assignment assignment) {
 			return EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class);
-		} else if (stat instanceof Referenceable ref) {
+		} else if (stat instanceof BlockWrapperWithArgs bwwa && EcoreUtil2.isAncestor(bwwa, context)) {
+			return getReferenceablesFromBlockWrapperWithArgs(bwwa);
+		}
+		else if (stat instanceof Referenceable ref) { // e.g. FunctionDeclaration
 			return Collections.singletonList(ref);
 		}
 		return Collections.emptyList();
 	}
 	
+	private static Collection<Referenceable> getReferenceablesFromBlockWrapperWithArgs(BlockWrapperWithArgs bwwa) {
+		if (bwwa instanceof NumericFor numericFor) {
+			return Collections.singletonList(numericFor.getArg());
+		} else if (bwwa instanceof GenericFor genericFor) {
+			return new ArrayList<Referenceable>(genericFor.getArgs().getArgs());
+		}
+		return Collections.emptyList();
+	}
 	
 	
 	

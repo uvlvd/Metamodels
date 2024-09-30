@@ -274,6 +274,35 @@ class LuaScopingTest {
 		check(result, SUT)
 	}
 	
+	
+	@Test
+	def void scopingNumericForTest() { 
+		val SUT = '''
+		a = {}
+		for i = 1, 10 do
+		   a[i] = i
+		   print(i)
+		end
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingGenericForTest() { 
+		val SUT = '''
+		a = {}
+		b = {"hello", "world"}
+		for k, v in pairs(b) do
+		   a[k] = v
+		end
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
 	@Test
 	def void scopingTempTest() { 
 		val SUT = '''

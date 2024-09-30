@@ -181,13 +181,13 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     							.flatMap(block -> block.getStats().stream())
     							//only consider Statements before the Statement the context is contained in
     							.takeWhile(stat -> !EcoreUtil.isAncestor(contextParentStatement, stat))
-    							.flatMap(stat -> LinkingAndScopingUtils.getReferenceablesFromStat(stat).stream())
+    							.flatMap(stat -> LinkingAndScopingUtils.getReferenceablesFromStat(stat, context).stream())
     							.filter(refble -> {
     								// Referenceables in assignments need to be checked for their position (on the lhs)
     								if (EcoreUtil2.getContainerOfType(refble, Assignment.class) != null) {
     									return LinkingAndScopingUtils.isAssignable(refble);
     								}
-    								// all other Referenceables are ok
+    								// all other Referenceables are ok.
     								return true;
     							})
     							// collect to new ArrayList s.t. resulting Collection is mutable and can be reversed
@@ -248,28 +248,27 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
      */
     //private Collection<Referenceable> findCandidatesInPathForFqn(QualifiedName contextFqn, final EObject context, final EObject scopeRoot) {
     //	var assignables = getAssignablesFromFor(scopeRoot, context);
-    private Collection<Referenceable> findCandidatesInAssignablesforFqn(final QualifiedName contextFqn, final Collection<Referenceable> assignables) {
+    private Collection<Referenceable> findCandidatesInAssignablesforFqn(final QualifiedName contextFqn, final Collection<Referenceable> referenceables) {
     	var result = new ArrayList<Referenceable>();
 
-    	for (final var assignable : assignables) {
+    	for (final var referenceable : referenceables) {
     		
-    		final var assignableFqn = qualifiedNameProvider.getFullyQualifiedName(assignable);
+    		final var referenceableFqn = qualifiedNameProvider.getFullyQualifiedName(referenceable);
     		
-    		
-    		if (contextFqn.equals(assignableFqn)) { // add all assignables with equal fqn
-    			result.add(assignable);
-    		} else if (contextFqn.startsWith(assignableFqn) && assignable instanceof Referencing) {
+    		if (contextFqn.equals(referenceableFqn)) { // add all assignables with equal fqn
+    			result.add(referenceable);
+    		} else if (contextFqn.startsWith(referenceableFqn) && referenceable instanceof Referencing) {
     			// search candidates in partial feature paths, 
     			// e.g.: b.member = 1; a.x = b; c = a.x.member; here, the candidates for a.x.member need to consider b.member
-        		final var assignedRef = (((Referencing) assignable).getRef()); // rhs of assignable (might be a Referencing)
-    			final var assignedValue = LinkingAndScopingUtils.tryGetAssignedValueFrom((Referencing) assignable); // value of assignable (is not Referencing)
+        		final var assignedRef = (((Referencing) referenceable).getRef()); // rhs of assignable (might be a Referencing)
+    			final var assignedValue = LinkingAndScopingUtils.tryGetAssignedValueFrom((Referencing) referenceable); // value of assignable (is not Referencing)
 	
         		if (assignedValue instanceof TableConstructor && assignedRef instanceof Referencing) {
         			var newFqnHead = qualifiedNameProvider.getFullyQualifiedName(assignedRef);
-        			var newFqnTail = getFqnTail(contextFqn, assignableFqn.getSegmentCount());
+        			var newFqnTail = getFqnTail(contextFqn, referenceableFqn.getSegmentCount());
         			var newFqn = newFqnHead.append(newFqnTail);
         			
-        			result.addAll(findCandidatesInAssignablesforFqn(newFqn, assignables)
+        			result.addAll(findCandidatesInAssignablesforFqn(newFqn, referenceables)
         				.stream()
         				.toList()
         			);

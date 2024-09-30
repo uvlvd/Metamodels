@@ -4,6 +4,7 @@ import java.util.Collections;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.linking.impl.LinkingHelper;
 import org.eclipse.xtext.naming.DefaultDeclarativeQualifiedNameProvider;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
@@ -12,12 +13,14 @@ import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.util.PolymorphicDispatcher;
 import org.eclipse.xtext.util.Strings;
 import org.xtext.lua.linking.LuaLinkingService;
+import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.LuaPackage.Literals;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
 import org.xtext.lua.lua.MemberAccess;
+import org.xtext.lua.lua.ParamArgs;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
@@ -55,8 +58,16 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
 		}
 		if (Strings.isEmpty(name))
 			return null;
+		
 		QualifiedName qualifiedNameFromConverter = getConverter().toQualifiedName(name);
-		//System.out.println("fooooo");
+		
+		// we do not consider parent names for function call arguments
+		var isParamArg = EcoreUtil2.getContainerOfType(obj, ParamArgs.class) != null;
+		if (isParamArg) {
+			return qualifiedNameFromConverter;
+		} 
+	
+		
 		var stopAtTableAccess = obj instanceof Referencing;
 		while (obj.eContainer() != null 
 				// TODO: document! We use names separated by "." as fqn, but for variables in TableAccesses we need to stop at the TableAccess "border"

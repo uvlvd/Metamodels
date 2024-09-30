@@ -197,22 +197,7 @@ class LuaScopingTest {
 		System.out.println(dump(result, ""));
 		check(result, SUT)
 	}
-	
-	@Test
-	def void scopingFunctionDeclarationTest() { 
-		val SUT = '''
-			a = {}
-			function func() end
-			function a.func2() end
-			b = func
-			c = a.func2
-			t = function(key) key = key:lower() end
-				
-		'''
-		val result = parseHelper.parse(SUT)
-		System.out.println(dump(result, ""));
-		check(result, SUT)
-	}
+
 	
 	@Test
 	def void scopingMissingValueInExpressionTest() { 
@@ -267,6 +252,28 @@ class LuaScopingTest {
 		check(result, SUT)
 	}
 	
+		
+	@Test
+	def void scopingFunctionDeclarationTest() { 
+		val SUT = '''
+			a = {}
+			function a.f() end
+		--	f = function () end
+			l = a.f()
+		--	k = f()
+			
+		--	function func() end
+		--	function a.func2() end
+		--	b = func
+		--	c = a.func2
+		--	t = function(key) key = key:lower() end
+				
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
 	@Test
 	def void scopingTempTest() { 
 		val SUT = '''
@@ -308,63 +315,7 @@ class LuaScopingTest {
 	@Test
 	def void scopingTemp3Test() { 
 		val SUT = '''
-			
-
-
-    for i = 2, narg do
-        local is_key = false
-        if key_finder then
-            is_key = key_finder(i, narg)
-        end
-
-        local n, err = read_len(sk)
-        if not n then
-            return nil, err
-        end
-
-        local s
-        if not is_key and n > MAX_VALUE_LEN then
-            -- avoid recording big value
-            local p, err = sk:read(MAX_VALUE_LEN)
-            if not p then
-                return nil, err
-            end
-
-            local ok, err = sk:drain(n - MAX_VALUE_LEN + 2)
-            if not ok then
-                return nil, err
-            end
-
-            s = ffi_str(p, MAX_VALUE_LEN) .. "...(" .. n .. " bytes)"
-        else
-            local p, err = sk:read(n + 2)
-            if not p then
-                return nil, err
-            end
-
-            s = ffi_str(p, n)
-
-            if is_key and matcher.keys[s] then
-                matcher = matcher.keys[s]
-                key_finder = nil
-            end
-        end
-
-        cmd_line[i] = s
-    end
-
-    if matcher then
-        if matcher.keys then
-            -- try to match any key of this command
-            matcher = matcher.keys["*"]
-        end
-
-        if matcher then
-            sleep(matcher.delay)
-        end
-    end
-
-end
+			return consul_client:get(consul_server.consul_watch_catalog_url)
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

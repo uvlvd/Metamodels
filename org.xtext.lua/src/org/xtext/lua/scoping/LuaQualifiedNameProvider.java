@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.linking.impl.LinkingHelper;
 import org.eclipse.xtext.naming.DefaultDeclarativeQualifiedNameProvider;
+import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.util.PolymorphicDispatcher;
@@ -13,6 +14,7 @@ import org.eclipse.xtext.util.Strings;
 import org.xtext.lua.linking.LuaLinkingService;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.FunctionCall;
+import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.LuaPackage.Literals;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
 import org.xtext.lua.lua.MemberAccess;
@@ -25,8 +27,7 @@ import com.google.inject.Inject;
 
 public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNameProvider {
 	private static final Logger LOGGER = Logger.getLogger(LuaQualifiedNameProvider.class);
-
-  	
+	
 	@Inject 
 	private LinkingHelper linkingHelper;
 	
@@ -74,11 +75,26 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
 			return getMemberAccessQualifiedName(ma);
 		if (obj instanceof TableAccess ta)
 			return getTableAccessQualifiedName(ta);
+		if (obj instanceof FunctionDeclaration decl)
+			return getFunctionDeclarationQualifiedName(decl);
 		return "";
 	}
 	
 	private String getMemberAccessQualifiedName(MemberAccess ma) {
 		return "[\"" + ma.getName() + "\"]";
+	}
+	
+	private String getFunctionDeclarationQualifiedName(FunctionDeclaration decl) {
+		var name = decl.getName();
+		var qn = getConverter().toQualifiedName(name);
+		if (qn.getSegmentCount() > 1) {
+			var last = qn.getLastSegment();
+			last = "[\"" + last + "\"]";
+			var result = qn.skipLast(1);
+			result = result.append(last);
+			return result.toString();
+		}
+		return name;
 	}
 	
 	private String getTableAccessQualifiedName(TableAccess ta) {

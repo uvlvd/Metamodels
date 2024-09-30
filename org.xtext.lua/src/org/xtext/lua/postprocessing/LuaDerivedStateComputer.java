@@ -15,6 +15,7 @@ import org.eclipse.xtext.scoping.IScopeProvider;
 import org.xtext.lua.lua.Var;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
 import org.xtext.lua.Config;
+import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.LuaPackage.Literals;
@@ -97,7 +98,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	 */
 	private void setNameAsRef(Referenceable refble) {
 		String name = refble.getName();
-		if (name == null) {
+		if (name == null && !(refble instanceof Exp)) {
 			throw new RuntimeException("Attempting to create 'ref' cross-reference from 'name' attribute for " + refble + ", but name is null.");
 		}
 		
@@ -111,7 +112,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 			
 			linkingSupport.createAndSetProxy(referencing, Literals.REFERENCING__REF, name);
 		} else {
-			LOGGER.warn("Attempting to create 'ref' cross-reference from 'name' attribute for for " + refble + ", which is not Referencing.");
+			//LOGGER.warn("Attempting to create 'ref' cross-reference from 'name' attribute for for " + refble + ", which is not Referencing.");
 			return;
 		}
 	}

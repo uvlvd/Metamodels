@@ -59,7 +59,8 @@ Stat returns Stat:
     NumericFor |
     GenericFor |
     
-    {FunctionDeclaration} 'function' funcName=FuncName body=FuncBody |
+    //{FunctionDeclaration} 'function' name=FuncName body=FuncBody |
+    FunctionDeclaration |
     //FunctionOrMethodDeclaration  |
     {LocalFunctionDeclaration} 'local' 'function' LUA_NAME body=FuncBody |
     {LocalNameListDeclaration} 'local' vars=NameList ('=' expList=ExpList)? |
@@ -77,6 +78,9 @@ GenericFor returns BlockWrapperWithArgs:
 	'for' args=NameList 'in' expList=ExpList 'do' block=Block 'end'
 ;
 
+FunctionDeclaration:
+	{FunctionDeclaration} 'function' name=FuncName body=FuncBody
+;
 /* 
 FunctionOrMethodDeclaration:
 	{FunctionDeclaration} 'function' funcName=FuncName body=FuncBody  |
@@ -147,14 +151,9 @@ Label:
  * Assignments contain a list of vars and an ExpList, this is used in the linking phase to distinguish
  * cross-references from PrefixExps (right-hand side of an Assignment, inside ExpList i.e. ExpList is parent/container) from declarations
  * (left-hand side of an Assignment, ExpList is NOT parent/container).
+ * 
+ * Unfortunately, this leads to all PrefixExp being sub-types of Stat.
  */
-//AssignmentOrFunctionCall returns Stat:
-//	PrefixExp (
-//		({FunctionCall.functionCall=current}) |
-//	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
-//	)
-//;
-
 AssignmentOrFunctionCall returns Stat:
 	PrefixExp (
 		({FunctionCall.functionCall=current}) |
@@ -171,7 +170,7 @@ ElseIf:
 	'elseif' condition=Exp 'then' block=Block
 ;
 
-LastStat: 
+LastStat returns Stat: 
 	{LastStat} 'return' (expList=ExpList)? |
     {LastStat} 'break'
 ;
@@ -266,13 +265,13 @@ ExpVarArgs:
 	{ExpVarArgs} '...' 
 ;
 
-PrefixExp returns Referencing:
+PrefixExp:
 	 //{Var} ref=[Var|LUA_NAME] =>suffixExp=SuffixExp? | 
 	 Var |
 	 '(' groupedExp=Exp ')' =>suffixExp=SuffixExp? // TODO: this alternative is not really Referencing
 ;
 
-SuffixExp returns Referencing:
+SuffixExp:
 	FunctionCall | // from FunctionCall in reference
 	MethodCall | // from FunctionCall in reference
 	TableAccess | // from Var in reference
@@ -329,6 +328,64 @@ Field:
 FuncName:
 	LUA_NAME ('.' LUA_NAME)* (':' LUA_NAME)?
 ;
+
+/* 
+FuncName:
+	{FuncName} name=LUA_NAME |
+	//Var (MemberAccess)* ('.' name=LUA_NAME | ':' name=LUA_NAME)
+	//ref=[Exp|LUA_NAME] =>suffix=FuncNameSuffix
+	
+	//refs+=[Exp|LUA_NAME] ('.' refs+=[Exp|LUA_NAME])* '.' name=LUA_NAME |
+	//refs+=[Exp|LUA_NAME] ('.' refs+=[Exp|LUA_NAME])* ':' name=LUA_NAME 
+	{FuncName} prefix=FuncNamePathPrefix =>('.' name=LUA_NAME) |
+	{MethodName} prefix=FuncNamePathPrefix =>(':' name=LUA_NAME) 
+;
+*/
+
+/* 
+FuncNameOrPath:
+	FuncName (
+		({FuncName.name=current}) |
+		({FuncPath.start = current})
+	)
+;
+
+AssignmentOrFunctionCall returns Stat:
+	PrefixExp (
+		({FunctionCall.functionCall=current}) |
+	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
+	)
+;
+
+FuncName:
+	FuncNamePath
+;
+
+FuncNamePathPrefix:
+	ref=[Exp|LUA_NAME] =>suffix=FuncNamePathInfix?
+;
+
+FuncNamePathInfix:
+	'.' ref=[Exp|LUA_NAME] suffix=FuncNamePathInfix |
+	FuncNameEnd
+;
+
+FuncNameEnd:
+	'.' name=LUA_NAME |
+	':' name=LUA_NAME 
+;
+
+FuncNamePath:
+	{FuncNamePath} ref=[Exp|LUA_NAME] suffix=FuncNamePathInfix
+;
+
+FuncNameSuffix:
+	'.' ref=[Exp|LUA_NAME] suffix=FuncNameSuffix |
+	//=>MemberAccess =>suffix=FuncNameSuffix? |
+	'.' name=LUA_NAME |
+	':' name=LUA_NAME
+;
+*/
 
 //FuncName:
 //	{FuncName} name=LUA_NAME |
@@ -410,8 +467,10 @@ Referenceable:
 	TableAccess |
 	MemberAccess |
 	Var |
+	//FuncName |
+	FunctionDeclaration |
+	Exp |
 	Label 
-	//| FuncName 
 ;
 
 /*
@@ -430,11 +489,11 @@ Feature:
  * Synthetic rule for all rules that contain a cross-reference
  */
 Referencing:
-	//ref=[Referenceable|LUA_NAME]
-	ref=[Exp|LUA_NAME]  |
+	ref=[Referenceable|LUA_NAME] |
+	//ref=[Exp|LUA_NAME]  |
+	TableAccess |
 	MemberAccess |
 	Var 
-	//| FuncName
 ;
 
 

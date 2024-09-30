@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
@@ -96,46 +97,10 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         		return IScope.NULLSCOPE;
         	}
         	
+        	var referenceables = getReferenceables(scopeRoot, context);
+        	var candidates = findCandidatesInAssignablesforFqn(contextFqn, referenceables);
         	
-        	//List<Referenceable> candidates_old = getCandidatesFromAssignablesFor(referencing, contextFqn);	
-        	
-        	//var candClone = new ArrayList<>(candidates);
-        	//Collections.reverse(candClone);
-        	//System.out.println(candClone);
-        	
-        	//var funcCandidates = getCandidatesFromFunctionDefs();
-        	/*
-        	System.out.println("Searching for: " + contextFqn);
-        	var rootElement = EcoreUtil2.getRootContainer(context);
-        	var functionDeclarations = EcoreUtil2.getAllContentsOfType(rootElement, FunctionDeclaration.class);
-        	var funcCandidates = functionDeclarations.stream()
-    				 .map(funcDecl ->  funcDecl.getFuncName())
-    				 //.flatMap(List::stream)
-    				 //.filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
-    				 .filter(refble ->  {
-    					 //var fullFuncName = refble.getRefs().isEmpty() ? refble.getName() : ; 
-    					// var list = new ArrayList<String>();
-    					// list.addAll(refble.getRefs().stream().map(ref -> ((Referenceable)ref.getRef()).getName()).toList());
-    					// list.add(refble.getName());
-    					// var qn = list.stream().map(null)
-    					 
-    					 System.out.println("	refble: " + refble);
-    					 //var qn = qualifiedNameProvider.getFullyQualifiedName(refble);
-    					 var qn = nameConverter.toQualifiedName(refble);
-    					 System.out.println("   " + qn);
-    					 return contextFqn.equals(qn);
-    				 })
-    				 .toList();
-        	System.out.println(funcCandidates);
-        	*/
-        	var assignables = getAssignablesFromFor(scopeRoot, context);
-        	var candidates = findCandidatesInAssignablesforFqn(contextFqn, assignables);
-        	
-        	if (referencing instanceof MemberAccess ma) {
-        		return new SimpleScope(createDescriptionsForMemberAccess(candidates));
-        	}
-        	
-        	return new SimpleScope(createDescriptionsForCandidates(candidates));
+        	return new SimpleScope(createDescriptionsForCandidates(candidates, context));
         }
     
         // TODO: parentBlocks, Functions etc.
@@ -199,9 +164,56 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 			return new SimpleScope(Collections.singletonList(assignedValueDescription));
 		}
     }
-    
+
+    // For functions, this could be a problem here: https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
+    //  (could also affect Assignments)
+    private Collection<Referenceable> getReferenceables(final EObject scopeRoot, final EObject context) {
+    	var contextParentStatementOpt = LinkingAndScopingUtils.getParentStatement(context);
+    	if (!contextParentStatementOpt.isPresent()) {
+    		System.out.println("Found no contextParentStatement for obj " + context);
+    		return Collections.emptyList();
+    	}
+    	var contextParentStatement = contextParentStatementOpt.get();
+    	
+    	List<Referenceable> referenceables = EcoreUtil2.getAllContentsOfType(scopeRoot, Block.class)
+    							.stream()
+    							// we need to get the statements by iterating over the block contents, since PrefixExps also extend Stat
+    							.flatMap(block -> block.getStats().stream())
+    							//only consider Statements before the Statement the context is contained in
+    							.takeWhile(stat -> !EcoreUtil.isAncestor(contextParentStatement, stat))
+    							.flatMap(stat -> LinkingAndScopingUtils.getReferenceablesFromStat(stat).stream())
+    							.filter(refble -> {
+    								// Referenceables in assignments need to be checked for their position (on the lhs)
+    								if (EcoreUtil2.getContainerOfType(refble, Assignment.class) != null) {
+    									return LinkingAndScopingUtils.isAssignable(refble);
+    								}
+    								// all other Referenceables are ok
+    								return true;
+    							})
+    							// collect to new ArrayList s.t. resulting Collection is mutable and can be reversed
+    							.collect(Collectors.toCollection(() -> new ArrayList<Referenceable>()));
+    	
+
+    	// reverse result s.t. the last assignment before the currently considered context is the first element in the resulting candidate list
+    	Collections.reverse(referenceables);
+    	return referenceables;
+    }
+    // TODO: should probably only consider assiganbles in STATEMENTS before current context, not Assignments
+    //    (since e.g. function declarations should also be considered, but are not part of Assignments)
+
+    // For functions, this could be a problem here: https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
+    //  (could also affect Assignments)
     private Collection<Referenceable> getAssignablesFromFor(final EObject scopeRoot, final EObject context) {
     	var assignments = EcoreUtil2.getAllContentsOfType(scopeRoot, Assignment.class);
+    	
+    	
+    	//TODO: could implement function declarations like this with just using the fqn of the function name,
+    	//     this would assume that the resolution of the "path" before a function name like function a.b.func()
+    	//     is not necessary because the resolution of "func" would search for a and b anyways (without having to resolve them
+    	//     individually)
+    	var functionDeclarations = EcoreUtil2.getAllContentsOfType(scopeRoot, FunctionDeclaration.class);
+    	functionDeclarations.forEach(fd -> System.out.println(qualifiedNameProvider.getFullyQualifiedName(fd).getSegments()));
+    	
     	List<Referenceable> assignables = assignments.stream()
     			 // ignore the assignment that the context object is part of (e.g.: a = a, the lhs a is not a candidate for the rhs a),
     			 // as well as all assignments that occur in statements after the context's statement 
@@ -238,13 +250,15 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     //	var assignables = getAssignablesFromFor(scopeRoot, context);
     private Collection<Referenceable> findCandidatesInAssignablesforFqn(final QualifiedName contextFqn, final Collection<Referenceable> assignables) {
     	var result = new ArrayList<Referenceable>();
+
     	for (final var assignable : assignables) {
     		
     		final var assignableFqn = qualifiedNameProvider.getFullyQualifiedName(assignable);
     		
+    		
     		if (contextFqn.equals(assignableFqn)) { // add all assignables with equal fqn
     			result.add(assignable);
-    		} else if (contextFqn.startsWith(assignableFqn)) {
+    		} else if (contextFqn.startsWith(assignableFqn) && assignable instanceof Referencing) {
     			// search candidates in partial feature paths, 
     			// e.g.: b.member = 1; a.x = b; c = a.x.member; here, the candidates for a.x.member need to consider b.member
         		final var assignedRef = (((Referencing) assignable).getRef()); // rhs of assignable (might be a Referencing)
@@ -288,27 +302,6 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     	return result;
     }
     
-    
-    /**
-     * For MemberAccess (e.g. a.member), we need to remove the quotes from the candidates name,
-     * since the candidates may be TableAccesses with StringLiterals as indexExp, which have leading and trailing quotes,
-     * see LuaQualifiedNameProvider). </br>
-     * 
-     * E.g. MemberAccess "member" in "a.member" has name "member", while candidate a["member"] has the name ""member"".
-     * @param candidates
-     * @return
-     */
-    private Collection<IEObjectDescription> createDescriptionsForMemberAccess(Collection<Referenceable> candidates) {
-    	return candidates.stream()
-				 .map(c -> 
-				 	EObjectDescription.create(
-						 LinkingAndScopingUtils.removeQuotesFromString(c.getName()),
-						 c
-					)
-				 )
-				 .toList();
-    }    
-    
     /**
      * We always need to create descriptions (instead of returning Scopes.scopeFor(candidates)), since the 
      * candidates name might contain ".", which would fail to match the QualifiedName generated from the cross-reference
@@ -317,16 +310,34 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
      * the generated cross-reference QualifiedName for "hello.world" would be "hello" "world", which would not match
      * the candidate's name "hello.world".</br></br>
      * 
-     * An alternative would be to extend the IQualifiedNameConverter.DefaultImpl and change/remove the delimiter.
+     * An alternative would be to extend the IQualifiedNameConverter.DefaultImpl and change/remove the delimiter.</br></br>
+     * 
+     * For MemberAccess (e.g. a.member), we need to remove the quotes from the candidates name,
+     * since the candidates may be TableAccesses with StringLiterals as indexExp, which have leading and trailing quotes,
+     * see LuaQualifiedNameProvider). </br>
+     * 
+     * E.g. MemberAccess "member" in "a.member" has name "member", while candidate a["member"] has the name ""member"". 
      * @param candidates The candidates.
      * @return A list of EObjectDescriptions of the candidates, created by applying the qualifiedNameConverter to the candidate's name attribute.
      */
-    private Collection<IEObjectDescription> createDescriptionsForCandidates(Collection<Referenceable> candidates) {
+    private Collection<IEObjectDescription> createDescriptionsForCandidates(Collection<Referenceable> candidates, EObject context) {
     	return candidates.stream()
-    				.map(c -> EObjectDescription.create(nameConverter.toQualifiedName(c.getName()), c))
+    				.map(c ->{
+    					var name = c.getName();
+    					if (c instanceof FunctionDeclaration fd) {
+    						name = getLastSegmentFromFunctionDeclarationName(fd);
+    					}
+    					if (context instanceof MemberAccess ma) {
+    						name = LinkingAndScopingUtils.removeQuotesFromString(name);
+    					}
+    					return EObjectDescription.create(nameConverter.toQualifiedName(name), c);
+    				})
     				.toList();
     }
 
-   
+    private String getLastSegmentFromFunctionDeclarationName(FunctionDeclaration fd) {
+    	var qn = nameConverter.toQualifiedName(fd.getName());
+    	return qn.getLastSegment();
+    } 
     
 }

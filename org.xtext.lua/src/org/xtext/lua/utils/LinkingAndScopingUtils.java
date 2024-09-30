@@ -1,5 +1,8 @@
 package org.xtext.lua.utils;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.log4j.Logger;
@@ -8,13 +11,17 @@ import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.Config;
 import org.xtext.lua.lua.Assignment;
+import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpLiteral;
 import org.xtext.lua.lua.ExpNumberLiteral;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.FunctionDeclaration;
+import org.xtext.lua.lua.LastStat;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
+import org.xtext.lua.lua.Stat;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
 
@@ -249,7 +256,10 @@ public final class LinkingAndScopingUtils {
 			//return tryGetAssignedValueFrom(refsRef, 0, maxDepth);
 		}
 		//System.out.println("ref found: " + ref.getRef());
-		return ref.getRef();
+		if (ref.getRef() instanceof Exp exp) {
+			return exp;
+		}
+		return null;
 	}
 	
 	public static boolean isTableAccessWithDummyName(EObject o) {
@@ -267,6 +277,26 @@ public final class LinkingAndScopingUtils {
 		}
 		return str;
 	}
+	
+	public static Optional<Stat> getParentStatement(EObject obj) {
+		// since all PrefixExps extend Stat, we need to return the Stat from the Block, not
+		// the direct parent of the object
+		var parentBlock = EcoreUtil2.getContainerOfType(obj, Block.class);
+		return EcoreUtil2.getAllContentsOfType(parentBlock, Stat.class).stream()
+				.filter(stat -> EcoreUtil2.isAncestor(stat, obj))
+				.findAny();
+	}
+	
+	public static Collection<Referenceable> getReferenceablesFromStat(Stat stat) {
+		if (stat instanceof Assignment assignment) {
+			return EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class);
+		} else if (stat instanceof Referenceable ref) {
+			return Collections.singletonList(ref);
+		}
+		return Collections.emptyList();
+	}
+	
+	
 	
 	
 }

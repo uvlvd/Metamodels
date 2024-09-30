@@ -16,6 +16,7 @@ import org.xtext.lua.linking.LuaLinkingService;
 import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.ExpList;
 import org.xtext.lua.lua.ExpStringLiteral;
+import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.LuaPackage.Literals;
@@ -62,22 +63,23 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
 		
 		QualifiedName qualifiedNameFromConverter = getConverter().toQualifiedName(name);
 		
-		// we do not consider parent names for function call arguments
-		var isParamArg = EcoreUtil2.getContainerOfType(obj, ParamArgs.class) != null;
-		if (isParamArg) {
-			// TODO: need to return full path of param, not just the last part of name 
-			// (equal to the stopAtTableAccess)
-			//return qualifiedNameFromConverter;
+
+		// we do not consider parent names (i.e. feature paths) for function arguments
+		if (obj instanceof Arg) {
+			return qualifiedNameFromConverter;
 		} 
-	
-		
+
+		var isParamArg = EcoreUtil2.getContainerOfType(obj, ParamArgs.class) != null;
 		var isReferencing = obj instanceof Referencing;
+		
 		while (obj.eContainer() != null 
 				// TODO: document! We use names separated by "." as fqn, but for variables in TableAccesses we need to stop at the TableAccess "border"
 				// so a["member"] is a.member but a[str] is a.str_content (i.e. content of the str var)
 				&& !(isReferencing && (obj.eContainer() instanceof TableAccess))
 				// stop at ExpList for paramArgs
-				&& !(isParamArg && (obj.eContainer() instanceof ExpList))) {
+				&& !(isParamArg && (obj.eContainer() instanceof ExpList))
+				// stop at FuncBody
+				&& !(obj.eContainer() instanceof FuncBody)) {
 			obj = obj.eContainer();
 			QualifiedName parentsQualifiedName = getFullyQualifiedName(obj);
 			if (parentsQualifiedName != null)

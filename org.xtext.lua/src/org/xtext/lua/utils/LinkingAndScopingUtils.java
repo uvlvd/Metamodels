@@ -19,6 +19,7 @@ import org.xtext.lua.lua.ExpLiteral;
 import org.xtext.lua.lua.ExpNumberLiteral;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.GenericFor;
 import org.xtext.lua.lua.LastStat;
@@ -292,22 +293,60 @@ public final class LinkingAndScopingUtils {
 	}
 	
 	public static Collection<Referenceable> getReferenceablesFromStat(Stat stat, EObject context) {
-		if (stat instanceof Assignment assignment) {
-			return EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class);
-		} else if (stat instanceof BlockWrapperWithArgs bwwa && EcoreUtil2.isAncestor(bwwa, context)) {
-			return getReferenceablesFromBlockWrapperWithArgs(bwwa);
+		final var bwwas = getBlockWrapperWithArgsFromStatForContext(stat, context);
+		final var hasBlockWrapperArgumentCandidates = !bwwas.isEmpty();
+
+		Collection<Referenceable> result = Collections.emptyList();
+		
+		if (hasBlockWrapperArgumentCandidates) {
+			result = bwwas.stream()
+					.flatMap(bwwa -> getReferenceablesFromBlockWrapperWithArgs(bwwa).stream())
+					.toList();
+		} else if (stat instanceof Assignment assignment) {
+			result = getReferenceablesFromAssignment(assignment);
+		} else if (stat instanceof Referenceable ref) { // e.g. FunctionDeclaration
+			result = Collections.singletonList(ref);
 		}
-		else if (stat instanceof Referenceable ref) { // e.g. FunctionDeclaration
-			return Collections.singletonList(ref);
+		// remove all referenceables that are part of a BlockWrapper which the context is not part of
+		result = result.stream()
+				.filter(referenceable -> {
+					var referenceableBlockWrapper = EcoreUtil2.getContainerOfType(referenceable, BlockWrapperWithArgs.class);
+					return EcoreUtil2.isAncestor(referenceableBlockWrapper, context);
+				})
+				.toList();
+		return result;
+	}
+	
+	private static Collection<Referenceable> getReferenceablesFromAssignment(Assignment assignment) {
+		return EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class)
+				.stream()
+				.filter(referenceable -> isAssignable(referenceable))
+				.toList();
+	}
+	
+	private static Collection<BlockWrapperWithArgs> getBlockWrapperWithArgsFromStatForContext(Stat stat, EObject context) {
+		var bwwas = EcoreUtil2.getAllContentsOfType(stat, BlockWrapperWithArgs.class);
+		if (stat instanceof BlockWrapperWithArgs bwwa) {
+			bwwas.add(bwwa);
 		}
-		return Collections.emptyList();
+		// only return BlockWrapperWithArgs which contain the context (other bwwas do not offer candidate arguments for the context)
+		return bwwas.stream()
+					 .filter(bwwa -> EcoreUtil2.isAncestor(bwwa, context))
+					 .toList();
 	}
 	
 	private static Collection<Referenceable> getReferenceablesFromBlockWrapperWithArgs(BlockWrapperWithArgs bwwa) {
 		if (bwwa instanceof NumericFor numericFor) {
 			return Collections.singletonList(numericFor.getArg());
 		} else if (bwwa instanceof GenericFor genericFor) {
-			return new ArrayList<Referenceable>(genericFor.getArgs().getArgs());
+			return new ArrayList<Referenceable>(genericFor.getArgList().getArgs());
+		} else if (bwwa instanceof FuncBody funcBody && funcBody.getParList() != null) {
+			var argList = funcBody.getParList().getArgsList();
+			if (argList == null) {
+				LOGGER.warn("Found ExpVarArgs in FuncBody ParList, scoping is not supported for varargs.");
+				return Collections.emptyList();
+			}
+			return new ArrayList<Referenceable>(argList.getArgs());
 		}
 		return Collections.emptyList();
 	}

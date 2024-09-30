@@ -77,7 +77,7 @@ NumericFor returns BlockWrapperWithArgs:
 
 GenericFor returns BlockWrapperWithArgs:
 	//{GenericFor} 'for' args=NameList 'in' expList=ExpList 'do' block=Block 'end'
-	{GenericFor} 'for' args=ArgList 'in' expList=ExpList 'do' block=Block 'end'
+	{GenericFor} 'for' argList=ArgList 'in' expList=ExpList 'do' block=Block 'end'
 ;
 
 FunctionDeclaration:
@@ -441,12 +441,11 @@ ExpFunctionDeclaration:
 ;
 
 FuncBody:
-	'(' (ParList)? ')' funcBlock=Block 'end'
+	'(' (parList=ParList)? ')' funcBlock=Block 'end'
 ;
 
 ParList:
-	NameList (',' '...')? |
-	//{VarArgs} '...'
+	argsList=ArgList (',' '...')? |
 	ExpVarArgs
 ;
 

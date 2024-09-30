@@ -288,6 +288,20 @@ class LuaScopingTest {
 	}
 	
 	@Test
+	def void scopingGenericForTest() { 
+		val SUT = '''
+		a = {}
+		b = {"hello", "world"}
+		for k, v in pairs(b) do
+		   a[k] = v
+		end
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
 	def void scopingParamArgsTest() { 
 		val SUT = '''
 		function func(arg)
@@ -303,15 +317,20 @@ class LuaScopingTest {
 		System.out.println(dump(result, ""));
 		check(result, SUT)
 	}
-	
+
 	@Test
-	def void scopingGenericForTest() { 
+	def void scopingFuncBodyArgsTest() { 
 		val SUT = '''
-		a = {}
-		b = {"hello", "world"}
-		for k, v in pairs(b) do
-		   a[k] = v
+		function func(arg1, arg2) 
+			a = arg1
+			b = arg2
 		end
+		
+		func = function (a, b)
+			a = a
+			-- b = b.b -- TODO: we dont know if b is a table, but this kind of access would indicate so.. -> implement trivial recovery?
+			b = b
+		end	
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
@@ -359,7 +378,7 @@ class LuaScopingTest {
 	@Test
 	def void scopingTemp3Test() { 
 		val SUT = '''
-			return consul_client:get(consul_server.consul_watch_catalog_url)
+			a= a
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

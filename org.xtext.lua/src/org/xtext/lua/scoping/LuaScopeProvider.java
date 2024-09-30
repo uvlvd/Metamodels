@@ -28,6 +28,7 @@ import org.eclipse.xtext.scoping.Scopes;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.lua.Config;
 import org.xtext.lua.linking.SyntheticExpNil;
+import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Exp;
@@ -90,6 +91,8 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         if (LinkingAndScopingUtils.isAssignable(context)) {
         	return getScopeForAssignable(context);
         }
+        
+        
 
         if (context instanceof Referencing referencing) {
         	final var contextFqn = qualifiedNameProvider.getFullyQualifiedName(context);
@@ -103,6 +106,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         	
         	var referenceables = getReferenceables(scopeRoot, context);
         	var candidates = findCandidatesInAssignablesforFqn(contextFqn, referenceables);
+        	
         	
         	return new SimpleScope(createDescriptionsForCandidates(candidates, context));
         }
@@ -182,13 +186,15 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     	List<Referenceable> referenceables = EcoreUtil2.getAllContentsOfType(scopeRoot, Block.class)
     							.stream()
     							// we need to get the statements by iterating over the block contents, since PrefixExps also extend Stat
-    							.flatMap(block -> block.getStats().stream())
+    							.flatMap(block -> block.getStats().stream()) // TODO: include lastStats here?
     							//only consider Statements before the Statement the context is contained in
     							.takeWhile(stat -> !EcoreUtil.isAncestor(contextParentStatement, stat))
     							.flatMap(stat -> LinkingAndScopingUtils.getReferenceablesFromStat(stat, context).stream())
     							.filter(refble -> {
+    								var isArg = refble instanceof Arg;
     								// Referenceables in assignments need to be checked for their position (on the lhs)
-    								if (EcoreUtil2.getContainerOfType(refble, Assignment.class) != null) {
+    								// TODO: should be more exact here, e.g. check if Assignment is container and if refble in assignment.getVars()
+    								if (!isArg && EcoreUtil2.getContainerOfType(refble, Assignment.class) != null) {
     									return LinkingAndScopingUtils.isAssignable(refble);
     								}
     								// all other Referenceables are ok.
@@ -264,7 +270,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     		} else if (contextFqn.startsWith(referenceableFqn)) {
     			if (!(referenceable instanceof Referencing)) {
     				// TODO: this will be logged e.g. when a function return value is accessed, e.g. see scopingFunctionDeclarationTest a.x.memberFunc()["member"]
-    				LOGGER.warn("Skipped resolution of sub-part of feature path for non-referencing " 
+    				LOGGER.warn("Skipped resolution of sub-part of feature path for non-referencing \n		" 
     							+ referenceable + " with fqn " 
     						    + referenceableFqn + 
     						    " for contextFqn " + contextFqn);

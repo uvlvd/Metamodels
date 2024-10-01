@@ -37,7 +37,9 @@ import org.xtext.lua.lua.ExpList;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.FunctionDeclaration;
+import org.xtext.lua.lua.Goto;
 import org.xtext.lua.lua.IndexExpField;
+import org.xtext.lua.lua.Label;
 import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.LuaPackage.Literals;
 import org.xtext.lua.postprocessing.LuaXtext2EcorePostProcessor;
@@ -101,6 +103,12 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         	return getScopeForField(field);
         }
         
+        // Get candidate Labels for Goto: Label names need to be unique within one block)
+    	if (context instanceof Goto) {
+    		var candidates = getReferenceablesForGoto(scopeRoot);
+    		return new SimpleScope(createDescriptionsForCandidates(candidates, context));
+    	}
+    		
         // handle other Referencing objects
         if (context instanceof Referencing referencing) {
         	final var contextFqn = qualifiedNameProvider.getFullyQualifiedName(context);
@@ -112,7 +120,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         		return IScope.NULLSCOPE;
         	}
         	
-        	var referenceables = getReferenceables(scopeRoot, context);  	
+        	var referenceables = getReferenceables(scopeRoot, context);
         	var candidates = findCandidatesInReferenceablesforFqn(contextFqn, referenceables);
         	return new SimpleScope(createDescriptionsForCandidates(candidates, context));
         }
@@ -205,7 +213,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 
     // For functions, this could be a problem here: https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
     //  (could also affect Assignments)
-    private Collection<Referenceable> getReferenceables(final EObject scopeRoot, final EObject context) {
+    private Collection<? extends Referenceable> getReferenceables(final EObject scopeRoot, final EObject context) {
     	var contextParentStatementOpt = LinkingAndScopingUtils.getParentStatement(context);
     	if (!contextParentStatementOpt.isPresent()) {
     		LOGGER.warn("Found no contextParentStatement for obj " + context);
@@ -228,6 +236,11 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     	Collections.reverse(referenceables);
     	return referenceables;
     }
+    
+    private Collection<? extends Referenceable> getReferenceablesForGoto(final EObject scopeRoot) {
+    	return EcoreUtil2.getAllContentsOfType(scopeRoot, Label.class);
+    }
+
     // TODO: should probably only consider assiganbles in STATEMENTS before current context, not Assignments
     //    (since e.g. function declarations should also be considered, but are not part of Assignments)
 
@@ -278,7 +291,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
      */
     //private Collection<Referenceable> findCandidatesInPathForFqn(QualifiedName contextFqn, final EObject context, final EObject scopeRoot) {
     //	var assignables = getAssignablesFromFor(scopeRoot, context);
-    private Collection<Referenceable> findCandidatesInReferenceablesforFqn(final QualifiedName contextFqn, final Collection<Referenceable> referenceables) {
+    private Collection<? extends Referenceable> findCandidatesInReferenceablesforFqn(final QualifiedName contextFqn, final Collection<? extends Referenceable> referenceables) {
     	var result = new ArrayList<Referenceable>();
 
     	for (final var referenceable : referenceables) {
@@ -356,15 +369,12 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
      * @param candidates The candidates.
      * @return A list of EObjectDescriptions of the candidates, created by applying the qualifiedNameConverter to the candidate's name attribute.
      */
-    private Collection<IEObjectDescription> createDescriptionsForCandidates(Collection<Referenceable> candidates, EObject context) {
+    private Collection<IEObjectDescription> createDescriptionsForCandidates(Collection<? extends Referenceable> candidates, EObject context) {
     	return candidates.stream()
     				.map(c ->{
     					var name = c.getName();
     					if (c instanceof FunctionDeclaration fd) {
     						name = getLastSegmentFromFunctionDeclarationName(fd);
-    					}
-    					if (context instanceof MemberAccess ma) {
-    						//name = LinkingAndScopingUtils.removeQuotesFromString(name);
     					}
     					return EObjectDescription.create(nameConverter.toQualifiedName(name), c);
     				})

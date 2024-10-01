@@ -124,8 +124,8 @@ FunctionOrMethodDeclaration:
 
 // TODO: needs to be sub-type of Referencing
 Goto:
-	//{Goto} 'goto' ref=[Label|LUA_NAME]
-	{Goto} 'goto' label=LUA_NAME
+	{Goto} 'goto' ref=[Label|LUA_NAME]
+	//{Goto} 'goto' label=LUA_NAME
 ;
 
 Label:
@@ -521,7 +521,8 @@ Referencing:
 	MemberAccess |
 	Var |
 	LocalVar |
-	Field
+	Field |
+	Goto
 ;
 
 

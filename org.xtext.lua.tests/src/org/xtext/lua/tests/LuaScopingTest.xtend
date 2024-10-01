@@ -415,27 +415,11 @@ class LuaScopingTest {
 	@Test
 	def void scopingNestedTableConstructorTest() { 
 		val SUT = '''
-		--a = {b = {c = {member = "hello world"}}}
-		--d = a.b.c.member
+		a = {b = {c = {member = "hello world"}}}
+		d = a.b.c.member
 		
 		m = {{{"hello again"}}}
 		n = m[1][1][1]
-		--print(m[1][1][1])
-		'''
-		val result = parseHelper.parse(SUT)
-		System.out.println(dump(result, ""));
-		check(result, SUT)
-	}
-	@Test
-	
-	def void scopingtemptempTest() { 
-		val SUT = '''
-		a = {[1] = {[2] = {member = "hello world"}}}
-		d = a[1][2]["member"]
-		
-		--m = {{{"hello again"}}}
-		--n = m[1][1][1]
-		--print(m[1][1][1])
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
@@ -459,13 +443,12 @@ class LuaScopingTest {
 	}
 	
 	@Test
-	def void scopingTest2() { 
+	def void scopingGotoLabelTest() { 
 		val SUT = '''
-		b = {}
-		b.member = 1
-		b["member2"] = 2
-		a = b["member2"]
-		a = b.member2
+		::label::
+		goto label
+		goto label2
+		::label2::
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

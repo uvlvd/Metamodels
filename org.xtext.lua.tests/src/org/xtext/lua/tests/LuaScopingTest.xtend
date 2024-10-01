@@ -165,7 +165,6 @@ class LuaScopingTest {
 	}
 	
 	
-	
 	/**
 	 *  d should be resolvable to 1, e.g.
 	 *  d -> a (in line 4), which contains [str], which points to a["member"], which points to 1.
@@ -259,6 +258,8 @@ class LuaScopingTest {
 			a = {}
 			function a.f() end
 			
+			c = a.f
+			
 			b = {}
 			function b.memberFunc() return {["member"] = 1} end
 			
@@ -292,6 +293,11 @@ class LuaScopingTest {
 		val SUT = '''
 		a = {}
 		b = {"hello", "world"}
+		
+		function pairs(arr) 
+			-- avoids error from library functions not yet being supported by scoping
+		end
+		
 		for k, v in pairs(b) do
 		   a[k] = v
 		end
@@ -331,6 +337,135 @@ class LuaScopingTest {
 			-- b = b.b -- TODO: we dont know if b is a table, but this kind of access would indicate so.. -> implement trivial recovery?
 			b = b
 		end	
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingLocalFuncBodyArgsTest() { 
+		val SUT = '''
+		local function func(arg1, arg2) 
+			a = arg1
+			b = arg2
+		end
+		
+		local func = function (a, b)
+			a = a
+			-- b = b.b -- TODO: we dont know if b is a table, but this kind of access would indicate so.. -> implement trivial recovery?
+			b = b
+		end	
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingLocalFuncDeclarationTest() { 
+		val SUT = '''
+		local function func() end
+		local function func2() end	
+		
+		a = func
+		b = func2
+		
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingLocalAssignmentTest() { 
+		val SUT = '''
+		local a
+		local b,c = 1
+		local func = function () end	
+		
+		l = b
+		k = a
+		m = c
+		f = func
+		
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingTableConstructorTest() { 
+		val SUT = '''
+		a = {["one"] = 1, [2] = 2, 3, four = 4, 5}
+		local a = {["one"] = 1, [2] = 2, 3, four = 4, 5}
+		one = a.one
+		two = a[2] --should be 5, since the "2" index is overwritten by the seconde ExpField (5)
+		three = a[1]
+		four = a.four
+		four2 = a["four"]
+		five = a[2]
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+
+	@Test
+	def void scopingNestedTableConstructorTest() { 
+		val SUT = '''
+		--a = {b = {c = {member = "hello world"}}}
+		--d = a.b.c.member
+		
+		m = {{{"hello again"}}}
+		n = m[1][1][1]
+		--print(m[1][1][1])
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	@Test
+	
+	def void scopingtemptempTest() { 
+		val SUT = '''
+		a = {[1] = {[2] = {member = "hello world"}}}
+		d = a[1][2]["member"]
+		
+		--m = {{{"hello again"}}}
+		--n = m[1][1][1]
+		--print(m[1][1][1])
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	
+	// TODO: this should test that the TableConstructor fields in the functioncall are not candidates for the 
+	// Assignment b=a.
+	@Test
+	def void scopingNonReferenceableTableConstructorTest() { 
+		val SUT = '''
+		func = function(a) end
+		func{1,2,3}
+		a = 1
+		b = a
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingTest2() { 
+		val SUT = '''
+		b = {}
+		b.member = 1
+		b["member2"] = 2
+		a = b["member2"]
+		a = b.member2
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
@@ -378,7 +513,7 @@ class LuaScopingTest {
 	@Test
 	def void scopingTemp3Test() { 
 		val SUT = '''
-			a= a
+			a = a
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

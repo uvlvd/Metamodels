@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.linking.ILinkingService;
 import org.eclipse.xtext.linking.impl.LinkingHelper;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
@@ -16,8 +17,11 @@ import org.xtext.lua.lua.Var;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
 import org.xtext.lua.Config;
 import org.xtext.lua.lua.Exp;
+import org.xtext.lua.lua.ExpField;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.Field;
+import org.xtext.lua.lua.IndexExpField;
 import org.xtext.lua.lua.LuaPackage.Literals;
 import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.Referenceable;
@@ -56,6 +60,8 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 					setTableAccessName(tableAccess);
 				}
 				
+			} else if (obj instanceof Field field) {
+				setFieldNameAndRef(field);
 			}
 			// set "name" attribute for all other Referenceables: 
 			else if (obj instanceof Referenceable refble) {
@@ -73,7 +79,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	 * @param tableAccess the TableAccess.
 	 */
 	private void setTableAccessName(TableAccess tableAccess) {
-		final var name = LinkingAndScopingUtils.tryResolveExpressionToString(tableAccess.getIndexExp());
+		final var name = LinkingAndScopingUtils.tryResolveExpressionToString(tableAccess.getIndexExp(), LinkingAndScopingUtils.DERIVED_DUMMY_NAME);
 		tableAccess.setName(name);
 	}
 	
@@ -83,11 +89,23 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	 * @param tableAccess the TableAccess.
 	 */
 	private void setTableAccessNameAndRef(TableAccess tableAccess) {
-		final var name = LinkingAndScopingUtils.tryResolveExpressionToString(tableAccess.getIndexExp());
+		final var name = LinkingAndScopingUtils.tryResolveExpressionToString(tableAccess.getIndexExp(), LinkingAndScopingUtils.DERIVED_DUMMY_NAME);
 		//set name attribute
 		tableAccess.setName(name);
 		//set cross-reference linkText 
 		linkingSupport.createAndSetProxy(tableAccess, Literals.REFERENCING__REF, name);
+	}
+	
+	/**
+	 * Sets the Field's "name" attribute and the cross-reference linkText to this name (see {@link LinkingAndScopingUtils#setFieldNameAndRef(Field, String)}.) </br>
+	 * @param field the Field.
+	 */
+	private void setFieldNameAndRef(Field field) {
+		var name = LinkingAndScopingUtils.tryGetNameForField(field, LinkingAndScopingUtils.DERIVED_DUMMY_NAME);
+		//set name attribute
+		field.setName(name);
+		//set cross-reference linkText  to name
+		linkingSupport.createAndSetProxy(field, Literals.REFERENCING__REF, name);
 	}
 	
 	/**

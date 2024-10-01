@@ -69,7 +69,7 @@ public class LuaLinkingService extends DefaultLinkingService {
 		for (var ta : tas) {
 			if (LinkingAndScopingUtils.isTableAccessWithDummyName(ta)) {
 				ta.setName(LinkingAndScopingUtils.LINKING_DUMMY_NAME);
-				var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp());
+				var name = LinkingAndScopingUtils.tryResolveExpressionToString(ta.getIndexExp(), LinkingAndScopingUtils.LINKING_DUMMY_NAME);
 				if (name != null) {
 					ta.setName(name);
 					linkingSupport.createAndSetProxy(ta, Literals.REFERENCING__REF, name);

@@ -62,8 +62,10 @@ Stat returns Stat:
     //{FunctionDeclaration} 'function' name=FuncName body=FuncBody |
     FunctionDeclaration |
     //FunctionOrMethodDeclaration  |
-    {LocalFunctionDeclaration} 'local' 'function' LUA_NAME body=FuncBody |
-    {LocalNameListDeclaration} 'local' vars=NameList ('=' expList=ExpList)? |
+    //{LocalFunctionDeclaration} 'local' 'function' name=LUA_NAME body=FuncBody |
+    LocalFunctionDeclaration |
+    //{LocalNameListDeclaration} 'local' vars=NameList ('=' expList=ExpList)? |
+    LocalAssignment |
     // since Lua 5.2
     {EmptyStat} ';' |
     Goto |
@@ -82,6 +84,14 @@ GenericFor returns BlockWrapperWithArgs:
 
 FunctionDeclaration:
 	{FunctionDeclaration} 'function' name=FuncName body=FuncBody
+;
+
+LocalFunctionDeclaration:
+	{LocalFunctionDeclaration} 'local' 'function' name=LUA_NAME body=FuncBody 
+;
+
+LocalAssignment:
+	{LocalAssignment} 'local' vars=NameList ('=' expList=ExpList)?
 ;
 /* 
 FunctionOrMethodDeclaration:
@@ -322,9 +332,9 @@ FieldList:
 ;
 
 Field:
-	'[' indexExp=Exp ']' '=' valueExp=Exp | 
-	LUA_NAME '=' valueExp=Exp | 
-	Exp
+	{IndexExpField} '[' indexExp=Exp ']' '=' valueExp=Exp | 
+	{NameField} name=LUA_NAME '=' valueExp=Exp | 
+	{ExpField} exp=Exp
 ;
 
 FuncName:
@@ -433,7 +443,11 @@ FuncNamePath returns FuncName:
 */
 
 NameList: 
-	names+=LUA_NAME (',' names+=LUA_NAME)*
+	names+=LocalVar (',' names+=LocalVar)*
+;
+
+LocalVar: // Referenceable name
+	name=LUA_NAME
 ;
 
 ExpFunctionDeclaration:
@@ -477,9 +491,12 @@ Referenceable:
 	Var |
 	//FuncName |
 	FunctionDeclaration |
+	LocalFunctionDeclaration |
 	Exp |
 	Label | 
-	Arg
+	Arg |
+	LocalVar |
+	Field
 ;
 
 /*
@@ -502,7 +519,9 @@ Referencing:
 	//ref=[Exp|LUA_NAME]  |
 	TableAccess |
 	MemberAccess |
-	Var 
+	Var |
+	LocalVar |
+	Field
 ;
 
 

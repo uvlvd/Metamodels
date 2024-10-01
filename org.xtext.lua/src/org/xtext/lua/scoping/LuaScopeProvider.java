@@ -32,13 +32,17 @@ import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Exp;
+import org.xtext.lua.lua.ExpField;
 import org.xtext.lua.lua.ExpList;
 import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.FunctionDeclaration;
+import org.xtext.lua.lua.IndexExpField;
 import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.LuaPackage.Literals;
 import org.xtext.lua.postprocessing.LuaXtext2EcorePostProcessor;
 import org.xtext.lua.lua.MemberAccess;
+import org.xtext.lua.lua.NameField;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.Stat;
@@ -88,12 +92,16 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         
         var scopeRoot = EcoreUtil2.getRootContainer(context);
         
+        // assignables (variables that get assigned a value in an Assignment) reference their assigned value
         if (LinkingAndScopingUtils.isAssignable(context)) {
         	return getScopeForAssignable(context);
         }
+        // fields (in TableConstructors) also reference their assigned value
+        if (context instanceof Field field) {
+        	return getScopeForField(field);
+        }
         
-        
-
+        // handle other Referencing objects
         if (context instanceof Referencing referencing) {
         	final var contextFqn = qualifiedNameProvider.getFullyQualifiedName(context);
 
@@ -104,10 +112,8 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         		return IScope.NULLSCOPE;
         	}
         	
-        	var referenceables = getReferenceables(scopeRoot, context);
-        	var candidates = findCandidatesInAssignablesforFqn(contextFqn, referenceables);
-        	
-        	
+        	var referenceables = getReferenceables(scopeRoot, context);  	
+        	var candidates = findCandidatesInReferenceablesforFqn(contextFqn, referenceables);
         	return new SimpleScope(createDescriptionsForCandidates(candidates, context));
         }
     
@@ -156,7 +162,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 		}
 		
     	final var fqn = nameConverter.toQualifiedName(name);
-    	final var value = LinkingAndScopingUtils.findAssignedExp((Feature) assignable);
+    	final var value = LinkingAndScopingUtils.findAssignedExp(assignable);
 		if (value == null) {
 			// create synthetic nil value if ExpList does not contains value for assignable
 			var nilValue = new SyntheticExpNil();
@@ -172,13 +178,37 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 			return new SimpleScope(Collections.singletonList(assignedValueDescription));
 		}
     }
+    
+    private IScope getScopeForField(Field field) {
+    	Exp value = null;
+    	if (field instanceof IndexExpField indexExpField) {
+    		value = indexExpField.getValueExp();
+    	} else if (field instanceof NameField nameField) {
+    		value = nameField.getValueExp();
+    	} else if (field instanceof ExpField expField) {
+    		value = expField.getExp();
+    	}
+    	
+    	if (value == null) {
+    		throw new RuntimeException("Could not determine value expression for field " + field);
+    	}
+    	
+    	var name = field.getName();
+    	if (name.equals(LinkingAndScopingUtils.DERIVED_DUMMY_NAME)) {
+    		name = LinkingAndScopingUtils.tryGetNameForField(field, LinkingAndScopingUtils.LINKING_DUMMY_NAME);
+    	}
+    	
+    	var fqn = nameConverter.toQualifiedName(name);
+    	var assignedValueDescription = EObjectDescription.create(fqn, value);
+    	return new SimpleScope(Collections.singletonList(assignedValueDescription));
+    }
 
     // For functions, this could be a problem here: https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
     //  (could also affect Assignments)
     private Collection<Referenceable> getReferenceables(final EObject scopeRoot, final EObject context) {
     	var contextParentStatementOpt = LinkingAndScopingUtils.getParentStatement(context);
     	if (!contextParentStatementOpt.isPresent()) {
-    		System.out.println("Found no contextParentStatement for obj " + context);
+    		LOGGER.warn("Found no contextParentStatement for obj " + context);
     		return Collections.emptyList();
     	}
     	var contextParentStatement = contextParentStatementOpt.get();
@@ -190,16 +220,6 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     							//only consider Statements before the Statement the context is contained in
     							.takeWhile(stat -> !EcoreUtil.isAncestor(contextParentStatement, stat))
     							.flatMap(stat -> LinkingAndScopingUtils.getReferenceablesFromStat(stat, context).stream())
-    							.filter(refble -> {
-    								var isArg = refble instanceof Arg;
-    								// Referenceables in assignments need to be checked for their position (on the lhs)
-    								// TODO: should be more exact here, e.g. check if Assignment is container and if refble in assignment.getVars()
-    								if (!isArg && EcoreUtil2.getContainerOfType(refble, Assignment.class) != null) {
-    									return LinkingAndScopingUtils.isAssignable(refble);
-    								}
-    								// all other Referenceables are ok.
-    								return true;
-    							})
     							// collect to new ArrayList s.t. resulting Collection is mutable and can be reversed
     							.collect(Collectors.toCollection(() -> new ArrayList<Referenceable>()));
     	
@@ -258,13 +278,12 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
      */
     //private Collection<Referenceable> findCandidatesInPathForFqn(QualifiedName contextFqn, final EObject context, final EObject scopeRoot) {
     //	var assignables = getAssignablesFromFor(scopeRoot, context);
-    private Collection<Referenceable> findCandidatesInAssignablesforFqn(final QualifiedName contextFqn, final Collection<Referenceable> referenceables) {
+    private Collection<Referenceable> findCandidatesInReferenceablesforFqn(final QualifiedName contextFqn, final Collection<Referenceable> referenceables) {
     	var result = new ArrayList<Referenceable>();
 
     	for (final var referenceable : referenceables) {
     		
     		final var referenceableFqn = qualifiedNameProvider.getFullyQualifiedName(referenceable);
-    		
     		if (contextFqn.equals(referenceableFqn)) { // add all assignables with equal fqn
     			result.add(referenceable);
     		} else if (contextFqn.startsWith(referenceableFqn)) {
@@ -286,7 +305,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         			var newFqnTail = getFqnTail(contextFqn, referenceableFqn.getSegmentCount());
         			var newFqn = newFqnHead.append(newFqnTail);
         			
-        			result.addAll(findCandidatesInAssignablesforFqn(newFqn, referenceables)
+        			result.addAll(findCandidatesInReferenceablesforFqn(newFqn, referenceables)
         				.stream()
         				.toList()
         			);
@@ -345,7 +364,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     						name = getLastSegmentFromFunctionDeclarationName(fd);
     					}
     					if (context instanceof MemberAccess ma) {
-    						name = LinkingAndScopingUtils.removeQuotesFromString(name);
+    						//name = LinkingAndScopingUtils.removeQuotesFromString(name);
     					}
     					return EObjectDescription.create(nameConverter.toQualifiedName(name), c);
     				})

@@ -8,53 +8,34 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
-import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.EcoreUtil2;
-import org.eclipse.xtext.linking.impl.LinkingHelper;
-import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.naming.QualifiedName;
-import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.scoping.IScope;
-import org.eclipse.xtext.scoping.Scopes;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
-import org.xtext.lua.Config;
 import org.xtext.lua.linking.SyntheticExpNil;
-import org.xtext.lua.lua.Arg;
-import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpField;
-import org.xtext.lua.lua.ExpList;
-import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.Goto;
 import org.xtext.lua.lua.IndexExpField;
 import org.xtext.lua.lua.Label;
-import org.xtext.lua.lua.LuaFactory;
-import org.xtext.lua.lua.LuaPackage.Literals;
-import org.xtext.lua.postprocessing.LuaXtext2EcorePostProcessor;
-import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.NameField;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
-import org.xtext.lua.lua.Stat;
-import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.TableConstructor;
-import org.xtext.lua.lua.Var;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
 
 import com.google.inject.Inject;
-import com.google.inject.Scope;
 
 /**
  * This class contains custom scoping description.
@@ -70,15 +51,6 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 	
   	@Inject
     private IQualifiedNameConverter nameConverter;
-  	
-	@Inject 
-	private LinkingHelper linkingHelper;
-	
-	@Inject
-	private SyntheticLinkingSupport linkingSupport;
-	
-	@Inject
-	private LuaFactory luaFactory = LuaFactory.eINSTANCE;
     
 	
 	/**
@@ -88,70 +60,45 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     @Override
     public IScope getScope(final EObject context, final EReference reference) {
         if (context == null) {
-            // nothing todo without context
+            // nothing to do without context
             return IScope.NULLSCOPE;
         }
         
-        var scopeRoot = EcoreUtil2.getRootContainer(context);
-        
-        // assignables (variables that get assigned a value in an Assignment) reference their assigned value
-        if (LinkingAndScopingUtils.isAssignable(context)) {
-        	return getScopeForAssignable(context);
+        var scope = getScopeForAssignableToValue(context);
+        if (scope != null) {
+        	return scope;
         }
+        
+        
+        scope = getScopeByTraversingBlocks(context);
+        if (scope != null) {
+        	return scope;
+        }
+        
+		// search global scope if no candidates were found in local scope
+    	//TODO: implement global scope
+		//return super.getGlobalScope(context.eResource(), reference);
+		return IScope.NULLSCOPE;
+    }
+    
+
+    /**
+     * Assignables and Fields reference their assigned value, this returns the respective scope.</br>
+     * E.g.: a = {b = 1} returns 1 for context object b, and the right-hand side TableConstructor for context object a.
+     * @param context the context object.
+     * @return the scope, or null if the context object is not an assignable or Field.
+     */
+    private IScope getScopeForAssignableToValue(EObject context) {
         // fields (in TableConstructors) also reference their assigned value
         if (context instanceof Field field) {
         	return getScopeForField(field);
         }
-        
-        // Get candidate Labels for Goto: Label names need to be unique within one block)
-    	if (context instanceof Goto) {
-    		var candidates = getReferenceablesForGoto(scopeRoot);
-    		return new SimpleScope(createDescriptionsForCandidates(candidates, context));
-    	}
-    		
-        // handle other Referencing objects
-        if (context instanceof Referencing referencing) {
-        	final var contextFqn = qualifiedNameProvider.getFullyQualifiedName(context);
-
-        	//TODO: it seems that the lazy linking happens before the DerivedStateComputer
-        	// 	installs the derived state, thus the name is null.
-        	//  need to change that somewhere...?
-        	if (contextFqn == null) {
-        		return IScope.NULLSCOPE;
-        	}
-        	
-        	var referenceables = getReferenceables(scopeRoot, context);
-        	var candidates = findCandidatesInReferenceablesforFqn(contextFqn, referenceables);
-        	return new SimpleScope(createDescriptionsForCandidates(candidates, context));
-        }
-    
-        // TODO: parentBlocks, Functions etc.
-        var parentBlock = EcoreUtil2.getContainerOfType(context.eContainer(), Block.class);
-        if (parentBlock == null) {
-            // if we have no parent anymore we delegate to the global scope
-        	//System.out.println("TODO: Implement global scope");
-        	//System.out.println(context);
-        	return super.getScope(context, reference); // TODO: just for debug, remove
-            //return super.getGlobalScope(context.eResource(), reference);
+    	// assignables (variables that get assigned a value in an Assignment) reference their assigned value
+        if (LinkingAndScopingUtils.isAssignable(context)) {
+        	return getScopeForAssignable(context);
         }
         
-        //System.out.println("current context: " + context);
-        //System.out.println("context parent: " + context.eContainer());
-        var parentStatement = EcoreUtil2.getContainerOfType(context, Stat.class);
-        //var blockScope = getScopeOfBlock(parentBlock, context, parentStatement, reference);
-        //return blockScope;
-        return IScope.NULLSCOPE;
-        
-        
-        /*
-        var scope = super.getScope(context, reference);
-        var temp = new ArrayList<IEObjectDescription>();
-        scope.getAllElements().forEach(temp::add);
-        if (temp.isEmpty()) {
-        	System.out.println("Scope empty for obj: " + context);
-        }
-        return super.getScope(context, reference); // TODO: just for debug, remove
-        */
+        return null;
     }
 
     /**
@@ -187,6 +134,13 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
 		}
     }
     
+    
+    //TODO: this does not seem like the right location for this method, since the field names are computed here
+    //      but the tableAccess names are computed in LuaLinkingService...
+    /**
+     * Returns the Scope for Fields. Every field has a value, which is the candidate returned in the returned scope.
+     * Since not all names for fields can be computed, some fields may get assigned a dummy name.
+     */
     private IScope getScopeForField(Field field) {
     	Exp value = null;
     	if (field instanceof IndexExpField indexExpField) {
@@ -211,65 +165,70 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
     	return new SimpleScope(Collections.singletonList(assignedValueDescription));
     }
 
+    
+    private IScope getScopeByTraversingBlocks(final EObject context) {
+    	final var currentBlock = EcoreUtil2.getContainerOfType(context, Block.class);
+    	return getScopeByTraversingBlocks(context, currentBlock, null);
+    }
+    
+    private IScope getScopeByTraversingBlocks(final EObject context, final Block currentBlock, final Block previousBlock) {
+    	// search for candidates in current block
+    	var candidates = getCandidatesFromBlock(context, currentBlock, previousBlock);
+    	if (!candidates.isEmpty()) {
+    		return new SimpleScope(createDescriptionsForCandidates(candidates, context));
+    	}
+    	
+    	// search for candidates in parent block if none were found in current block
+    	final var parentBlock = EcoreUtil2.getContainerOfType(currentBlock.eContainer(), Block.class);
+		if (parentBlock != null) {
+			return getScopeByTraversingBlocks(context, parentBlock, currentBlock);
+		}
+		
+		// no parent block found, try global scope
+		return null;
+    }
+    
+    private List<? extends Referenceable> getCandidatesFromBlock(final EObject context, final Block currentBlock, final Block previousBlock) {
+    	List<? extends Referenceable> candidates = new ArrayList<>();
+    	// Get candidate Labels for Goto: Label names need to be unique within one block)
+    	if (context instanceof Goto) {
+    		// TODO: do not search global scope for GOTO references
+    		candidates = getReferenceablesForGoto(currentBlock, previousBlock);
+    	}
+    	 // handle other Referencing objects
+        if (context instanceof Referencing referencing) {
+        	final var contextFqn = qualifiedNameProvider.getFullyQualifiedName(context);
+
+        	//TODO: it seems that the lazy linking happens before the DerivedStateComputer
+        	// 	installs the derived state, thus the name is null.
+        	//  need to change that somewhere...?
+        	if (contextFqn != null) {
+        		// TODO: getReferenceables should be renamed
+	        	var referenceables = getReferenceables(context, currentBlock);
+	        	candidates = findCandidatesInReferenceablesforFqn(contextFqn, referenceables);
+        	}
+        }
+        return candidates;
+    }
+    
     // For functions, this could be a problem here: https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
     //  (could also affect Assignments)
-    private Collection<? extends Referenceable> getReferenceables(final EObject scopeRoot, final EObject context) {
-    	var contextParentStatementOpt = LinkingAndScopingUtils.getParentStatement(context);
-    	if (!contextParentStatementOpt.isPresent()) {
-    		LOGGER.warn("Found no contextParentStatement for obj " + context);
-    		return Collections.emptyList();
-    	}
-    	var contextParentStatement = contextParentStatementOpt.get();
-    	
-    	List<Referenceable> referenceables = EcoreUtil2.getAllContentsOfType(scopeRoot, Block.class)
-    							.stream()
-    							// we need to get the statements by iterating over the block contents, since PrefixExps also extend Stat
-    							.flatMap(block -> block.getStats().stream()) // TODO: include lastStats here?
-    							//only consider Statements before the Statement the context is contained in
-    							.takeWhile(stat -> !EcoreUtil.isAncestor(contextParentStatement, stat))
-    							.flatMap(stat -> LinkingAndScopingUtils.getReferenceablesFromStat(stat, context).stream())
-    							// collect to new ArrayList s.t. resulting Collection is mutable and can be reversed
-    							.collect(Collectors.toCollection(() -> new ArrayList<Referenceable>()));
-    	
-
+    private List<? extends Referenceable> getReferenceables(final EObject context, final Block contextBlock) {
+    	var referenceables = LinkingAndScopingUtils.getReferenceablesForContextFromBlock(context, contextBlock);
     	// reverse result s.t. the last assignment before the currently considered context is the first element in the resulting candidate list
     	Collections.reverse(referenceables);
     	return referenceables;
     }
     
-    private Collection<? extends Referenceable> getReferenceablesForGoto(final EObject scopeRoot) {
-    	return EcoreUtil2.getAllContentsOfType(scopeRoot, Label.class);
-    }
-
-    // TODO: should probably only consider assiganbles in STATEMENTS before current context, not Assignments
-    //    (since e.g. function declarations should also be considered, but are not part of Assignments)
-
-    // For functions, this could be a problem here: https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
-    //  (could also affect Assignments)
-    private Collection<Referenceable> getAssignablesFromFor(final EObject scopeRoot, final EObject context) {
-    	var assignments = EcoreUtil2.getAllContentsOfType(scopeRoot, Assignment.class);
-    	
-    	
-    	//TODO: could implement function declarations like this with just using the fqn of the function name,
-    	//     this would assume that the resolution of the "path" before a function name like function a.b.func()
-    	//     is not necessary because the resolution of "func" would search for a and b anyways (without having to resolve them
-    	//     individually)
-    	var functionDeclarations = EcoreUtil2.getAllContentsOfType(scopeRoot, FunctionDeclaration.class);
-    	functionDeclarations.forEach(fd -> System.out.println(qualifiedNameProvider.getFullyQualifiedName(fd).getSegments()));
-    	
-    	List<Referenceable> assignables = assignments.stream()
-    			 // ignore the assignment that the context object is part of (e.g.: a = a, the lhs a is not a candidate for the rhs a),
-    			 // as well as all assignments that occur in statements after the context's statement 
-    			 .takeWhile(assignment -> !EcoreUtil.isAncestor(assignment, context))
-    			 // the rest of this stream pipeline gets the Referenceable objects from the lhs of the assignments
-				 .map(assignment ->  EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class))
-				 .flatMap(List::stream)
-				 .filter(obj -> LinkingAndScopingUtils.isAssignable(obj))
-				 // collect to new ArrayList s.t. resulting Collection is mutable and can be reversed
-				 .collect(Collectors.toCollection(() -> new ArrayList<Referenceable>()));
-    	// reverse result s.t. the last assignment before the currently considered context is the first element in the resulting candidate list
-    	Collections.reverse(assignables);
-    	return assignables;
+    
+    private List<? extends Referenceable> getReferenceablesForGoto(final Block contextBlock, final Block previousBlock) {
+    	var referenceables = EcoreUtil2.getAllContentsOfType(contextBlock, Label.class)
+    			.stream()
+    			// we ignore the previous block, since it has been searched before (see getScopeByTraversingBlocks)
+    			.filter(block -> block != previousBlock)
+    			.collect(Collectors.toCollection(() -> new ArrayList<>()));
+    	Collections.reverse(referenceables);
+    	return referenceables;
     }
     
 	// function findCandidatesInPathForFqn(fqn) that searches for feature candidates by fqn:
@@ -291,7 +250,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
      */
     //private Collection<Referenceable> findCandidatesInPathForFqn(QualifiedName contextFqn, final EObject context, final EObject scopeRoot) {
     //	var assignables = getAssignablesFromFor(scopeRoot, context);
-    private Collection<? extends Referenceable> findCandidatesInReferenceablesforFqn(final QualifiedName contextFqn, final Collection<? extends Referenceable> referenceables) {
+    private List<? extends Referenceable> findCandidatesInReferenceablesforFqn(final QualifiedName contextFqn, final Collection<? extends Referenceable> referenceables) {
     	var result = new ArrayList<Referenceable>();
 
     	for (final var referenceable : referenceables) {
@@ -360,12 +319,7 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
      * the candidate's name "hello.world".</br></br>
      * 
      * An alternative would be to extend the IQualifiedNameConverter.DefaultImpl and change/remove the delimiter.</br></br>
-     * 
-     * For MemberAccess (e.g. a.member), we need to remove the quotes from the candidates name,
-     * since the candidates may be TableAccesses with StringLiterals as indexExp, which have leading and trailing quotes,
-     * see LuaQualifiedNameProvider). </br>
-     * 
-     * E.g. MemberAccess "member" in "a.member" has name "member", while candidate a["member"] has the name ""member"". 
+	 *
      * @param candidates The candidates.
      * @return A list of EObjectDescriptions of the candidates, created by applying the qualifiedNameConverter to the candidate's name attribute.
      */

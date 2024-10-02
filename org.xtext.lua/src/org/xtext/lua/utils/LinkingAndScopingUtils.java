@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
@@ -29,6 +30,7 @@ import org.xtext.lua.lua.GenericFor;
 import org.xtext.lua.lua.IndexExpField;
 import org.xtext.lua.lua.LastStat;
 import org.xtext.lua.lua.LocalAssignment;
+import org.xtext.lua.lua.LocalFunctionDeclaration;
 import org.xtext.lua.lua.LocalVar;
 import org.xtext.lua.lua.NumericFor;
 import org.xtext.lua.lua.PrefixExp;
@@ -445,14 +447,14 @@ public final class LinkingAndScopingUtils {
 		return o instanceof TableAccess ta && ta.getName().equals(DERIVED_DUMMY_NAME);
 	}
 	
-	public static String removeQuotesFromString(String str) {
+	private static String removeQuotesFromString(String str) {
 		if (str != null && str.startsWith("\"") && str.endsWith("\"")) {
 			return str.substring(1, str.length() - 1);
 		}
 		return str;
 	}
 	
-	public static Optional<Stat> getParentStatement(EObject obj) {
+	private static Optional<Stat> getParentStatement(EObject obj) {
 		// since all PrefixExps extend Stat, we need to return the Stat from the Block, not
 		// the direct parent of the object
 		var parentBlock = EcoreUtil2.getContainerOfType(obj, Block.class);
@@ -461,45 +463,95 @@ public final class LinkingAndScopingUtils {
 				.findAny();
 	}
 	
-	public static List<? extends Referenceable> getReferenceablesFromStat(Stat stat, EObject context) {
-		final var bwwas = getBlockWrapperWithArgsFromStatForContext(stat, context);
-		final var hasBlockWrapperArgumentCandidates = !bwwas.isEmpty();
 
-		List<? extends Referenceable> result = Collections.emptyList();
-		if (hasBlockWrapperArgumentCandidates) {
-			result = bwwas.stream()
-					.flatMap(bwwa -> getReferenceablesFromBlockWrapperWithArgs(bwwa).stream())
-					.toList();
-		} else if (stat instanceof Assignment assignment) {
-			result = getReferenceablesFromAssignment(assignment);
+
+	
+	
+	
+	
+	
+	
+	public static List<? extends Referenceable> getReferenceablesForContextFromBlock(final EObject context, final Block block) {
+    	final var contextParentStatementOpt = LinkingAndScopingUtils.getParentStatement(context);
+    	if (!contextParentStatementOpt.isPresent()) {
+    		LOGGER.warn("Found no contextParentStatement for obj " + context);
+    		return Collections.emptyList();
+    	}
+    	final var contextParentStatement = contextParentStatementOpt.get();
+    	
 		
-		} else if (stat instanceof LocalAssignment localAssignment) {
-			result = getReferenceablesFromLocalAssignment(localAssignment);
-		} 
-		// other Referenceables include e.g. FunctionDeclaration, LocalFunctionDeclaration
-		else if (stat instanceof Referenceable ref) { 
-			result = Collections.singletonList(ref);
+		List<Referenceable> referenceables = new ArrayList<>();
+		if (block.eContainer() instanceof BlockWrapperWithArgs bwwa) {
+			referenceables.addAll(getArgsFromBlockWrapperWithArgs(bwwa));
 		}
-		// remove all referenceables that are part of a BlockWrapper which the context is not part of
-		// TODO: may not be needed, if referenceables are computed correctly per statement:
-		// 		the problem is, that getReferenceablesFromAssignment used to
-		//      return all child referenceables of the assignment, which for ExpFunctionDeclarations
-		//      returned all referenceables inside the function to any context
-		//  ^^^^ this should be reconsidered, since now the filtering happens by block. It depends on how
-		//      the statements are defined: if only direct children of a block are the statements, this could still work
-		// TODO: move to top, or stream in LuaScopeProvider.getReferenceables()
-		// TODO: use Scope shadowing for this?
-		result = result.stream()
-				.filter(referenceable -> { // check if the closest block of the Referenceable is an Ancestor of the context
-					var referenceableBlock = EcoreUtil2.getContainerOfType(referenceable, Block.class);
-					return referenceableBlock == null || EcoreUtil2.isAncestor(referenceableBlock, context);
-				})
-				.toList();
+		var referenceablesInBlock = streamAllStatsFromBlockUntil(block, contextParentStatement)
+						.flatMap(stat -> getReferenceablesFromStat(stat).stream())
+						.toList();
 		
-		return result;
+		referenceables.addAll(referenceablesInBlock);
+		
+		LOGGER.debug("Searching for: " + context + " in block :" + block + "; found: " + referenceables);
+
+		return referenceables;
 	}
 	
-	private static List<Referenceable> getReferenceablesFromAssignment(Assignment assignment) {
+	private static Stream<? extends Stat> streamAllGlobalStatsFromBlock(final Block block) {
+		return streamAllStatsFromBlock(block)
+				.filter(stat -> !(stat instanceof LocalAssignment || stat instanceof LocalFunctionDeclaration));
+	}
+	
+	private static Stream<? extends Stat> streamAllStatsFromBlock(final Block block) {
+		return streamAllStatsFromBlockUntil(block, null);
+	}
+	
+	private static Stream<? extends Stat> streamAllStatsFromBlockUntil(final Block block, final Stat stopStat) {
+		return block.eContents().stream()
+				// because of how we defined the xtext grammar, PrefixExps extend Stat and need to be filtered here
+				.filter(stat -> !(stat instanceof PrefixExp))
+				// do not return LastStat
+				.filter(stat -> !(stat instanceof LastStat))
+				// stop at stopStat (usually the statement the context is contained in, 
+				//only statements before the context' statement are referenceable by the context)
+				.takeWhile(stat -> !EcoreUtil.isAncestor(stat, stopStat))
+				// map to correct return type
+				.map(stat -> (Stat) stat); 
+	}
+
+	public static List<? extends Referenceable> getReferenceablesFromStat(Stat stat) {
+		List<Referenceable> result = new ArrayList<>();
+		
+		
+		if (stat instanceof Assignment assignment) {
+			result.addAll(getReferenceablesFromAssignment(assignment));
+		}
+		
+		if (stat instanceof LocalAssignment localAssignment) {
+			result.addAll(getReferenceablesFromLocalAssignment(localAssignment));
+		} 
+		// other Referenceables include e.g. FunctionDeclaration, LocalFunctionDeclaration
+		if (stat instanceof Referenceable ref) { 
+			result.add(ref);
+		} 
+		
+		// statement may contain blocks, add Referenceables from these
+		final var childBlocks = EcoreUtil2.getAllContentsOfType(stat, Block.class);
+		if (!childBlocks.isEmpty()) { 
+			// TODO: should filter returned references from childBlocks by 
+			//		 globalReferences that DO NOT have a matching local declaration inside the respective childBlock
+			//       (see LuaScopingTest.scopingVisibilityTest last line: references 'x' in block but should reference global 'x')
+			// we only return the global stats from blocks, since they are also accessible from without the block
+			result.addAll(childBlocks.stream()
+						.flatMap(block -> streamAllGlobalStatsFromBlock(block))
+						.flatMap(globalStat -> getReferenceablesFromStat(globalStat).stream())
+						.toList()
+			);
+		} 
+
+		return result;
+	}
+		
+	
+	private static List<? extends Referenceable> getReferenceablesFromAssignment(Assignment assignment) {
 		return EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class)
 				.stream()
 				// assignables and fields in table connstructors are Referenceables in Assignments
@@ -514,18 +566,7 @@ public final class LinkingAndScopingUtils {
 				.toList();
 	}
 	
-	private static List<BlockWrapperWithArgs> getBlockWrapperWithArgsFromStatForContext(Stat stat, EObject context) {
-		var bwwas = EcoreUtil2.getAllContentsOfType(stat, BlockWrapperWithArgs.class);
-		if (stat instanceof BlockWrapperWithArgs bwwa) {
-			bwwas.add(bwwa);
-		}
-		// only return BlockWrapperWithArgs which contain the context (other bwwas do not offer candidate arguments for the context)
-		return bwwas.stream()
-					 .filter(bwwa -> EcoreUtil2.isAncestor(bwwa, context))
-					 .toList();
-	}
-	
-	private static List<? extends Referenceable> getReferenceablesFromBlockWrapperWithArgs(BlockWrapperWithArgs bwwa) {
+	private static List<? extends Referenceable> getArgsFromBlockWrapperWithArgs(BlockWrapperWithArgs bwwa) {
 		if (bwwa instanceof NumericFor numericFor) {
 			return Collections.singletonList(numericFor.getArg());
 		} else if (bwwa instanceof GenericFor genericFor) {

@@ -445,6 +445,10 @@ class LuaScopingTest {
 	@Test
 	def void scopingGotoLabelTest() { 
 		val SUT = '''
+		do
+			::label::
+			goto label
+		end
 		::label::
 		goto label
 		goto label2
@@ -453,6 +457,35 @@ class LuaScopingTest {
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
 		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingVisibilityTest() { 
+		val SUT = '''
+		function print(str) end
+		
+		x = 10                -- global variable 252f626c
+		do                    -- new block
+			local x = x         -- new 'x', with value 10 7186333e
+			print(x)            --> 10
+			x = x+1                 -- 12aa4996
+		    do                  -- another block
+		    	local x = x+1     -- another 'x' 4b2d44bc
+		    	print(x)          --> 12
+		    end
+			print(x)            --> 11
+		end
+		print(x)              --> 10  (the global one)
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+		// TODO: fix the problem described by the failed assertion below
+		//		(see also LinkingAndScopingUtils.getReferenceablesFromStat)
+		Assertions.assertTrue(
+			false, 
+			"The print(x) in the last line should reference the global x, but references a local one."
+		);
 	}
 	
 	@Test

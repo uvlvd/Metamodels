@@ -19,6 +19,7 @@ import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.scoping.IScope;
+import org.eclipse.xtext.scoping.impl.SimpleLocalScopeProvider;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.lua.linking.SyntheticExpNil;
 import org.xtext.lua.lua.Block;
@@ -43,7 +44,7 @@ import com.google.inject.Inject;
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#scoping
  * on how and when to use it.
  */
-public class LuaScopeProvider extends AbstractLuaScopeProvider {
+public class LuaScopeProvider extends SimpleLocalScopeProvider {
 	private static final Logger LOGGER = Logger.getLogger(LuaScopeProvider.class);
 	
 	@Inject
@@ -52,7 +53,6 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
   	@Inject
     private IQualifiedNameConverter nameConverter;
     
-	
 	/**
 	 * NOTE: Always create IEObjectDescriptions using the qualifiedNameConverter when creating
 	 * Scopes, see {@link #createDescriptionsForCandidates(Collection)}.
@@ -77,8 +77,8 @@ public class LuaScopeProvider extends AbstractLuaScopeProvider {
         
 		// search global scope if no candidates were found in local scope
     	//TODO: implement global scope
-		//return super.getGlobalScope(context.eResource(), reference);
-		return IScope.NULLSCOPE;
+		return super.getGlobalScope(context.eResource(), reference);
+		//return IScope.NULLSCOPE;
     }
     
 

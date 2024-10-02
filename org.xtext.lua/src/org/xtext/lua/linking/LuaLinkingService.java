@@ -54,14 +54,14 @@ public class LuaLinkingService extends DefaultLinkingService {
 		// (could probably also be handled in some other way in the scopeProvider implementation)
 		// TODO: would probably be better is this could somehow be executed as a "first step" of the linking via an api method
 		if (isTableAccessNamesResolved.compareAndSet(false, true)) {
-			resolveAllTableAccessNamesAndRefsInContextRoot(context);
-			
+			resolveAllTableAccessNamesAndRefsInContextRoot(context);	
 		}
 
 		var linkedObjects = super.getLinkedObjects(context, ref, node);
 		
 		return linkedObjects;
 	}
+	
 	
 	private void resolveAllTableAccessNamesAndRefsInContextRoot(EObject context) {
 		var scopeRoot = EcoreUtil2.getRootContainer(context);

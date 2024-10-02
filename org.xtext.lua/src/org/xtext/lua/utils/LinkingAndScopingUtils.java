@@ -447,7 +447,7 @@ public final class LinkingAndScopingUtils {
 		return o instanceof TableAccess ta && ta.getName().equals(DERIVED_DUMMY_NAME);
 	}
 	
-	private static String removeQuotesFromString(String str) {
+	public static String removeQuotesFromString(String str) {
 		if (str != null && str.startsWith("\"") && str.endsWith("\"")) {
 			return str.substring(1, str.length() - 1);
 		}

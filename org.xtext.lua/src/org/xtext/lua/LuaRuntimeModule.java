@@ -20,9 +20,12 @@ import org.eclipse.xtext.nodemodel.INode;
 import org.eclipse.xtext.parsetree.reconstr.ITransientValueService;
 import org.eclipse.xtext.resource.DerivedStateAwareResource;
 import org.eclipse.xtext.resource.DerivedStateAwareResourceDescriptionManager;
+import org.eclipse.xtext.resource.IDefaultResourceDescriptionStrategy;
 import org.eclipse.xtext.resource.IDerivedStateComputer;
 import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.resource.XtextResource;
+import org.eclipse.xtext.scoping.IGlobalScopeProvider;
+import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.eclipse.xtext.util.concurrent.IUnitOfWork;
 import org.xtext.lua.converters.LuaValueConverterService;
 import org.xtext.lua.linking.LuaLinker;
@@ -30,8 +33,11 @@ import org.xtext.lua.linking.LuaLinkingDiagnosticMessageProvider;
 import org.xtext.lua.linking.LuaLinkingService;
 import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.postprocessing.LuaDerivedStateComputer;
+import org.xtext.lua.scoping.LuaGlobalScopeProvider;
+import org.xtext.lua.scoping.LuaImportUriResolver;
 import org.xtext.lua.scoping.LuaQualifiedNameConverter;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
+import org.xtext.lua.scoping.LuaResourceDescriptionStrategy;
 import org.xtext.lua.serialization.LuaTransientValueService;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -44,7 +50,7 @@ import com.google.common.collect.Multimap;
 public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	/**
 	 * Bind custom value converter to handle the conversion of parsed Lua values,
-	 * e.g. hex numbers.
+	 * e.g. (hex) numbers.
 	 */
 	@Override
 	public Class<? extends IValueConverterService> bindIValueConverterService() {
@@ -65,17 +71,18 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 		return LuaQualifiedNameProvider.class;
 	}
 	
-	public Class<? extends IQualifiedNameConverter> bindIQualifiedNameConverter() {
-		return LuaQualifiedNameConverter.class;
-	}
+	//public Class<? extends IQualifiedNameConverter> bindIQualifiedNameConverter() {
+	//	return LuaQualifiedNameConverter.class;
+	//}
 	
-	public LuaFactory bindLuaFactoryToInstance() {
-		return LuaFactory.eINSTANCE;
-	}
+	//public LuaFactory bindLuaFactoryToInstance() {
+	//	return LuaFactory.eINSTANCE;
+	//}
 	
 	/**
 	 * LuaTransientValueService marks derived "name" attributes as transient s.t. they are ignored by the serialization.
 	 */
+	// TODO: check what this does now, probably set "ref" cross-references and some "name" attributes to null
 	@Override
 	public Class<? extends ITransientValueService> bindITransientValueService() {
 		return LuaTransientValueService.class;
@@ -86,10 +93,10 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 		return LuaLinkingService.class;
 	}
 	
-	@Override
-	public Class<? extends ILinker> bindILinker() {
-		return LuaLinker.class;
-	}
+	//@Override
+	//public Class<? extends ILinker> bindILinker() {
+	//	return LuaLinker.class;
+	//}
 	
 	//TODO: maybe not used
 	/*
@@ -108,6 +115,7 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	 * "name" attribute is null (i.e. for Referencing objects that are also Referenceable).
 	 * 
 	 */
+	
 	public Class<? extends IDerivedStateComputer> bindIDerivedStateComputer() {
 		return LuaDerivedStateComputer.class;
 	}
@@ -122,5 +130,25 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	public Class<? extends IResourceDescription.Manager> bindIResourceDescriptionManager() {
 		return DerivedStateAwareResourceDescriptionManager.class;
 	}
+	
+	/**
+	 * Bind a custom ResourceDescriptionStrategy for Lua,
+	 * sed to create descriptions for elements that should be visible from without a resource (i.e. for global scoping).
+	 * @return
+	 */
+	public Class<? extends IDefaultResourceDescriptionStrategy> bindIDefaultResourceDescriptionStrategy() {
+        return LuaResourceDescriptionStrategy.class;
+    }
+	
+    @Override
+    public Class<? extends IGlobalScopeProvider> bindIGlobalScopeProvider() {
+        return LuaGlobalScopeProvider.class;
+    }
+    
+    public Class<? extends ImportUriResolver> bindImportUriResolver() {
+        return LuaImportUriResolver.class;
+    }
+
+	
 
 }

@@ -15,10 +15,13 @@ import org.eclipse.emf.ecore.EObject
 import java.io.ByteArrayOutputStream
 import org.xtext.lua.PreprocessingUtils
 import org.eclipse.xtext.resource.DerivedStateAwareResource
+import org.eclipse.xtext.resource.IResourceServiceProvider
+import org.eclipse.xtext.naming.IQualifiedNameConverter
+import org.eclipse.emf.ecore.resource.Resource
 
 @ExtendWith(InjectionExtension)
 @InjectWith(LuaInjectorProvider)
-class LuaScopingTest {
+class LuaLocalScopingTest {
 	@Inject
 	ParseHelper<Chunk> parseHelper
 	
@@ -484,7 +487,7 @@ class LuaScopingTest {
 		//		(see also LinkingAndScopingUtils.getReferenceablesFromStat)
 		Assertions.assertTrue(
 			false, 
-			"The print(x) in the last line should reference the global x, but references a local one."
+			"The print(x) in the last line should reference the global x, but references a local one (the one in the first block x=x+1)."
 		);
 	}
 	

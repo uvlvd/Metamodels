@@ -1,10 +1,14 @@
 package org.xtext.lua.utils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
@@ -105,7 +109,7 @@ public final class LinkingAndScopingUtils {
 	}
 	
 	private static boolean isPartOfAnyTableAccessIndexExp(EObject obj) {
-		if (obj instanceof TableAccess) return false; // getContainerOfType(obj, type) returns true if obj ist instance of type
+		if (obj instanceof TableAccess) return false; // getContainerOfType(obj, type) returns true if obj is instance of type
 		
 		// check if obj has a parent that is TableAccess 
 		var parentTableAccess = EcoreUtil2.getContainerOfType(obj, TableAccess.class);
@@ -494,7 +498,12 @@ public final class LinkingAndScopingUtils {
 
 		return referenceables;
 	}
+
+
 	
+
+	
+
 	private static Stream<? extends Stat> streamAllGlobalStatsFromBlock(final Block block) {
 		return streamAllStatsFromBlock(block)
 				.filter(stat -> !(stat instanceof LocalAssignment || stat instanceof LocalFunctionDeclaration));
@@ -533,18 +542,24 @@ public final class LinkingAndScopingUtils {
 			result.add(ref);
 		} 
 		
-		// statement may contain blocks, add Referenceables from these
+		// statement may contain blocks, add visible Referenceables from these
 		final var childBlocks = EcoreUtil2.getAllContentsOfType(stat, Block.class);
 		if (!childBlocks.isEmpty()) { 
+			result.addAll(childBlocks.stream()
+					.flatMap(block -> streamExternallyVisibleReferenceablesFromBlock(block))
+					.toList()
+		);
+			
 			// TODO: should filter returned references from childBlocks by 
 			//		 globalReferences that DO NOT have a matching local declaration inside the respective childBlock
 			//       (see LuaScopingTest.scopingVisibilityTest last line: references 'x' in block but should reference global 'x')
 			// we only return the global stats from blocks, since they are also accessible from without the block
+			/*
 			result.addAll(childBlocks.stream()
 						.flatMap(block -> streamAllGlobalStatsFromBlock(block))
 						.flatMap(globalStat -> getReferenceablesFromStat(globalStat).stream())
 						.toList()
-			);
+			);*/
 		} 
 
 		return result;
@@ -581,5 +596,59 @@ public final class LinkingAndScopingUtils {
 		}
 		return Collections.emptyList();
 	}
+	
+	
+	private static Stream<? extends Referenceable> streamExternallyVisibleReferenceablesFromBlock(Block block) {
+		return streamAllStatsFromBlock(block)
+			//.filter(stat -> !(stat instanceof LocalAssignment || stat instanceof LocalFunctionDeclaration))
+			.flatMap(stat -> {
+				if (stat instanceof Assignment assignment) {
+					return getAssignablesFromAssignment(assignment).stream()
+						.filter(referenceable -> !isNamePartOfPreviousLocalAssignment(referenceable, stat, block));
+				} else if (stat instanceof FunctionDeclaration funcDecl) {
+					if (!isNamePartOfPreviousLocalFunctionDeclaration(funcDecl, block)) {
+						return Arrays.asList(funcDecl).stream();
+					}
+				}
+				return new ArrayList<Referenceable>().stream();		
+			});
+			
+	}
+	
+	private static boolean isNamePartOfPreviousLocalAssignment(Referenceable referenceable, Stat stat, Block block) {
+		final var name = referenceable.getName();
+		return streamAllStatsFromBlockUntil(block, stat)
+			.filter(stmt -> stmt instanceof LocalAssignment)
+			.anyMatch(localAssignment -> localAssignmentContainsName(name, (LocalAssignment) localAssignment));
+	}
+	
+	/**
+	 * Returns true if the local assignment contains a var with the given name.
+	 */
+	private static boolean localAssignmentContainsName(String name, LocalAssignment localAssignment) {
+		return localAssignment.getVars().getNames()
+					.stream()
+					.map(localVarName -> localVarName.getName())
+					.anyMatch(localVarName -> name.equals(localVarName));
+	}
+	
+	private static boolean isNamePartOfPreviousLocalFunctionDeclaration(FunctionDeclaration funcDecl, Block block) {
+		return streamAllStatsFromBlockUntil(block, funcDecl)
+			.anyMatch(stat -> 
+				stat instanceof LocalFunctionDeclaration localFuncDecl 
+					&& funcDecl.getName().equals(localFuncDecl.getName())
+
+			);
+	}
+	
+	// TODO: with how isAssignable() is implemented, this is probably not very efficient
+	// TODO: check if other parts of the program need a "getAssignablesFromAssignment" functionality and use this method
+	private static List<? extends Referenceable> getAssignablesFromAssignment(Assignment assignment) {
+		return assignment.getVars().stream()
+					.flatMap(var -> EcoreUtil2.getAllContentsOfType(var, Referenceable.class).stream())
+					.filter(referenceable -> isAssignable(referenceable))
+					.toList();
+	}
+	
 	
 }

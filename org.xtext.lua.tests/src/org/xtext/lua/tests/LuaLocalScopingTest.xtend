@@ -467,13 +467,13 @@ class LuaLocalScopingTest {
 		val SUT = '''
 		function print(str) end
 		
-		x = 10                -- global variable 252f626c
+		x = 10                -- global variable 2d000e80
 		do                    -- new block
-			local x = x         -- new 'x', with value 10 7186333e
+			local x = x         -- new 'x', with value 10 21422231
 			print(x)            --> 10
-			x = x+1                 -- 12aa4996
+			x = x+1                 -- 39e67516
 		    do                  -- another block
-		    	local x = x+1     -- another 'x' 4b2d44bc
+		    	local x = x+1     -- another 'x' 1d61c6dc
 		    	print(x)          --> 12
 		    end
 			print(x)            --> 11
@@ -533,6 +533,21 @@ class LuaLocalScopingTest {
 	def void scopingTemp3Test() { 
 		val SUT = '''
 			a = a
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingTemp4Test() { 
+		val SUT = '''
+		 m = function()
+		 	local _M = {}
+		 	_M.first = "hello"
+		 	--return _M
+		 end
+		 test = m().first
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

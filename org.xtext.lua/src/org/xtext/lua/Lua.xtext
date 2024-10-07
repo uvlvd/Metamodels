@@ -182,11 +182,18 @@ ElseIf:
 	'elseif' condition=Exp 'then' block=Block
 ;
 
-LastStat returns Stat: 
-	{LastStat} 'return' (expList=ExpList)? |
-    {LastStat} 'break'
+LastStat: 
+	Return |
+    Break
 ;
 
+Return:
+	{Return} 'return' (expList=ExpList)?
+;
+
+Break:
+	{Break} 'break'
+;
 
 
 //Arg:

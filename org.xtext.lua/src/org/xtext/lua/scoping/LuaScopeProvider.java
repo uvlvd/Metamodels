@@ -69,8 +69,9 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
         	return scope;
         }
         
-        
+        System.out.println(context + ": " + qualifiedNameProvider.getFullyQualifiedName(context));
         scope = getScopeByTraversingBlocks(context);
+        
         if (scope != null) {
         	return scope;
         }
@@ -214,6 +215,9 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     // For functions, this could be a problem here: https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
     //  (could also affect Assignments)
     private List<? extends Referenceable> getReferenceables(final EObject context, final Block contextBlock) {
+    	if (qualifiedNameProvider.getFullyQualifiedName(context).toString().equals("m.[first]")) {
+			System.out.println("> breakpoint");
+		}
     	var referenceables = LinkingAndScopingUtils.getReferenceablesForContextFromBlock(context, contextBlock);
     	// reverse result s.t. the last assignment before the currently considered context is the first element in the resulting candidate list
     	Collections.reverse(referenceables);
@@ -255,10 +259,15 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
 
     	for (final var referenceable : referenceables) {
     		
+    		if (contextFqn.toString().equals("m.[first]")) {
+    			System.out.println("	refbles: " + referenceables);
+    		}
+    		
     		final var referenceableFqn = qualifiedNameProvider.getFullyQualifiedName(referenceable);
     		if (contextFqn.equals(referenceableFqn)) { // add all assignables with equal fqn
     			result.add(referenceable);
     		} else if (contextFqn.startsWith(referenceableFqn)) {
+    			// TODO: check this out
     			if (!(referenceable instanceof Referencing)) {
     				// TODO: this will be logged e.g. when a function return value is accessed, e.g. see scopingFunctionDeclarationTest a.x.memberFunc()["member"]
     				LOGGER.warn("Skipped resolution of sub-part of feature path for non-referencing \n		" 

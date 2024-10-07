@@ -476,7 +476,8 @@ public final class LinkingAndScopingUtils {
 	
 	
 	public static List<? extends Referenceable> getReferenceablesForContextFromBlock(final EObject context, final Block block) {
-    	final var contextParentStatementOpt = LinkingAndScopingUtils.getParentStatement(context);
+    	// we use the parentStatement to decide where to stop searching for candidates (i.e. only consider statements before the context's statement)
+		final var contextParentStatementOpt = LinkingAndScopingUtils.getParentStatement(context);
     	if (!contextParentStatementOpt.isPresent()) {
     		LOGGER.warn("Found no contextParentStatement for obj " + context);
     		return Collections.emptyList();
@@ -502,13 +503,6 @@ public final class LinkingAndScopingUtils {
 
 	
 
-	
-
-	private static Stream<? extends Stat> streamAllGlobalStatsFromBlock(final Block block) {
-		return streamAllStatsFromBlock(block)
-				.filter(stat -> !(stat instanceof LocalAssignment || stat instanceof LocalFunctionDeclaration));
-	}
-	
 	private static Stream<? extends Stat> streamAllStatsFromBlock(final Block block) {
 		return streamAllStatsFromBlockUntil(block, null);
 	}
@@ -529,14 +523,13 @@ public final class LinkingAndScopingUtils {
 	public static List<? extends Referenceable> getReferenceablesFromStat(Stat stat) {
 		List<Referenceable> result = new ArrayList<>();
 		
-		
 		if (stat instanceof Assignment assignment) {
 			result.addAll(getReferenceablesFromAssignment(assignment));
 		}
 		
 		if (stat instanceof LocalAssignment localAssignment) {
 			result.addAll(getReferenceablesFromLocalAssignment(localAssignment));
-		} 
+		}
 		// other Referenceables include e.g. FunctionDeclaration, LocalFunctionDeclaration
 		if (stat instanceof Referenceable ref) { 
 			result.add(ref);
@@ -548,18 +541,7 @@ public final class LinkingAndScopingUtils {
 			result.addAll(childBlocks.stream()
 					.flatMap(block -> streamExternallyVisibleReferenceablesFromBlock(block))
 					.toList()
-		);
-			
-			// TODO: should filter returned references from childBlocks by 
-			//		 globalReferences that DO NOT have a matching local declaration inside the respective childBlock
-			//       (see LuaScopingTest.scopingVisibilityTest last line: references 'x' in block but should reference global 'x')
-			// we only return the global stats from blocks, since they are also accessible from without the block
-			/*
-			result.addAll(childBlocks.stream()
-						.flatMap(block -> streamAllGlobalStatsFromBlock(block))
-						.flatMap(globalStat -> getReferenceablesFromStat(globalStat).stream())
-						.toList()
-			);*/
+			);
 		} 
 
 		return result;
@@ -569,6 +551,8 @@ public final class LinkingAndScopingUtils {
 	private static List<? extends Referenceable> getReferenceablesFromAssignment(Assignment assignment) {
 		return EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class)
 				.stream()
+				// filter for vars on lhs and fields on rhs
+				.filter(referenceable -> referenceable instanceof Field || !EcoreUtil2.isAncestor(assignment.getExpList(), referenceable))
 				// assignables and fields in table connstructors are Referenceables in Assignments
 				.filter(referenceable -> isAssignable(referenceable) || referenceable instanceof Field)
 				.toList();
@@ -616,10 +600,22 @@ public final class LinkingAndScopingUtils {
 	}
 	
 	private static boolean isNamePartOfPreviousLocalAssignment(Referenceable referenceable, Stat stat, Block block) {
-		final var name = referenceable.getName();
+		// check name of featurePathRoot if referenceable is part of featurePath, else the referenceable's own name
+		final var name = getNameOrFeaturePathRootName(referenceable);
 		return streamAllStatsFromBlockUntil(block, stat)
 			.filter(stmt -> stmt instanceof LocalAssignment)
 			.anyMatch(localAssignment -> localAssignmentContainsName(name, (LocalAssignment) localAssignment));
+	}
+	
+	private static String getNameOrFeaturePathRootName(Referenceable referenceable) {
+		var name = referenceable.getName();
+		if (referenceable instanceof Feature feature) {
+			final var featurePathRootOpt = findFeaturePathRoot(feature);
+			if (featurePathRootOpt.isPresent()) {
+				name = featurePathRootOpt.get().getName();
+			}
+		}
+		return name;
 	}
 	
 	/**

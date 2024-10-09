@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.EcoreUtil2;
+import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.xtext.lua.Config;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
@@ -40,6 +41,7 @@ import org.xtext.lua.lua.NumericFor;
 import org.xtext.lua.lua.PrefixExp;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
+import org.xtext.lua.lua.Return;
 import org.xtext.lua.lua.Stat;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.TableConstructor;
@@ -458,7 +460,7 @@ public final class LinkingAndScopingUtils {
 		return str;
 	}
 	
-	private static Optional<Stat> getParentStatement(EObject obj) {
+	public static Optional<Stat> getParentStatement(EObject obj) {
 		// since all PrefixExps extend Stat, we need to return the Stat from the Block, not
 		// the direct parent of the object
 		var parentBlock = EcoreUtil2.getContainerOfType(obj, Block.class);
@@ -474,22 +476,19 @@ public final class LinkingAndScopingUtils {
 	
 	
 	
-	
-	public static List<? extends Referenceable> getReferenceablesForContextFromBlock(final EObject context, final Block block) {
-    	// we use the parentStatement to decide where to stop searching for candidates (i.e. only consider statements before the context's statement)
-		final var contextParentStatementOpt = LinkingAndScopingUtils.getParentStatement(context);
-    	if (!contextParentStatementOpt.isPresent()) {
-    		LOGGER.warn("Found no contextParentStatement for obj " + context);
-    		return Collections.emptyList();
-    	}
-    	final var contextParentStatement = contextParentStatementOpt.get();
-    	
-		
+	/**
+	 * 
+	 * @param context
+	 * @param block
+	 * @param stopStat the statement until all statements inside the Block should be searched, null if all statements in the block should be searched.
+	 * @return
+	 */
+	public static List<? extends Referenceable> getReferenceablesForContextFromBlock(final EObject context, final Block block, final Stat stopStat) {
 		List<Referenceable> referenceables = new ArrayList<>();
 		if (block.eContainer() instanceof BlockWrapperWithArgs bwwa) {
 			referenceables.addAll(getArgsFromBlockWrapperWithArgs(bwwa));
 		}
-		var referenceablesInBlock = streamAllStatsFromBlockUntil(block, contextParentStatement)
+		var referenceablesInBlock = streamAllStatsFromBlockUntil(block, stopStat)
 						.flatMap(stat -> getReferenceablesFromStat(stat).stream())
 						.toList();
 		
@@ -582,7 +581,7 @@ public final class LinkingAndScopingUtils {
 	}
 	
 	
-	private static Stream<? extends Referenceable> streamExternallyVisibleReferenceablesFromBlock(Block block) {
+	public static Stream<? extends Referenceable> streamExternallyVisibleReferenceablesFromBlock(Block block) {
 		return streamAllStatsFromBlock(block)
 			//.filter(stat -> !(stat instanceof LocalAssignment || stat instanceof LocalFunctionDeclaration))
 			.flatMap(stat -> {
@@ -641,10 +640,46 @@ public final class LinkingAndScopingUtils {
 	// TODO: check if other parts of the program need a "getAssignablesFromAssignment" functionality and use this method
 	private static List<? extends Referenceable> getAssignablesFromAssignment(Assignment assignment) {
 		return assignment.getVars().stream()
-					.flatMap(var -> EcoreUtil2.getAllContentsOfType(var, Referenceable.class).stream())
+					.flatMap(var -> {
+						ArrayList<Referenceable> result = new ArrayList<>();
+						result.add(var);
+						result.addAll(EcoreUtil2.getAllContentsOfType(var, Referenceable.class));
+						return result.stream();
+					})
 					.filter(referenceable -> isAssignable(referenceable))
 					.toList();
 	}
+
+	
+	
+	
+    // TODO: create function that returns referenceables for all expressions in return statement
+	public static List<? extends Referenceable> getReferenceablesFromReturnStat(Return returnStat, final IQualifiedNameProvider qualifiedNameProvider) {
+		final var containingBlock =  EcoreUtil2.getContainerOfType(returnStat, Block.class);
+		List<Referenceable> result = new ArrayList<>();
+		
+
+		final var expList = returnStat.getExpList();
+		if (expList == null || expList.getExps().isEmpty()) {
+			return result;
+		}
+
+		// other returned expressions are irrelevant here, since this function does not handle assignments
+		// like a, b = func() but direct accesses like func().a
+		final var firstReturnExp = expList.getExps().get(0);
+		
+		if (firstReturnExp instanceof Referencing referencing) {
+			final var firstReturnExpFqn = qualifiedNameProvider.getFullyQualifiedName(firstReturnExp);
+			getReferenceablesForContextFromBlock(returnStat, containingBlock, null)
+				.stream()
+				.filter(referenceable -> qualifiedNameProvider.getFullyQualifiedName(referenceable).startsWith(firstReturnExpFqn))
+				.forEach(result::add);
+		}// TODO: create new value object if return is a value (not a variable)
+		
+		return result;
+	}
+	
+
 	
 	
 }

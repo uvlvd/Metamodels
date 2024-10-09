@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
+import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.resource.IEObjectDescription;
@@ -15,12 +16,16 @@ import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Chunk;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Return;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
+
+import com.google.inject.Inject;
 
 
 public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionStrategy {
 	private static final Logger LOGGER = Logger.getLogger(LuaResourceDescriptionStrategy.class);
-	
+
+
 	// adapted from DefaultResourceDescriptionStrategy.createEObjectDescriptions
     private void createEObjectDescription(IAcceptor<IEObjectDescription> acceptor, Referenceable referenceable) {
     	try {
@@ -45,6 +50,29 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
     	if (getQualifiedNameProvider() == null)
 			return false;
     	
+    	// Simplified version: we return all externally visible referenceables from the root block
+    	// as well as the referenceables from its return statement (if any)
+
+    	if (eObject instanceof Chunk) {
+            // always traverse Chunk's children
+            return true;
+        } else if (eObject instanceof Block block && eObject.eContainer() instanceof Chunk) {
+            // always traverse root block in a chunk
+        	LinkingAndScopingUtils.streamExternallyVisibleReferenceablesFromBlock(block)
+        		.forEach(assignable -> createEObjectDescription(acceptor, assignable));
+            return true;
+        } else if (eObject instanceof Return returnStat) {
+        	var temp = LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStat, getQualifiedNameProvider());
+        	System.out.println("temp: " + temp);
+        	LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStat, getQualifiedNameProvider())
+        		.forEach(assignable -> createEObjectDescription(acceptor, assignable));
+        	return false;
+        }
+    	return false;
+    	
+    	
+    	
+    	/*
     	// we only want (global) FunctionDeclarations and leafs of PrefixExp feature paths 
     	// (i.e. assignables in (global) Assignments) to be accessible from outside a resource. 
     	// => we need to traverse to all (global) FunctionDeclarations and return those as well as
@@ -79,6 +107,7 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
         }
     	// fall-through: TODO: check if anything non-expected falls through
         return false;
+        */
     }
 
 }

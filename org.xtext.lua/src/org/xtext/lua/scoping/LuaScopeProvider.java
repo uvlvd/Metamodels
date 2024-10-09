@@ -69,7 +69,6 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
         	return scope;
         }
         
-        System.out.println(context + ": " + qualifiedNameProvider.getFullyQualifiedName(context));
         scope = getScopeByTraversingBlocks(context);
         
         if (scope != null) {
@@ -215,10 +214,15 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     // For functions, this could be a problem here: https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
     //  (could also affect Assignments)
     private List<? extends Referenceable> getReferenceables(final EObject context, final Block contextBlock) {
-    	if (qualifiedNameProvider.getFullyQualifiedName(context).toString().equals("m.[first]")) {
-			System.out.println("> breakpoint");
-		}
-    	var referenceables = LinkingAndScopingUtils.getReferenceablesForContextFromBlock(context, contextBlock);
+    	// we use the parentStatement to decide where to stop searching for candidates (i.e. only consider statements before the context's statement)
+		final var contextParentStatementOpt = LinkingAndScopingUtils.getParentStatement(context);
+    	if (!contextParentStatementOpt.isPresent()) {
+    		LOGGER.warn("Found no contextParentStatement for obj " + context);
+    		return Collections.emptyList();
+    	}
+    	final var contextParentStatement = contextParentStatementOpt.get();
+    	
+    	var referenceables = LinkingAndScopingUtils.getReferenceablesForContextFromBlock(context, contextBlock, contextParentStatement);
     	// reverse result s.t. the last assignment before the currently considered context is the first element in the resulting candidate list
     	Collections.reverse(referenceables);
     	return referenceables;
@@ -258,15 +262,12 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     	var result = new ArrayList<Referenceable>();
 
     	for (final var referenceable : referenceables) {
-    		
-    		if (contextFqn.toString().equals("m.[first]")) {
-    			System.out.println("	refbles: " + referenceables);
-    		}
-    		
     		final var referenceableFqn = qualifiedNameProvider.getFullyQualifiedName(referenceable);
     		if (contextFqn.equals(referenceableFqn)) { // add all assignables with equal fqn
     			result.add(referenceable);
     		} else if (contextFqn.startsWith(referenceableFqn)) {
+    			
+    			
     			// TODO: check this out
     			if (!(referenceable instanceof Referencing)) {
     				// TODO: this will be logged e.g. when a function return value is accessed, e.g. see scopingFunctionDeclarationTest a.x.memberFunc()["member"]
@@ -298,6 +299,21 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
 
     	return result;
     }
+    
+	// TODO: use this in findCandidatesInReferenceablesforFqn
+	public List<? extends Referenceable> findCandidatesFromFeaturePath() {
+		var result = new ArrayList<Referenceable>();
+		// 1. contextFqn matches referenceableFqn
+		
+		// 2. contextFqn starts with referenceableFqn
+		// 2.1 check Tables assigned to referenceables, build new fqn and take candidates
+		//   like before
+		// 2.2 search in function return values
+		//   2.2.1 get function return values, set as new referenceables to be searched
+		//   2.2.2 set newFqn to contextFqn - contextFqn.startThatEquals(referenceableFqn)
+		//   2.2.3 recursive call with newFqn and newReferenceables
+		return result;
+	}
     
     private QualifiedName getFqnTail(QualifiedName forFqn, int startIndex) {
     	var resultSegments = new ArrayList<String>();

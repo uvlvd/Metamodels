@@ -126,29 +126,51 @@ class LuaGlobalScopingTest {
 	@Test
 	def void globalScopingRequireTest() { 
 
-		val SUT = '''
+		val PROVIDING_SUT = '''
 			function require(modname) end
+			function globalFunc1() end
 		'''
-		val result = parseHelper.parse(SUT)
-		val resultUri = result.eResource.getURI
-		System.out.println("resultUri " + resultUri)
-		
+		val result = parseHelper.parse(PROVIDING_SUT)
+		val resultUri = result.eResource.getURI	
 		val rs = result.eResource.getResourceSet
 		
-		val SUT2 = 
+		val REQUIRING_SUT = 
 		'require(\"' + resultUri + '\") '+
 		'''
-			local require = require
-			local core = require("apisix.core")
-			function globalFunc2 () end
+			globalFunc1()
 		'''
-		val result2 = parseHelper.parse(SUT2, rs)
+		val result2 = parseHelper.parse(REQUIRING_SUT, rs)
 		
-		
-		printExportedObjects(result.eResource)
-		printExportedObjects(result2.eResource)
+		System.out.println(dump(result, ""));
 		System.out.println(dump(result2, ""));
-		check(result2, SUT)
+		check(result, PROVIDING_SUT)
+		check(result2, REQUIRING_SUT)
+	}
+	
+	@Test
+	def void globalScopingVarDeclRequireTest() { 
+
+		val PROVIDING_SUT = '''
+			function require(modname) end
+			local _M = {}
+			_M.global = "global"
+			return _M
+		'''
+		val result = parseHelper.parse(PROVIDING_SUT)
+		val resultUri = result.eResource.getURI	
+		val rs = result.eResource.getResourceSet
+		
+		val REQUIRING_SUT = 
+		'temp = require(\"' + resultUri + '\") ' +
+		'''
+			g = temp.global
+		'''
+		val result2 = parseHelper.parse(REQUIRING_SUT, rs)
+		
+		System.out.println(dump(result, ""));
+		System.out.println(dump(result2, ""));
+		check(result, PROVIDING_SUT)
+		check(result2, REQUIRING_SUT)
 	}
 	
 }

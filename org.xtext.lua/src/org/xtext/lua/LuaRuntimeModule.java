@@ -115,7 +115,6 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	 * "name" attribute is null (i.e. for Referencing objects that are also Referenceable).
 	 * 
 	 */
-	
 	public Class<? extends IDerivedStateComputer> bindIDerivedStateComputer() {
 		return LuaDerivedStateComputer.class;
 	}

@@ -34,12 +34,20 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 		for (URI uri : urisAsList) {
 			scope = createLazyResourceScope(scope, uri, descriptions, type, filter, ignoreCase);
 		}
+		//System.out.println("resource: " + resource);
+		//System.out.println("type: " + type);
+		//System.out.println("filter: " + filter);
 		//System.out.println("uniqueImportURIs" + uniqueImportURIs);
 		//System.out.println("descriptions" + descriptions);
 		//System.out.println("urisAsList" + urisAsList);
 		System.out.println("scope " + scope);
 		return scope;
 
+	}
+	
+	// TODO: maybe extract to LuaResourceDescriptionStrategy
+	public static Predicate<IEObjectDescription> returnedExpAtIndexFilter(int index) {
+		return LuaResourceDescriptionStrategy.isReturnedExpAtIndex(index);
 	}
 	
 	

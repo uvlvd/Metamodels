@@ -22,6 +22,7 @@ import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.BlockWrapperWithArgs;
 import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpField;
+import org.xtext.lua.lua.ExpFunctionDeclaration;
 import org.xtext.lua.lua.ExpList;
 import org.xtext.lua.lua.ExpLiteral;
 import org.xtext.lua.lua.ExpNumberLiteral;
@@ -30,6 +31,7 @@ import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.FieldList;
 import org.xtext.lua.lua.FuncBody;
+import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.GenericFor;
 import org.xtext.lua.lua.IndexExpField;
@@ -37,6 +39,7 @@ import org.xtext.lua.lua.LastStat;
 import org.xtext.lua.lua.LocalAssignment;
 import org.xtext.lua.lua.LocalFunctionDeclaration;
 import org.xtext.lua.lua.LocalVar;
+import org.xtext.lua.lua.MethodCall;
 import org.xtext.lua.lua.NumericFor;
 import org.xtext.lua.lua.PrefixExp;
 import org.xtext.lua.lua.Referenceable;
@@ -314,6 +317,46 @@ public final class LinkingAndScopingUtils {
 		return Optional.empty();
 	}
 	
+	public static Var getFeaturePathRoot(Feature feature) {	
+		if (feature instanceof Var var) { // found root
+			return var;
+		}
+		
+		var parent = feature.eContainer();
+		if (parent instanceof Feature parentFeature) {
+			return getFeaturePathRoot(parentFeature);
+		} 
+		
+		// should never be null
+		throw new RuntimeException("Feature path root could not be found, this should not have happened..."); 
+	}
+	
+	public static Var getFeaturePathParentForFilter(Feature feature) {	
+		if (feature instanceof Var var) { // found root
+			return var;
+		}
+		
+		var parent = feature.eContainer();
+		if (parent instanceof Feature parentFeature) {
+			return getFeaturePathRoot(parentFeature);
+		} 
+		
+		// should never be null
+		throw new RuntimeException("Feature path root could not be found, this should not have happened..."); 
+	}
+	
+	public static boolean hasNextFeature(Feature feature) {
+		return feature.eContents().stream().anyMatch(child -> child instanceof Feature);
+	}
+	
+	public static Feature getNextFeature(Feature feature) {
+		var nextOpt = feature.eContents().stream().filter(child -> child instanceof Feature).findFirst();
+		if (nextOpt.isPresent()) {
+			return (Feature) nextOpt.get();
+		}
+		return null;
+	}
+	
 	/**
 	 * Attempts to calculate a table field's name, which depends on the field's type: </br>
 	 * 	- NameField: "name" attribute  </br>
@@ -415,7 +458,8 @@ public final class LinkingAndScopingUtils {
 	 * avoid equality with "name" attributes generated from a string, e.g. a["1"] and a[1] define different fields in table a.
 	 */
 	private static String tableKeyNumberToNameString(double d) {
-		return NUMBER_NAME_STRING_PREFIX + Double.toString(d);
+		// use , instead of . to avoid clash with qualifiedName separator
+		return NUMBER_NAME_STRING_PREFIX + Double.toString(d).replace(".", ",");
 	}
 	
 	public static Exp tryGetAssignedValueFrom(Referencing ref) {
@@ -653,33 +697,82 @@ public final class LinkingAndScopingUtils {
 	
 	
 	
-    // TODO: create function that returns referenceables for all expressions in return statement
-	public static List<? extends Referenceable> getReferenceablesFromReturnStat(Return returnStat, final IQualifiedNameProvider qualifiedNameProvider) {
+	
+	public static List<List<Referenceable>> getReferenceablesFromReturnStat(Return returnStat, final IQualifiedNameProvider qualifiedNameProvider) {
 		final var containingBlock =  EcoreUtil2.getContainerOfType(returnStat, Block.class);
-		List<Referenceable> result = new ArrayList<>();
-		
-
+		List<List<Referenceable>> result = new ArrayList<>();
 		final var expList = returnStat.getExpList();
 		if (expList == null || expList.getExps().isEmpty()) {
-			return result;
+			return Collections.emptyList();
 		}
 
-		// other returned expressions are irrelevant here, since this function does not handle assignments
-		// like a, b = func() but direct accesses like func().a
-		final var firstReturnExp = expList.getExps().get(0);
+		final var exps = expList.getExps();
+		for (var exp : exps) {
+			if (exp instanceof Referencing referencing) {
+				final var expFqn = qualifiedNameProvider.getFullyQualifiedName(exp);
+				final ArrayList<Referenceable> expReferenceables = new ArrayList<> ();
+					getReferenceablesForContextFromBlock(returnStat, containingBlock, null)
+						.stream()
+						.filter(referenceable -> qualifiedNameProvider.getFullyQualifiedName(referenceable).startsWith(expFqn))
+						.forEach(expReferenceables::add);
+				result.add(expReferenceables);
+			}// TODO: create new value object if return is a value (not a variable)
+		}
 		
-		if (firstReturnExp instanceof Referencing referencing) {
-			final var firstReturnExpFqn = qualifiedNameProvider.getFullyQualifiedName(firstReturnExp);
-			getReferenceablesForContextFromBlock(returnStat, containingBlock, null)
-				.stream()
-				.filter(referenceable -> qualifiedNameProvider.getFullyQualifiedName(referenceable).startsWith(firstReturnExpFqn))
-				.forEach(result::add);
-		}// TODO: create new value object if return is a value (not a variable)
 		
 		return result;
 	}
+
 	
 
+	public static boolean isFunctionDeclaration(Referenceable referenceable) {
+		return getFuncBodyFromFuncObject(referenceable) != null;
+	}
+	
+
+	// TODO: is this unused? -> remove
+	public static boolean isFunctionCallFeature(Feature feature) {
+		return feature instanceof FunctionCall || feature instanceof MethodCall;
+
+	}
+
+	// TODO: is this unused? -> remove
+	public static boolean isFunctionCallFeature(Referenceable referenceable) {
+		
+		if (referenceable instanceof Feature feature) {
+			final var children = feature.eContents();
+			if (!children.isEmpty()) {
+				final var suffix = children.get(0);
+				return suffix instanceof FunctionCall || suffix instanceof MethodCall;
+			}
+		}
+		return false;
+	}
+	
+	public static FuncBody getFuncBodyFromFuncObject(EObject funcObject) {
+		if (funcObject instanceof FunctionDeclaration funcDecl) {
+			return funcDecl.getBody();
+		} else if (funcObject instanceof LocalFunctionDeclaration funcDecl) {
+			return funcDecl.getBody();
+		} else if (funcObject instanceof ExpFunctionDeclaration funcDecl) {
+			return funcDecl.getBody();
+		} else if (funcObject instanceof Referencing referencing) {
+			var value = tryGetAssignedValueFrom(referencing);
+			if (value instanceof ExpFunctionDeclaration funcDecl) {
+				return funcDecl.getBody();
+			}
+		}
+		return null;
+	}
+	
+	
+	public static Optional<Return> findReturnStatInBlock(Block block) {
+		var returnStat = block.getLastStat();
+		if (returnStat instanceof Return ret) {
+			return Optional.of(ret);
+		}
+		return Optional.empty();
+	}
 	
 	
 }

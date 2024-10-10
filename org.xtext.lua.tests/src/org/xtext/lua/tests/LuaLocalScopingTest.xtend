@@ -553,6 +553,24 @@ class LuaLocalScopingTest {
 		System.out.println(dump(result, ""));
 		check(result, SUT)
 	}
+	
+	// TODO: we need to include the previously searched scopes when collecting the 
+	// referenceables, since this will not work otherwise ("b" is not visible in the 
+	// inner block, but a is not visible in the outer block , so the reference cannot be
+	// resolved)
+	@Test
+	def void scopingTemp5Test() { 
+		val SUT = '''
+		b = {member = "hello world"}
+		do 
+		  a = b 
+		  print(a.member)
+		end
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
 
 	
 }

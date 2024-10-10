@@ -1,6 +1,8 @@
 package org.xtext.lua.scoping;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
@@ -19,30 +21,34 @@ import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Return;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
 
+import com.google.common.base.Predicate;
 import com.google.inject.Inject;
 
 
 public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionStrategy {
 	private static final Logger LOGGER = Logger.getLogger(LuaResourceDescriptionStrategy.class);
-
+	
+	private static final String GLOBAL_RETURN_USERDATA_KEY = "globalReturn";
+	
+    private void createEObjectDescription(IAcceptor<IEObjectDescription> acceptor, Referenceable referenceable) {
+    	createEObjectDescription(acceptor, referenceable, null);
+    }
 
 	// adapted from DefaultResourceDescriptionStrategy.createEObjectDescriptions
-    private void createEObjectDescription(IAcceptor<IEObjectDescription> acceptor, Referenceable referenceable) {
+    private void createEObjectDescription(IAcceptor<IEObjectDescription> acceptor, Referenceable referenceable, Map<String, String> userData) {
     	try {
 			QualifiedName qualifiedName = getQualifiedNameProvider().getFullyQualifiedName(referenceable);
 			if (qualifiedName != null) {
-				acceptor.accept(EObjectDescription.create(qualifiedName, referenceable));
+				if (userData != null) {
+					acceptor.accept(EObjectDescription.create(qualifiedName, referenceable, userData));
+				} else {
+					acceptor.accept(EObjectDescription.create(qualifiedName, referenceable));
+				}
+				
 			}
 		} catch (Exception exc) {
 			LOGGER.error(exc.getMessage(), exc);
 		}
-    	
-    	// From previous implementation
-        /*var fqn = this.getQualifiedNameProvider()
-            .apply(refble);
-        if (fqn != null) {
-            acceptor.accept(EObjectDescription.create(fqn, refble));
-        }*/
     }
 
     @Override
@@ -51,8 +57,9 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
 			return false;
     	
     	// Simplified version: we return all externally visible referenceables from the root block
-    	// as well as the referenceables from its return statement (if any)
-
+    	// as well as the referenceables from its return statement (if any).
+    	// This is not how it actually works in Lua, since globals defined inside child-blocks would
+    	// also be visible from another file.
     	if (eObject instanceof Chunk) {
             // always traverse Chunk's children
             return true;
@@ -62,10 +69,21 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
         		.forEach(assignable -> createEObjectDescription(acceptor, assignable));
             return true;
         } else if (eObject instanceof Return returnStat) {
-        	var temp = LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStat, getQualifiedNameProvider());
-        	System.out.println("temp: " + temp);
-        	LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStat, getQualifiedNameProvider())
-        		.forEach(assignable -> createEObjectDescription(acceptor, assignable));
+        	final var referenceablesFromReturnExps = LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStat, getQualifiedNameProvider());
+        	final var returnExpsCount = referenceablesFromReturnExps.size();
+        	
+        	for (int i = 0; i < returnExpsCount; i++) {
+        		final var expIdentifier = Integer.toString(i);
+        		for (final var referenceable : referenceablesFromReturnExps.get(i)) {
+        			var userData = new HashMap<String, String>();
+        			userData.put(GLOBAL_RETURN_USERDATA_KEY, expIdentifier);
+        			createEObjectDescription(acceptor, referenceable, userData);
+        		}
+        	}
+
+        	// we traversed the Chunk as well as the root block to get to the return statement of the root block.
+        	//LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStat, getQualifiedNameProvider())
+        	//	.forEach(assignable -> createEObjectDescription(acceptor, assignable));
         	return false;
         }
     	return false;
@@ -109,5 +127,16 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
         return false;
         */
     }
+    
+    public static Predicate<IEObjectDescription> isReturnedExpAtIndex(int index) {
+    	return description -> {
+			var userDataEntry = description.getUserData(GLOBAL_RETURN_USERDATA_KEY);
+			if (userDataEntry != null) {
+				return userDataEntry.equals(Integer.toString(index));
+			}
+			return false;
+		};
+    }
+    
 
 }

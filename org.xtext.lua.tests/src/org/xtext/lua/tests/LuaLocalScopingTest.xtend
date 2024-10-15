@@ -540,14 +540,43 @@ class LuaLocalScopingTest {
 	}
 	
 	@Test
-	def void scopingTemp4Test() { 
+	def void scopingFunctionCallReturnFeatureTest() { 
 		val SUT = '''
 		 m = function()
 		 	local _M = {}
-		 	_M.first = "hello"
-		 	--return _M
+		 	_M.first = "first"
+		 	_M.second = "second"
+		 	return _M
 		 end
 		 test = m().first
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	// TODO: returned function defined outside of returning function
+	// does not work, see scopingResolveParentBlockReferencedVarTest
+	@Test
+	def void scopingDoubleFunctionCallReturnFeatureTest() { 
+		val SUT = '''
+		 --local n = function ()
+		 --	local _M = {}
+		 --	_M.first = "first"
+		 --	return _M
+		 --end
+		 m = function()
+		 	local n = function ()
+		 		 	local _M = {}
+		 		 	_M.first = "first"
+		 		    return _M
+		 	end
+		 	--local _M = {}
+		 	--_M.first = "hello"
+		 	--_M.second = "hello2"
+		 	return n
+		 end
+		 test = m()().first
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
@@ -559,12 +588,12 @@ class LuaLocalScopingTest {
 	// inner block, but a is not visible in the outer block , so the reference cannot be
 	// resolved)
 	@Test
-	def void scopingTemp5Test() { 
+	def void scopingResolveParentBlockReferencedVarTest() { 
 		val SUT = '''
-		b = {member = "hello world"}
+		b = {member = "hellow world"}
 		do 
 		  a = b 
-		  print(a.member)
+		  c = a.member
 		end
 		'''
 		val result = parseHelper.parse(SUT)

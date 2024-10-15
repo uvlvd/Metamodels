@@ -154,11 +154,19 @@ class LuaGlobalScopingTest {
 			function require(modname) end
 			local _M = {}
 			_M.global = "global"
-			return _M
+			local _N = {}
+			_N.globalN = "globalN"
+			return _M, _N
 		'''
 		val result = parseHelper.parse(PROVIDING_SUT)
 		val resultUri = result.eResource.getURI	
 		val rs = result.eResource.getResourceSet
+		
+		val PROVIDING_SUT_UNUSED = 
+		'''
+			function require_unused(modname) end
+		'''
+		val result_unused = parseHelper.parse(PROVIDING_SUT_UNUSED, rs)
 		
 		val REQUIRING_SUT = 
 		'temp = require(\"' + resultUri + '\") ' +

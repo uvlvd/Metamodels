@@ -29,6 +29,7 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
 	private static final Logger LOGGER = Logger.getLogger(LuaResourceDescriptionStrategy.class);
 	
 	private static final String GLOBAL_RETURN_USERDATA_KEY = "globalReturn";
+	private static final String GLOBAL_RETURN_URI_USERDATA_KEY = "uriString";
 	
     private void createEObjectDescription(IAcceptor<IEObjectDescription> acceptor, Referenceable referenceable) {
     	createEObjectDescription(acceptor, referenceable, null);
@@ -76,7 +77,9 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
         		final var expIdentifier = Integer.toString(i);
         		for (final var referenceable : referenceablesFromReturnExps.get(i)) {
         			var userData = new HashMap<String, String>();
+        			var uriString = eObject.eResource().getURI().toString(); // TODO: add resource uri to userdata map for easy return value of require calc?
         			userData.put(GLOBAL_RETURN_USERDATA_KEY, expIdentifier);
+        			userData.put(GLOBAL_RETURN_URI_USERDATA_KEY, uriString);
         			createEObjectDescription(acceptor, referenceable, userData);
         		}
         	}
@@ -133,6 +136,18 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
 			var userDataEntry = description.getUserData(GLOBAL_RETURN_USERDATA_KEY);
 			if (userDataEntry != null) {
 				return userDataEntry.equals(Integer.toString(index));
+			}
+			return false;
+		};
+    }
+    
+    public static Predicate<IEObjectDescription> isReturnedExpAtIndex(int index, String uriString) {
+    	return description -> {
+			var userDataReturnIndex = description.getUserData(GLOBAL_RETURN_USERDATA_KEY);
+			var userDataReturnURI = description.getUserData(GLOBAL_RETURN_URI_USERDATA_KEY);
+			if (userDataReturnIndex != null && userDataReturnURI != null) {
+				return userDataReturnIndex.equals(Integer.toString(index)) 
+						&& userDataReturnURI.equals(uriString);
 			}
 			return false;
 		};

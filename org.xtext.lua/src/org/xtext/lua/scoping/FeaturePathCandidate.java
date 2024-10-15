@@ -62,7 +62,8 @@ public class FeaturePathCandidate {
 	 * @return
 	 */
 	public boolean referencesReferencing() {
-		return !hasNextUncheckedIndex()  // can only have a value assigned if current index is last
+		//return !hasNextUncheckedIndex()  // can only have a value assigned if current index is last
+		return isCompletelyMatched() 	
 				&& LinkingAndScopingUtils.isAssignable(context);
 	}
 	
@@ -71,10 +72,10 @@ public class FeaturePathCandidate {
 	 * @return the Referencing this FeaturePathCandidate's context is assigned to.
 	 */
 	public Referencing getReferencedReferencing() {
-		if (context instanceof Referencing referencingContext) {
-			var assigned = referencingContext.getRef();
-			if (assigned instanceof Referencing referencing) {
-				return referencing;
+		if (context instanceof Referencing referencing) {
+			var assigned = referencing.getRef();
+			if (assigned instanceof Referencing referencedReferencing) {
+				return referencedReferencing;
 			}
 			return null;
 		} else {

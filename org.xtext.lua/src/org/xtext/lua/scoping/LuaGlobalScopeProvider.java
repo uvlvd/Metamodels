@@ -1,5 +1,6 @@
 package org.xtext.lua.scoping;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -15,13 +16,20 @@ import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.resource.IResourceDescriptions;
 import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.impl.ImportUriGlobalScopeProvider;
+import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.eclipse.xtext.util.IAcceptor;
+import org.xtext.lua.lua.Var;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
+import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
+	
+	@Inject
+	ImportUriResolver uriResolver;
 	
 	@Override
 	protected IScope getScope(Resource resource, boolean ignoreCase, EClass type, Predicate<IEObjectDescription> filter) {
@@ -37,7 +45,7 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 		//System.out.println("resource: " + resource);
 		//System.out.println("type: " + type);
 		//System.out.println("filter: " + filter);
-		//System.out.println("uniqueImportURIs" + uniqueImportURIs);
+		System.out.println("uniqueImportURIs" + uniqueImportURIs);
 		//System.out.println("descriptions" + descriptions);
 		//System.out.println("urisAsList" + urisAsList);
 		System.out.println("scope " + scope);
@@ -49,6 +57,14 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 	public static Predicate<IEObjectDescription> returnedExpAtIndexFilter(int index) {
 		return LuaResourceDescriptionStrategy.isReturnedExpAtIndex(index);
 	}
+	// TODO: rename this, corresponding method in LuaResourceDescriptionStrategy
+	//   and corresponding static strings in LuaResourceDescriptionStrategy
+	public static Predicate<IEObjectDescription> returnedExpAtIndexFilter(int index, String uriString) {
+		return LuaResourceDescriptionStrategy.isReturnedExpAtIndex(index, uriString);
+	}
+
+
+
 	
 	
 

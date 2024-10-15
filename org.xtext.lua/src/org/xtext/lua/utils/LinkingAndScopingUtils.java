@@ -331,6 +331,30 @@ public final class LinkingAndScopingUtils {
 		throw new RuntimeException("Feature path root could not be found, this should not have happened..."); 
 	}
 	
+	public static Feature getFeaturePathNamedLeaf(Feature feature) {
+		return getFeaturePathNamedLeaf(feature, null);
+	}
+	
+	private static Feature getFeaturePathNamedLeaf(Feature feature, Feature lastMatch) {
+		if (feature instanceof Referenceable referenceable) { // has name
+			lastMatch = feature;
+		}
+		
+		Optional<Feature> featureChildOpt = feature.eContents().stream()
+								.filter(child -> child instanceof Feature)
+								.map(f -> (Feature) f) // cast to Feature type
+								.findFirst();
+		
+		if (!featureChildOpt.isPresent()) {
+			return lastMatch; // might be null
+		}
+		
+		var featureChild = featureChildOpt.get();
+
+		
+		return getFeaturePathNamedLeaf(featureChild, lastMatch);
+	}
+	
 	public static Var getFeaturePathParentForFilter(Feature feature) {	
 		if (feature instanceof Var var) { // found root
 			return var;
@@ -477,6 +501,7 @@ public final class LinkingAndScopingUtils {
 			//System.out.println("ref's "+ ref + " ref null?: " + ref.getRef());
 			return null;
 		}
+		// TODO: this can probably be removed, since now synthetic NIL exps are assigned 
 		if (ref.getRef().equals(ref)) { // reference to self means no value was assigned (i.e. the value is 'nil')
 			//System.out.println("ref to self?: " + ref.getRef());
 			return null;
@@ -537,7 +562,8 @@ public final class LinkingAndScopingUtils {
 						.toList();
 		
 		referenceables.addAll(referenceablesInBlock);
-		
+    	// reverse result s.t. the last assignment before the currently considered context is the first element in the resulting candidate list
+    	Collections.reverse(referenceables);
 		LOGGER.debug("Searching for: " + context + " in block :" + block + "; found: " + referenceables);
 
 		return referenceables;
@@ -695,31 +721,34 @@ public final class LinkingAndScopingUtils {
 	}
 
 	
-	
-	
-	
-	public static List<List<Referenceable>> getReferenceablesFromReturnStat(Return returnStat, final IQualifiedNameProvider qualifiedNameProvider) {
-		final var containingBlock =  EcoreUtil2.getContainerOfType(returnStat, Block.class);
-		List<List<Referenceable>> result = new ArrayList<>();
+	public static List<Exp> getExpsFromReturnStat(Return returnStat) {
 		final var expList = returnStat.getExpList();
-		if (expList == null || expList.getExps().isEmpty()) {
+		if (expList == null ) {
 			return Collections.emptyList();
 		}
 
-		final var exps = expList.getExps();
+		return expList.getExps();
+	}
+	
+	// TODO: this should use the LocalScopeProvider-way of finding referenceables
+	public static List<List<Referenceable>> getReferenceablesFromReturnStat(Return returnStat, final IQualifiedNameProvider qualifiedNameProvider) {
+		final var containingBlock =  EcoreUtil2.getContainerOfType(returnStat, Block.class);
+		List<List<Referenceable>> result = new ArrayList<>();
+
+		final var exps = getExpsFromReturnStat(returnStat);
 		for (var exp : exps) {
-			if (exp instanceof Referencing referencing) {
-				final var expFqn = qualifiedNameProvider.getFullyQualifiedName(exp);
+			if (exp instanceof Feature feature) {
+				final var leaf = getFeaturePathNamedLeaf(feature);
+				final var expFqn = qualifiedNameProvider.getFullyQualifiedName(leaf);
 				final ArrayList<Referenceable> expReferenceables = new ArrayList<> ();
-					getReferenceablesForContextFromBlock(returnStat, containingBlock, null)
-						.stream()
-						.filter(referenceable -> qualifiedNameProvider.getFullyQualifiedName(referenceable).startsWith(expFqn))
-						.forEach(expReferenceables::add);
+				getReferenceablesForContextFromBlock(returnStat, containingBlock, null)
+					.stream()
+					.filter(referenceable -> qualifiedNameProvider.getFullyQualifiedName(referenceable).startsWith(expFqn))
+					.forEach(expReferenceables::add);
 				result.add(expReferenceables);
-			}// TODO: create new value object if return is a value (not a variable)
+			}
 		}
-		
-		
+
 		return result;
 	}
 

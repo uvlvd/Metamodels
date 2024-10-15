@@ -8,8 +8,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.apache.log4j.Logger;
+import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.xtext.EcoreUtil2;
@@ -19,6 +21,7 @@ import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.scoping.IScope;
+import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.eclipse.xtext.scoping.impl.SimpleLocalScopeProvider;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.lua.linking.SyntheticExpNil;
@@ -27,6 +30,8 @@ import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpField;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.Field;
+import org.xtext.lua.lua.FuncBody;
+import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.Goto;
 import org.xtext.lua.lua.IndexExpField;
@@ -35,6 +40,7 @@ import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.NameField;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
+import org.xtext.lua.lua.Return;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.TableConstructor;
 import org.xtext.lua.lua.Var;
@@ -57,6 +63,13 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
   	@Inject
     private IQualifiedNameConverter nameConverter;
     
+	
+	@Inject
+	ImportUriResolver uriResolver;
+	
+	// TODO: refactor, remove
+	private EObject currentContext;
+	private EReference currentReference;
 	/**
 	 * NOTE: Always create IEObjectDescriptions using the qualifiedNameConverter when creating
 	 * Scopes, see {@link #createDescriptionsForCandidates(Collection)}.
@@ -67,21 +80,27 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
             // nothing to do without context
             return IScope.NULLSCOPE;
         }
+        currentContext = context;
+        currentReference = reference;
         
         var scope = getScopeForAssignableToValue(context);
         
-        /*
+        
         System.out.println("foo");
         if (context instanceof Var var && var.getName().equals("require")) {
         	System.out.println("bar");
         	var globalScope = super.getGlobalScope(context.eResource(), reference, LuaGlobalScopeProvider.returnedExpAtIndexFilter(0));
         	System.out.println("   globalScope: " + globalScope);
-        }*/
+
+        	final var uri = URI.createURI(uriResolver.apply(var));
+        	var globalScope2 = super.getGlobalScope(context.eResource(), reference, LuaGlobalScopeProvider.returnedExpAtIndexFilter(0, uri.toString()));
+        	System.out.println("   globalScope2: " + globalScope2);
+        }
         
         if (scope != null) {
         	return scope;
         }
-        
+
         scope = getScopeByTraversingBlocks(context);
         
         if (scope != null) {
@@ -92,9 +111,32 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
         
 		// search global scope if no candidates were found in local scope
     	//TODO: implement global scope
+        //TODO: for require-call assignments to variables, the global scope is resolved when searching referenceable candidates for features
         System.out.println("Searchign global scope for " + context);
 		return super.getGlobalScope(context.eResource(), reference);
 		//return IScope.NULLSCOPE;
+    }
+    
+    /**
+     * Returns the referenceable objects from the return expression at the given index of a call to the "require" function.
+     * @param context
+     * @param reference
+     * @param index
+     * @param requireFuncCall
+     * @return
+     */
+    private List<Referenceable> getReferenceablesFromRequireCall(final EObject context, EReference reference, int index, Var requireFuncCall) {
+    	final var uri = URI.createURI(uriResolver.apply(requireFuncCall));
+    	System.out.println("XDDDD " + uri);
+    	var globalScope2 = super.getGlobalScope(context.eResource(), reference, LuaGlobalScopeProvider.returnedExpAtIndexFilter(0, uri.toString()));
+    	
+    	return StreamSupport.stream(globalScope2.getAllElements().spliterator(), false)
+    				.map(obj -> obj.getEObjectOrProxy())
+    				.filter(obj -> obj instanceof Referenceable)
+    				.map(obj -> (Referenceable) obj)
+    				.toList();
+    	//var globalScope2 = super.getGlobalScope(context.eResource(), reference, LuaGlobalScopeProvider.returnedExpAtIndexFilterForUri(index, uri));
+    	//System.out.println("   globalScop2: " + globalScope2);
     }
     
 
@@ -120,7 +162,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     /**
      * Returns the Scope for assignables. Assignables are Referenceables on the lhs of an Assignment,
      * and the returned Scope contains a single candidate: the corresponding value expression on the rhs of the Assignment. </br>
-     * If there is no corresponding value expression (e.g. a, b = 1), a new ExpNil is created and set as reference (in the e.g. b).
+     * If there is no corresponding value expression (e.g. a, b = 1), a new ExpNil is created and set as reference (in the e.g. b). </br>
      * @param assignable
      * @return
      */
@@ -265,8 +307,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     	final var contextParentStatement = contextParentStatementOpt.get();
     	
     	var referenceables = LinkingAndScopingUtils.getReferenceablesForContextFromBlock(context, contextBlock, contextParentStatement);
-    	// reverse result s.t. the last assignment before the currently considered context is the first element in the resulting candidate list
-    	Collections.reverse(referenceables);
+
     	return referenceables;
     }
     
@@ -381,6 +422,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
      * @param referenceables the referenceables to be searched.
      * @return
      */
+    // TODO: rename getCandidatesForFeature and/or findCandidatesForFeature
     private List<? extends Referenceable> getCandidatesForFeature(Feature feature, final Collection<? extends Referenceable> referenceables) {
     	var result = new ArrayList<Referenceable>();
     	//TODO: checkout LinkingAndScopingUtils.findFeaturePathRoot, which only returns roots for Referenceables
@@ -407,6 +449,30 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     					 .map(FeaturePathCandidate::getReferenceable)
     					 .toList();
     }
+    
+    // TODO: rename, extract common stuff with getCandidatesForFeature
+    private List<FeaturePathCandidate> getPossibliesForFeature(Feature feature, final Collection<? extends Referenceable> referenceables) {
+    	var result = new ArrayList<Referenceable>();
+    	//TODO: checkout LinkingAndScopingUtils.findFeaturePathRoot, which only returns roots for Referenceables
+    	//    -> should probably be renamed
+    	
+    	// we use features here to be able to distinguish between function/methodCalls and other feature types
+    	final var featurePathRoot = LinkingAndScopingUtils.getFeaturePathRoot(feature);
+    	final var featurePathCandidates = buildFeaturePathCandidates(referenceables);
+   
+    	// get initial candidates for path root
+    	var candidates = findCandidatesForFeature(featurePathRoot, null, featurePathCandidates, referenceables);
+    	// iterate over all path elements until the feature we started from
+    	Feature previousFeature = featurePathRoot;
+    	while (previousFeature != feature) {
+    		var currentFeature = LinkingAndScopingUtils.getNextFeature(previousFeature);
+    		candidates = findCandidatesForFeature(currentFeature, previousFeature, candidates, referenceables);
+    		previousFeature = currentFeature;
+
+    	}
+    	
+    	return candidates;
+    }
 
     
 
@@ -414,16 +480,16 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     // it is important to note, that this will return all candidates based on if the feature path matches UNTIL the current location
     // in the feature paths. That is, candidates that match and have a next feature component will be returned regardless of if a next feature exitst for the context feature
     /**
-     * Searches for candidates inside the given candidates and referenceables based on the current and previous elements of a feature path.<\ br>
+     * Searches for candidates inside the given candidates and referenceables based on the current and previous elements of a feature path.</br>
      * The intended use is to find scoping candidates for a (start of a) feature path. For this, call this function first with current = featurePathRoot and previous = null,
      * then subsequently call it with the corresponding next current and previous features of the feature path, and finally with the last previous element and current = null. </br>
-     * To get initial candidates, call with previous = null. Call with current = null when reaching the end of the considered feature path.</ br>
+     * To get initial candidates, call with previous = null. Call with current = null when reaching the end of the considered feature path.</br>
      * If used to get candidates from a feature path without a subsequent call with current = null, the returned candidates may contain
      * candidates that match until the last current, but have further elements. 
      * 
      * @param current the current feature in the path.
      * @param previous the next feature in the path.
-     * @param candidates the candidates from a previous call of this method.
+     * @param candidates the candidates from a previous call of this method. Candidates correspond to allReferenceables on initial call.
      * @param allReferenceables all referenceables that should be considered for the search.
      * @return
      */
@@ -440,6 +506,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     		for (var candidate : candidates) {
     			if (LinkingAndScopingUtils.isFunctionCallFeature(previous)) {
     				// TODO: we might want to return the expressions returned by the function here
+    				//       if this function is also used for assignments to features?
     			} else {
     				if (candidate.isCompletelyMatched()) {
     					result.add(candidate);
@@ -453,8 +520,14 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     	if (LinkingAndScopingUtils.isFunctionCallFeature(previous)) {
     		// TODO: handle
     		if (LinkingAndScopingUtils.isFunctionCallFeature(current)) {
-    			// resolve function call from candidates
+    			// resolve function call from candidates: since the previous was also a function call,
+    			// the candidates should contain the referenceables returned by this function call 
     			for (var candidate : candidates) {
+    				// filter candidates for completely matched elements, resulting in all functions that can be called
+    				if (candidate.isCompletelyMatched()) {
+    					// 2. buildFeaturePathCandidates(findReferenceablesForFunctionReference(filteredCandidate.getReferenceable()))
+        				// 3. result.addAll(featurePathCandidates)
+    				}
     				// viable candidates should be function declarations or reference to functions
     				// idea:
     				// 1. filter for candidates that have no next index -> should be the functions that are called?
@@ -466,11 +539,11 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     				//result.addAll(findReferenceablesForFunctionReference(candidate));
 
         		}
+    			//return result;
     		} else {
-    			System.out.println("Implement functionCall as previous!");
-    			// treat current as new root
+    			// candidates were already filtered/extended s.t. they correspond to the 
+    			// viable candidates from the previous function/methodCall
     		}
-    		return result;
     	}
     	
     	//final var previousFqn = qualifiedNameProvider.getFullyQualifiedName(previous);
@@ -479,20 +552,14 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     	if (LinkingAndScopingUtils.isFunctionCallFeature(current)) {
     		// We have two possibilities here: 1. previous is named feature or 2. previous itself was functionCallFeature
     		// For 1. the candidates were already filtered by name => get new candidates from candidate function return values
+    		// TODO: check if these cases work and re-write the doc/comments here
     		// For 2. the candidates already contain the return values from the previous functionCall => get new candidates from candidate function return values
     		for (var candidate : candidates) {
-    			System.out.println("Implement functionCall as current!");
-    			// TODO: see case above
-    			/*
-    			final var candidateFqn = qualifiedNameProvider.getFullyQualifiedName(candidate);
-    			// filter candidates that end with feature with feature.name == previous.name and have correct fqn length
-    			//var isFunctionReferenceCandidate = getFqnTail(candidateFqn, previousFqn.getSegmentCount()).isEmpty();
-    			var isFunctionReferenceCandidate = candidateFqn.getSegmentCount() == currentFeaturePathLocationIndex;
-    			if (isFunctionReferenceCandidate && candidate instanceof Referencing referencing) {
-    				var referencedFunction = referencing.getRef();
-    				result.addAll(findCandidatesForFunctionReference(referencedFunction));
+    			if (candidate.isCompletelyMatched()) { // candidate can only be functionCallCandidate if it is completely matched
+    				final var candidateContext = candidate.getReferenceable();
+    				final var candidateFuncBody = LinkingAndScopingUtils.getFuncBodyFromFuncObject(candidateContext);
+    				result.addAll(getFeaturePathCandidatesFromFuncBody(candidateFuncBody));		
     			}
-    			*/
     		}
     		return result;
     	}
@@ -509,8 +576,77 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     				result.add(candidate);
     				// find candidates from candidate feature
     				if (candidate.referencesReferencing()) {
+    					
+    					// TODO: need to get the last Referencing in referencing chain, then
+    					//   a) check if (local)FunctionDeclaration -> return candidates from return exp
+    					//        - return exp should be assigned to variable
+    					//        	-> for assignedValue check if is in returnExp
+    					//          -> if so get return exp references
+    					//   b) check if TableAccesss
+    					//   c) ???
+    					
+    					
+    					// TODO: check that this is the leaf of the assignment
     					var assignedReferencing = candidate.getReferencedReferencing();
+    					
+    					
+    					System.out.println("assignedReferencing : " + assignedReferencing);
+    					if (assignedReferencing instanceof Feature feature) {
+    						if (assignedReferencing instanceof Referenceable ref && ref.getName().equals("require")) {// TODO: use static string for "require", already used in LuaImportUriResolver
+    							if (LinkingAndScopingUtils.hasNextFeature(feature)) {
+    								var next = LinkingAndScopingUtils.getNextFeature(feature);
+    								if (next instanceof FunctionCall funcCall) {
+    									System.out.println("fooo aöhdsfasdf " + getReferenceablesFromRequireCall(currentContext, currentReference, 0, (Var) feature));
+    									result.addAll(buildFeaturePathCandidates(getReferenceablesFromRequireCall(currentContext, currentReference, 0, (Var) feature), 1)); // TODO: use dynamic indexToCheck
+    									continue; // TODO: refactor
+    								}
+    							}
+    						}
+    						var leaf = LinkingAndScopingUtils.getFeaturePathNamedLeaf(feature);
+    						System.out.println("leaf : " + leaf);
+    						var leafFqn = qualifiedNameProvider.getFullyQualifiedName(leaf);
+    						System.out.println("leafFqn : " + leafFqn);
+        					var referencedByLeaf = ((Referencing) leaf).getRef();
+        					System.out.println("referencedByLeaf : " + referencedByLeaf);
+        					if (LinkingAndScopingUtils.isFunctionDeclaration(referencedByLeaf)) {
+        						// TODO: refactor all of this
+
+        							final var candidateFuncBody = LinkingAndScopingUtils.getFuncBodyFromFuncObject(referencedByLeaf);
+            						System.out.println("ressss " + getFeaturePathCandidatesFromFuncBody(candidateFuncBody));
+            						result.addAll(getFeaturePathCandidatesFromFuncBody(candidateFuncBody));
+        						
+        						
+        					}
+        					continue;
+    					}
+    					
+    					/*
+    					// TODO: should be feature
+    					System.out.println("bar : " + assignedReferencing);
+    					if (assignedReferencing instanceof Feature feature) {
+    						System.out.println("barxxx : " + assignedReferencing);
+    						var leaf = LinkingAndScopingUtils.getFeaturePathNamedLeaf(feature);
+        					var leafFqn = qualifiedNameProvider.getFullyQualifiedName(leaf);
+        					var referencedByLeaf = ((Referencing) leaf).getRef();
+        					var referenceables =  getReferenceables(referencedByLeaf, EcoreUtil2.getContainerOfType(referencedByLeaf, Block.class));
+        					System.out.println("referencedByLeaf : " + referencedByLeaf);
+        					System.out.println("referenceables : " + referenceables);
+        					var newCandidates = getPossibliesForFeature((Feature) referencedByLeaf, referenceables);
+        					newCandidates.forEach(c-> System.out.println("foo " + c.getReferenceable()));
+        					result.addAll(newCandidates);
+    					}
+    					*/
+    					
+    					// TODO: only getting referenceables in referencedByLeaf's block is probably not correct, would technically also
+    					// need to find referenceables in parent blocks maybe baby. 
+    					
+    					// Idea: try to get the Referenceables using this function but without calling it with current == null at the end
+    					//    that should yield all candidates that match the path until the refeerencedByLeaf, including candaditas with longer paths
+    					//var newCandidates = getReferenceables(referencedByLeaf); // get referenceables in referencedByLeaf's block
+    					// TODO: filter candidates like below
+    					// TODO: also get referenceables like this for functionCalls above, then probably do not need allReferenceables anymore
     					if (assignedReferencing != null) {
+    						// TODO: use leaf of assigned
     						// add all candidates that start with the assigned's name (since the assigned exp is referencing, i.e. some variable/featurePath)
     						var assignedsFqn = qualifiedNameProvider.getFullyQualifiedName(assignedReferencing);
     						var referenceablesFromCandidate = allReferenceables.stream()
@@ -518,8 +654,13 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     													.startsWith(assignedsFqn)
     									)
     									.toList();
-        					result.addAll(buildFeaturePathCandidates(referenceablesFromCandidate, assignedsFqn.getSegmentCount()));
+    						// use the assignedFqn.segmentCount to set the indexToCheck in the FeaturePathCandidate
+    						var indexToCheckForCandidate = assignedsFqn.getSegmentCount();
+        					result.addAll(buildFeaturePathCandidates(referenceablesFromCandidate, indexToCheckForCandidate));
     					}
+    					
+    					
+    					
     				}
     			}
 	
@@ -531,6 +672,59 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     	return result;
     }
     
+    private List<FeaturePathCandidate> getFeaturePathCandidatesFromFuncBody(FuncBody funcBody) {
+    	if (funcBody == null) {
+    		return Collections.emptyList();
+    	}
+    
+		final var containingBlock = funcBody.getFuncBlock();
+		List<FeaturePathCandidate> result = new ArrayList<>();
+		
+		final var returnStatOpt = LinkingAndScopingUtils.findReturnStatInBlock(containingBlock);
+		if (returnStatOpt.isPresent()) {
+			var returnStat = returnStatOpt.get();
+		
+			final var exps = LinkingAndScopingUtils.getExpsFromReturnStat(returnStat);
+			if (!exps.isEmpty()) {
+				final var exp = exps.get(0);
+				if (exp instanceof Feature feature) {
+					final var leaf = LinkingAndScopingUtils.getFeaturePathNamedLeaf(feature);
+					final var expFqn = qualifiedNameProvider.getFullyQualifiedName(leaf);
+					final var indexToMatch = expFqn.getSegmentCount();
+					LinkingAndScopingUtils.getReferenceablesForContextFromBlock(returnStat, containingBlock, null)
+						.stream()
+						.filter(referenceable -> qualifiedNameProvider.getFullyQualifiedName(referenceable).startsWith(expFqn))
+						.map(ref -> buildFeaturePathCandidate(ref, indexToMatch))
+						.forEach(result::add);
+				}
+			}
+		}
+
+		return result;
+    }
+    
+    /**
+     * Returns the FeaturePathCandidates found in the given features scope. The FeaturePathCandidate.indexToMatch
+     * is set to the features qualifiedName segmentCount.
+     * @param feature
+     * @return
+     */
+    /*
+    private List<FeaturePathCandidate> getFeaturePathCandidatesFromScopeForFeature(Feature feature) {
+		final IScope leafScope = getScope(feature, null);
+		if (leafScope != null) {
+			final var indexToCheckForCandidate = qualifiedNameProvider.getFullyQualifiedName(feature).getSegmentCount();
+			final var newCandidates = StreamSupport.stream(leafScope.getAllElements().spliterator(), false)
+					.map(description -> description.getEObjectOrProxy())
+					.filter(obj -> obj instanceof Referenceable)
+					.map(obj -> (Referenceable) obj)
+					.toList();
+			System.out.println("new candidates: " + newCandidates);
+			return buildFeaturePathCandidates(newCandidates, indexToCheckForCandidate);
+		}
+		return Collections.emptyList();
+    }
+    */
     private List<FeaturePathCandidate> buildFeaturePathCandidates(final Collection<? extends Referenceable> referenceables) {
     	return buildFeaturePathCandidates(referenceables, 0);
     }
@@ -572,7 +766,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     	return length;
     }
     
-    private List<? extends Referenceable> findReferenceablesForFunctionReference (Referenceable functionReference) {
+    private List<? extends Referenceable> findReferenceablesForFunctionReference(Referenceable functionReference) {
     	var result = new ArrayList<Referenceable>();
     	if (functionReference instanceof Referencing referencing) {
     		// TODO: might need to get referenced function if the given functionReference is a Referencing object (e.g. func = func1, b = func())

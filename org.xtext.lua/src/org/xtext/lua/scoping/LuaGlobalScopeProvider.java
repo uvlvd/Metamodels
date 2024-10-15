@@ -45,10 +45,10 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 		//System.out.println("resource: " + resource);
 		//System.out.println("type: " + type);
 		//System.out.println("filter: " + filter);
-		System.out.println("uniqueImportURIs" + uniqueImportURIs);
+		//System.out.println("uniqueImportURIs" + uniqueImportURIs);
 		//System.out.println("descriptions" + descriptions);
 		//System.out.println("urisAsList" + urisAsList);
-		System.out.println("scope " + scope);
+		//System.out.println("scope " + scope);
 		return scope;
 
 	}

@@ -546,9 +546,13 @@ class LuaLocalScopingTest {
 		 	local _M = {}
 		 	_M.first = "first"
 		 	_M.second = "second"
+		 	_M.table = {}
+		 	_M.table.member = "member"
 		 	return _M
 		 end
 		 test = m().first
+		 test2 = m().table
+		 test3 = test2.member
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

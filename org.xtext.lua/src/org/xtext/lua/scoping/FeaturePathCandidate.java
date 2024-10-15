@@ -64,6 +64,8 @@ public class FeaturePathCandidate {
 	public boolean referencesReferencing() {
 		//return !hasNextUncheckedIndex()  // can only have a value assigned if current index is last
 		return isCompletelyMatched() 	
+				&& context instanceof Referencing referencing
+				&& referencing.getRef() instanceof Referencing
 				&& LinkingAndScopingUtils.isAssignable(context);
 	}
 	
@@ -77,12 +79,13 @@ public class FeaturePathCandidate {
 			if (assigned instanceof Referencing referencedReferencing) {
 				return referencedReferencing;
 			}
-			return null;
-		} else {
-			throw new RuntimeException("Cannot get Reference from non-referencing FeaturePathCandidate with context " + context + " and fqn " + qualifiedName);
-		}		
+		} 
+		throw new RuntimeException("Cannot get Reference from non-referencing FeaturePathCandidate with context " + context + " and fqn " + qualifiedName);	
 	}
 	
+	/**
+	 * Returns true if all segments of this candidate were matched.
+	 */
 	public boolean isCompletelyMatched() {
 		return fqnSegments.size() == indexToCheck;
 	}

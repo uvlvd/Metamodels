@@ -759,7 +759,9 @@ public final class LinkingAndScopingUtils {
 	}
 	
 
-	// TODO: is this unused? -> remove
+	/**
+	 * Returns true if the given feature is a FunctionCall or MethodCall-
+	 */
 	public static boolean isFunctionCallFeature(Feature feature) {
 		return feature instanceof FunctionCall || feature instanceof MethodCall;
 

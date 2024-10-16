@@ -355,6 +355,19 @@ public final class LinkingAndScopingUtils {
 		return getFeaturePathNamedLeaf(featureChild, lastMatch);
 	}
 	
+	public static Feature getFeaturePathLeaf(Feature feature) {
+		Optional<Feature> featureChildOpt = feature.eContents().stream()
+				.filter(child -> child instanceof Feature)
+				.map(f -> (Feature) f) // cast to Feature type
+				.findFirst();
+		
+		if (!featureChildOpt.isPresent()) {
+			return getFeaturePathLeaf(featureChildOpt.get());
+		}
+		
+		return feature;
+	}
+	
 	public static Var getFeaturePathParentForFilter(Feature feature) {	
 		if (feature instanceof Var var) { // found root
 			return var;

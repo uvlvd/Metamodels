@@ -89,10 +89,5 @@ public class FeaturePathCandidate {
 	public boolean isCompletelyMatched() {
 		return fqnSegments.size() == indexToCheck;
 	}
-	
-	public boolean hasNextUncheckedIndex() {
-		return indexToCheck < fqnSegments.size();
-	}
-	
-	
+		
 }

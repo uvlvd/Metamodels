@@ -17,7 +17,6 @@ import org.eclipse.emf.ecore.EReference;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
-import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.scoping.IScope;
@@ -25,6 +24,7 @@ import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.eclipse.xtext.scoping.impl.SimpleLocalScopeProvider;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.lua.linking.SyntheticExpNil;
+import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.ExpField;
@@ -36,13 +36,10 @@ import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.Goto;
 import org.xtext.lua.lua.IndexExpField;
 import org.xtext.lua.lua.Label;
-import org.xtext.lua.lua.MemberAccess;
+import org.xtext.lua.lua.LocalVar;
 import org.xtext.lua.lua.NameField;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
-import org.xtext.lua.lua.Return;
-import org.xtext.lua.lua.TableAccess;
-import org.xtext.lua.lua.TableConstructor;
 import org.xtext.lua.lua.Var;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
 
@@ -78,181 +75,55 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
             return IScope.NULLSCOPE;
         }
         
-      
+        // try to get scope for features of require function calls
+        var scope = getScopeForFeatureOfRequireFuncCallFeaturePath(context, reference);
         
-        // TODO: this kinda works, but needs further improvement:
-        //    1. need to improve getReferenceablesFromRequireCall() or smth. 
-        // 			-> need to consider that fields might be called directly, which changes where the indexToCheck starts
-        //    2. need to extract common functionality between this part and the getCandidatesForFeature-part
-        if (context instanceof Feature feature) {
-        	var featurePathRoot = LinkingAndScopingUtils.getFeaturePathRoot(feature);
-        	if (featurePathRoot != feature && featurePathRoot.getName().equals("require")) {
-        		if (LinkingAndScopingUtils.hasNextFeature(featurePathRoot)) {
-        			var next = LinkingAndScopingUtils.getNextFeature(featurePathRoot);
-    				if (next instanceof FunctionCall funcCall) {
-    					/*
-    					var temp = getReferenceablesFromRequireCall(context, reference, 0, (Var) featurePathRoot);
-    					System.out.println("temp: " + temp.stream().map(t->qualifiedNameProvider.getFullyQualifiedName(t)).toList());
-    					
-    					var indexToCheck = qualifiedNameProvider.getFullyQualifiedName(feature).getSegmentCount() - 1;
-    					// TODO: need to filter the candidates from the getReferenceablesFromRequireCall by the rest of the
-    					// FeaturPath until leaf? Test first what happens when require is resolved for assignment,
-    					var referenceables = temp;
-    			    	//final var featurePathRoot = LinkingAndScopingUtils.getFeaturePathRoot(feature);
-    			    	final var featurePathCandidates = buildFeaturePathCandidates(referenceables, indexToCheck);
-    			   
-    			    	// get initial candidates for path root
-    			    	var candidates = findCandidatesForFeature(feature, reference, feature, featurePathCandidates);
-    			    	// iterate over all path elements until the feature we started from
-    			    	Feature previousFeature = feature;
-    			    	while (previousFeature != feature) {
-    			    		var currentFeature = LinkingAndScopingUtils.getNextFeature(previousFeature);
-    			    		candidates = findCandidatesForFeature(feature, reference, currentFeature, candidates);
-    			    		previousFeature = currentFeature;
-
-    			    	}*/
-    			    	
-    			    	var candidates = getFeaturePathCandidatesFromRequireCallFeaturePathUntil(context, reference, 0, featurePathRoot, feature);
-    			    	var test = candidates.stream()
-    					 	.filter(FeaturePathCandidate::isCompletelyMatched)
-    					 	.map(FeaturePathCandidate::getReferenceable)
-    					 	.toList();
-    			    	
-    					
-    			    	//final var featurePathRoot = LinkingAndScopingUtils.getFeaturePathRoot(feature);
-    			    	//final var featurePathCandidates = buildFeaturePathCandidates(referenceables);
-    			    	
-    					//var candidates = getCandidatesForFeature(feature, reference, referenceables);
-    					return new SimpleScope(createDescriptionsForCandidates(test, context));
-    				}
-        		}
-        	}
+        // try to get scope for assignables (i.e. end of feature path on rhs of assignment)
+        if (scope == null) {
+        	scope = getScopeForAssignableToValue(context);
         }
         
-        var scope = getScopeForAssignableToValue(context);
+        // try to get scope for other references
+        if (scope == null) {
+        	// we pass context and reference for calls to "require" (need to call the global scope, see getReferenceablesFromRequireCall)
+        	scope = getScopeByTraversingBlocks(context, reference);
+        }
         
+        // return scope if any was found
         if (scope != null) {
         	return scope;
         }
-
-        //TODO: 
-        // when an assignemnt like test = require("core.lua").member is at the top of a file,
-        // the "member" cannot be resolved because the Statement is ignored when building candidates for traversing blocks
-        // or something... need to get candidates from the require call and search for member in them (maybe using
-        // getCandidatesForFeature)???
         
-        // we pass context and reference for calls to "require" (need to call the global scope, see getReferenceablesFromRequireCall)
-        scope = getScopeByTraversingBlocks(context, reference);
-        
-        if (scope != null) {
-        	return scope;
-        }
-      
-
-        
-		// search global scope if no candidates were found in local scope
-        // For assignments where an assignable is assigned to a require-call, the global scope is resolved when searching referenceable candidates for features
-        System.out.println("Searchign global scope for " + context);
+		// else search global scope
+        // For assignments where an assignable is assigned to a require-call, 
+        // the global scope is resolved when searching referenceable candidates for features
+        // (i.e. by getScopeForFeatureOfRequireFuncCallFeaturePath or in getScopeByTraversingBlocks)
 		return super.getGlobalScope(context.eResource(), reference);
     }
-    //TODO: this is copied from findCandidatesThatMatchUntil
     
+    /**
+     * Only call this for features of a require func call feature path, e.g. "member" in require(...).member.
+     */
+    private IScope getScopeForFeatureOfRequireFuncCallFeaturePath(EObject context, EReference reference) {
+    	if (LinkingAndScopingUtils.isPartOfRequireFunctionCallFeaturePath(context)) {
+        	final var featureOfRequireFuncCallFeaturePath = (Feature) context;
+        	final var featurePathRootOpt = LinkingAndScopingUtils.getFeaturePathRoot(featureOfRequireFuncCallFeaturePath);
+        	if (featurePathRootOpt.isPresent()) {
+        		final var featurePathRoot = featurePathRootOpt.get();
+            	if (featurePathRoot != context) { // the "require" Var itself is resolved using the global scope (standard library)
+            		final var featurePathCandidates = getFeaturePathCandidatesFromRequireCallFeaturePathUntil(context, reference, 0, featurePathRoot, featureOfRequireFuncCallFeaturePath);
+    		    	final var candidates = featurePathCandidates.stream()
+    				 	.filter(FeaturePathCandidate::isCompletelyMatched)
+    				 	.map(FeaturePathCandidate::getReferenceable)
+    				 	.toList();
 
-    
-    /**
-     * Returns the referenceable objects from the return expression at the given index of a call to the "require" function.
-     * @param context
-     * @param reference
-     * @param returnExpIndex
-     * @param requireFuncCall
-     * @return
-     */
-    private List<Referenceable> getReferenceablesFromRequireCall(
-    		final EObject context, 
-    		final EReference reference, 
-    		final int returnExpIndex, 
-    		final Var requireFuncCall) {
-    	final var uri = URI.createURI(uriResolver.apply(requireFuncCall));
-    	var globalScope2 = super.getGlobalScope(context.eResource(), 
-    											reference, 
-    											LuaGlobalScopeProvider.returnedExpAtIndexFilter(returnExpIndex, uri.toString())
-    											);
-    	
-    	return StreamSupport.stream(globalScope2.getAllElements().spliterator(), false)
-    				.map(obj -> obj.getEObjectOrProxy())
-    				.filter(obj -> obj instanceof Referenceable)
-    				.map(obj -> (Referenceable) obj)
-    				.toList();
-    }
-    
-    /**
-     * Returns the FeaturePathCandidates for a require call feature path, that is returns all candidates from the returned expression
-     * at index {@code returnExpIndex} for the given require call, with their {@link FeaturePathCandidate#indexToCheck} set to the index after
-     * the last segment of the require call feature feature path.</br>
-     * E.g.: a requireFuncCall in require(...).member returns FeaturePathCandidates from the file ... with the indexToCheck 
-     * set to the segment after "member".</br>
-     * The indexToCheck is always at least 1, since the name of the returned expression itself is always matched by the "require".
-     * 
-     * @param context the current context object.
-     * @param reference the current reference object.
-     * @param returnExpIndex the index for which the require return expression referenceables should be returned (e.g. a, b = require(...) for b -> returnExpIndex = 1)
-     * @param requireFuncCall the require Var (start of the require call feature path).
-     * @return the candidates with the indexToCheck set according to the require call feature path.
-     */
-    private List<FeaturePathCandidate> getFeaturePathCandidatesFromRequireCallFeaturePath(
-    		final EObject context, 
-    		final EReference reference, 
-    		final int returnExpIndex, 
-    		final Var requireFuncCall) {
-    	var requireCallReferenceables = getReferenceablesFromRequireCall(context, reference, returnExpIndex, requireFuncCall);
-    	if (LinkingAndScopingUtils.hasNextFeature(requireFuncCall)) {
-    		var funcCallFeature = LinkingAndScopingUtils.getNextFeature(requireFuncCall);
-    		var featurePathCandidates = buildFeaturePathCandidates(requireCallReferenceables, 1);
-    		if (LinkingAndScopingUtils.hasNextFeature(funcCallFeature)) { // filter and extend candidates if require() is followed by other features
-    			var nextFeature = LinkingAndScopingUtils.getNextFeature(funcCallFeature);
-    			var lastFeature = LinkingAndScopingUtils.getFeaturePathLeaf(requireFuncCall);
-    			return getFeaturePathCandidatesFromRequireCallFeaturePathUntil(context, reference, returnExpIndex, requireFuncCall, lastFeature);
-    		}
-    		return featurePathCandidates;
-    	}
-    	return Collections.emptyList();
-    }
-    
-    /**
-     * Returns the FeaturePathCandidates for a require call feature path, that is returns all candidates from the returned expression
-     * at index {@code returnExpIndex} for the given require call, with their {@link FeaturePathCandidate#indexToCheck} set to the index after
-     * the last segment of the require call feature feature path that matches the given lastSegment.</br>
-     * E.g.: a requireFuncCall in require(...).member returns FeaturePathCandidates from the file ... with the indexToCheck 
-     * set to the segment after "member".</br>
-     * The indexToCheck is always at least 1, since the name of the returned expression itself is always matched by the "require".
-     * 
-     * 
-     * @param context the current context object.
-     * @param reference the current reference object.
-     * @param returnExpIndex the index for which the require return expression referenceables should be returned (e.g. a, b = require(...) for b -> returnExpIndex = 1)
-     * @param requireFuncCall the require Var (start of the require call feature path).
-     * @param lastFeature the last feature of the require func call feature path that should be included for candidate matching.
-     * @return the candidates with the indexToCheck set according to the require call feature path.
-     */
-    private List<FeaturePathCandidate> getFeaturePathCandidatesFromRequireCallFeaturePathUntil(
-    		final EObject context, 
-    		final EReference reference, 
-    		final int returnExpIndex, 
-    		final Var requireFuncCall,
-    		final Feature lastFeature) {
-    	var requireCallReferenceables = getReferenceablesFromRequireCall(context, reference, returnExpIndex, requireFuncCall);
-    	if (LinkingAndScopingUtils.hasNextFeature(requireFuncCall)) {
-    		var funcCallFeature = LinkingAndScopingUtils.getNextFeature(requireFuncCall);
-    		var featurePathCandidates = buildFeaturePathCandidates(requireCallReferenceables, 1);
-    		if (LinkingAndScopingUtils.hasNextFeature(funcCallFeature)) { // filter and extend candidates if require() is followed by other features
-    			var nextFeature = LinkingAndScopingUtils.getNextFeature(funcCallFeature);
-        		// we start at indexToStart = 1 with the nextFeature since "require" would not match whatever the return value of the require function is called
-        		var filteredCandidates = filterAndExtendFeaturePathCandidatesForFeature(context, reference, nextFeature, lastFeature, featurePathCandidates);
-        		return filteredCandidates;
-    		}
-    		return featurePathCandidates;
-    	}
-    	return Collections.emptyList();
+    				return new SimpleScope(createDescriptionsForCandidates(candidates, featureOfRequireFuncCallFeaturePath));
+            	}
+        	} else {
+        		LOGGER.warn("Cannot get Scope for feature of require function call feature path because feature path does not start with a Var.");
+        	}
+        }
+    	return null;
     }
     
     
@@ -375,38 +246,6 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     	}
     	
     	throw new RuntimeException("Expected to be able to compute candidates from context object " + context + ", but its type " + context.getClass() + " is not supported.");
-    	
-    	/*
-    	// handle other Referencing objects
-        if (context instanceof Referencing referencing) {
-        	final var contextFqn = qualifiedNameProvider.getFullyQualifiedName(context);
-
-        	
-        	//TODO: it seems that the lazy linking happens before the DerivedStateComputer
-        	// 	installs the derived state, thus the name is null.
-        	//  need to change that somewhere...?
-        	if (contextFqn != null) {
-        		// TODO: getReferenceables should be renamed
-	        	var referenceables = getReferenceables(context, currentBlock);
-	        	
-	        	if (context instanceof Feature feature) {
-	        		temp = getCandidatesForFeature(feature, referenceables);
-	        	} else {
-	        		System.out.println("!!! Not searching candidates with new function for " + context);
-	        	}
-	        	
-	        	candidates = findCandidatesInReferenceablesforFqn(contextFqn, referenceables);
-	        	
-	        	if (!candidates.equals(temp)) {
-		            System.out.println("Candidates for context " + context + " with fqn " + contextFqn);
-		            System.out.println("	previous candidates: " + candidates);
-		            System.out.println("	temp candidates    : " + temp);
-	        	}
-        	}
-        }
-
-        return temp;
-        */
     }
     
     // For functions, this could be a problem here: https://stackoverflow.com/questions/12291203/lua-how-to-call-a-function-prior-to-it-being-defined
@@ -436,16 +275,19 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     }
     
     /**
-     * Searches for candidates for the given Feature by traversing its feature path, starting from the root featur and matching
-     * each feature path segment to the respective segment of the fully qualified name of the candidate. 
-     * @param feature the feature.
+     * Searches for candidates for the given Feature by traversing its feature path, starting from the root Feature and matching
+     * each feature path segment to the respective segment of the fully qualified name of the candidate. Builds new candidates from 
+     * candidates that themselves contain references as needed.
+     * @param context the feature.
      * @param referenceables the referenceables to be searched.
-     * @return
+     * @return the candidates.
      */
-    // TODO: rename getCandidatesForFeature and/or findCandidatesForFeature
-    private List<? extends Referenceable> getCandidatesForFeature(Feature feature, final EReference reference, final Collection<? extends Referenceable> referenceables) {
+    private List<? extends Referenceable> getCandidatesForFeature(
+    		final Feature context, 
+    		final EReference reference, 
+    		final Collection<? extends Referenceable> referenceables) {
     	
-    	final var featurePathCandidates = findCandidatesThatMatchUntil(feature, reference, referenceables);
+    	final var featurePathCandidates = findFeaturePathCandidatesThatMatchUntil(context, reference, referenceables);
     	return featurePathCandidates.stream()
 				 .filter(FeaturePathCandidate::isCompletelyMatched)
 				 .map(FeaturePathCandidate::getReferenceable)
@@ -457,61 +299,51 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
      * the returned candidates contain candidates with a path that continues after the match of the given feature.</br>
      * The returned candidates can be filtered via {@link FeaturePathCandidate#isCompletelyMatched} to get the matching candidates for the given feature
      * (see {@link #getCandidatesForFeature}).
-     * @param feature
-     * @param referenceables
-     * @return
+     * @param feature.
+     * @param referenceables.
+     * @return the FeaturePathCandidates.
      */
-    private List<FeaturePathCandidate> findCandidatesThatMatchUntil(final Feature feature, final EReference reference, final Collection<? extends Referenceable> referenceables) {
-    	//TODO: checkout LinkingAndScopingUtils.findFeaturePathRoot, which only returns roots for Referenceables
-    	//    -> should probably be renamed
-
-    	// we use features here to be able to distinguish between function/methodCalls and other feature types
-    	final var featurePathRoot = LinkingAndScopingUtils.getFeaturePathRoot(feature);
-    	final var featurePathCandidates = buildFeaturePathCandidates(referenceables);
-   
-    	// get initial candidates for path root
-    	var candidates = findCandidatesForFeature(feature, reference, featurePathRoot, featurePathCandidates);
-    	// iterate over all path elements until the feature we started from
-    	Feature previousFeature = featurePathRoot;
-    	while (previousFeature != feature) {
-    		var currentFeature = LinkingAndScopingUtils.getNextFeature(previousFeature);
-    		candidates = findCandidatesForFeature(feature, reference, currentFeature, candidates);
-    		previousFeature = currentFeature;
-
+    private List<FeaturePathCandidate> findFeaturePathCandidatesThatMatchUntil(
+    		final Feature context, 
+    		final EReference reference, 
+    		final Collection<? extends Referenceable> referenceables) {
+    	// TODO: we use features here to be able to distinguish between function/methodCalls and other feature types
+    	// i.e. can't use a FeaturePathCandidate for the current feature, but might want to implement a FeaturePath class.
+    	final var featurePathRootOpt = LinkingAndScopingUtils.getFeaturePathRoot(context);
+    	if (featurePathRootOpt.isPresent()) {
+    		final var featurePathRoot = featurePathRootOpt.get();
+        	final var featurePathCandidates = buildFeaturePathCandidates(referenceables);
+        	return filterAndExtendFeaturePathCandidatesFromFeatureToFeature(context, reference, featurePathRoot, context, featurePathCandidates);
+    	} else {
+    		LOGGER.warn("Cannot find feature path candidates for " + context + " because feature path does not start with a Var.");
+    		return Collections.emptyList();
     	}
-    	return candidates;
     }
     
-    private List<FeaturePathCandidate> filterAndExtendFeaturePathCandidatesForFeature(
+    private List<FeaturePathCandidate> filterAndExtendFeaturePathCandidatesFromFeatureToFeature(
     			final EObject context, 
     			final EReference reference, 
     			final Feature startFeature, 
     			final Feature endFeature, 
     			final Collection<FeaturePathCandidate> initialFeaturePathCandidates) {
-    	var candidates = findCandidatesForFeature(context, reference, startFeature, initialFeaturePathCandidates);
+    	var candidates = filterAndExtendFeaturePathCandidatesByFeature(context, reference, startFeature, initialFeaturePathCandidates);
     	// iterate over all path elements until the feature we started from
-    	Feature previousFeature = startFeature;
+    	var previousFeature = startFeature;
     	while (previousFeature != endFeature && LinkingAndScopingUtils.hasNextFeature(previousFeature)) {
-    		var currentFeature = LinkingAndScopingUtils.getNextFeature(previousFeature);
-    		candidates = findCandidatesForFeature(context, reference, currentFeature, candidates);
+    		final var currentFeature = LinkingAndScopingUtils.getNextFeature(previousFeature);
+    		candidates = filterAndExtendFeaturePathCandidatesByFeature(context, reference, currentFeature, candidates);
     		previousFeature = currentFeature;
 
     	}
     	return candidates;
     }
-    
 
-    // this returns all candidates that can be reached by traversing a feature path, using the current and previous features
-    // it is important to note, that this will return all candidates based on if the feature path matches UNTIL the current location
-    // in the feature paths. That is, candidates that match and have a next feature component will be returned regardless of if a next feature exitst for the context feature
-    // TODO: update doc
+    
     /**
-     * Searches for candidates inside the given candidates and referenceables based on the current and previous elements of a feature path.</br>
-     * The intended use is to find scoping candidates for a (start of a) feature path. For this, call this function first with current = featurePathRoot and previous = null,
-     * then subsequently call it with the corresponding next current and previous features of the feature path, and finally with the last previous element and current = null. </br>
-     * To get initial candidates, call with previous = null. Call with current = null when reaching the end of the considered feature path.</br>
-     * If used to get candidates from a feature path without a subsequent call with current = null, the returned candidates may contain
-     * candidates that match until the last current, but have further elements. 
+     * Filters and extends the given FeaturePathCandidates by the given Feature ({@code current}). The given FeaturePathCandidates
+     * are filtered according to {@link FeaturePathCandidate#checkAndIncrementIndex} applied to the current Feature's name and extended
+     * if a candidate references a Referencing object. Used by {@link filterAndExtendFeaturePathCandidatesFromFeatureToFeature} to
+     * find candidates from feature paths that match another feature path.
      * 
      * @param current the current feature in the path.
      * @param previous the next feature in the path.
@@ -519,7 +351,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
      * @param allReferenceables all referenceables that should be considered for the search.
      * @return
      */
-    private List<FeaturePathCandidate> findCandidatesForFeature(
+    private List<FeaturePathCandidate> filterAndExtendFeaturePathCandidatesByFeature(
     		final EObject context,
     		final EReference reference,
     		final Feature current, 
@@ -543,7 +375,6 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     	
     	// handle current is named feature (i.e. Var, MemberAccess or TableAccess)
     	// => from here, we assume that current is a Referenceable (since named features are referenceables)
-    	System.out.println("current: " + current);
     	assert(current instanceof Referenceable); // TODO: throw exception instead
     	final var currentFqn = qualifiedNameProvider.getFullyQualifiedName(current);
     	final var currentName = currentFqn.getLastSegment();
@@ -557,7 +388,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     				// this is the rhs expression the candidate points at if it is an assignable:
     				// -> points at the start of a featurePath if it is a feature
     				var assignedReferencing = candidate.getReferencedReferencing(); // TODO: is this always a feature if this is referencing?
-    				result.addAll(buildCandidatesFromAssignedReferencing(context, reference, assignedReferencing));		
+    				result.addAll(buildFeaturePathCandidatesFromAssignedReferencing(context, reference, assignedReferencing));		
     			}
     		}
     	}
@@ -565,43 +396,27 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     	return result;
     }
     
+    // TODO: this method is too complex, should be split into multiple methods for each case.
     // assignedReferencing is a Referencing Feature on the rhs (first element of a feature path) that was assigned to an assignable
-    private List<FeaturePathCandidate> buildCandidatesFromAssignedReferencing(final EObject context, final EReference reference, final Referencing assignedReferencing) {
+    /**
+     * Called by {@link #findCandidatesForFeature} when a Referencing object (the {@code assignedReferencing}) is assigned to a candidate
+     * to build and return the FeaturePathCandidates resulting from the reference of the assigned object.
+     * @param context the current context object.
+     * @param reference the current reference.
+     * @param assignedReferencing the object that is assigned to the candidate (i.e. on rhs of Assignment of candidate).
+     * @return the FeaturePathCandidates reachable from the assignedReferencing.
+     */
+    private List<FeaturePathCandidate> buildFeaturePathCandidatesFromAssignedReferencing(final EObject context, final EReference reference, final Referencing assignedReferencing) {
     	if (assignedReferencing instanceof Feature feature) {
     		var leaf = LinkingAndScopingUtils.getFeaturePathNamedLeaf(feature);
 			var referencedByLeaf = ((Referencing) leaf).getRef();
     		
     		// handle require calls here, since they/what they reference are/is defined by the first part of the featurePath
-			// TODO: use external function to check if something is a require func call, i.e. is a var (needs to be first part of feature path) with name "require" and followed by a FuncCall Feature
-			if (assignedReferencing instanceof Referenceable ref && ref.getName().equals("require")) {// TODO: use static string for "require", already used in LuaImportUriResolver
-				if (LinkingAndScopingUtils.hasNextFeature(feature)) {
-					var next = LinkingAndScopingUtils.getNextFeature(feature);
-					if (next instanceof FunctionCall funcCall) {
-						var requireFuncCall = feature;
-						//var temp = getReferenceablesFromRequireCall(context, reference, 0, (Var) feature);
-						//System.out.println("temp: " + temp);
-						//var indexToCheck = qualifiedNameProvider.getFullyQualifiedName(feature).getSegmentCount();
-						// TODO: need to filter the candidates from the getReferenceablesFromRequireCall by the rest of the
-						// FeaturPath until leaf? Test first what happens when require is resolved for assignment,
-						
-						// assumption: the indexToCheck starts at 1 since the require return value itself is not matched
-						// (i.e. when require returns a table _M only its fields need to be matched, since var = require(...) would set var to _M)
-						// and includes all named segments of the feature path
-						var temp = getFeaturePathCandidatesFromRequireCallFeaturePath(context, reference, 0, (Var) requireFuncCall);
-						System.out.println("candidates from require call: " + temp);
-						return temp;
-						//var indexToCheck = qualifiedNameProvider.getFullyQualifiedName(LinkingAndScopingUtils.getFeaturePathNamedLeaf(feature)).getSegmentCount();
-						//return buildFeaturePathCandidates(getReferenceablesFromRequireCall(context, reference, 0, (Var) feature), indexToCheck); 
-					}
-				}
+			if (assignedReferencing instanceof Var var && LinkingAndScopingUtils.isRequireFunctionCall(var)) {
+				var requireFuncCall = var;
+				return getAllFeaturePathCandidatesFromRequireCallFeaturePath(context, reference, 0, (Var) requireFuncCall);
 			}
 			
-			// handle other kinds of feature calls here: 
-			// 1. get named leaf, 
-			// 2. get referenced Referenceable, 
-			// 3. get possible Referenceables, 
-			// 4. get candidates by calling findCandidatesThatMatchUntil(Referenceable, Referenceables)
-
 			// get candidates from function calls
 			if (LinkingAndScopingUtils.isFunctionDeclaration(referencedByLeaf)) {
 				final var candidateFuncBody = LinkingAndScopingUtils.getFuncBodyFromFuncObject(referencedByLeaf);
@@ -609,13 +424,45 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
 			}
 			// get candidates from referenced feature paths
 			else if (referencedByLeaf instanceof Feature referencedFeature) {
+				// handle other references to other features here:
+				// 1. get Referenceables for the referenced feature from all Referenceables of its 
+				//    block until the statement containing the assigned feature
+				// 2. filter/extend candidates by calling findFeaturePathCandidatesThatMatchUntil with 
+				//    the referenced feature and the Referenceables from 1.
 				var referencedBlock = EcoreUtil2.getContainerOfType(referencedFeature, Block.class);
-				var referenceablesInReferencedBlock = LinkingAndScopingUtils.getReferenceablesForContextFromBlock(referencedFeature, referencedBlock, null);
-				return findCandidatesThatMatchUntil(referencedFeature, reference, referenceablesInReferencedBlock);
-			} 
+				// parenStatement should be present here, a feature is always part of a Stat
+				var parentStatement = LinkingAndScopingUtils.getParentStatement(assignedReferencing);
+				var referenceablesInReferencedBlock = LinkingAndScopingUtils.getReferenceablesForContextFromBlock(referencedFeature, referencedBlock, parentStatement.get());
+				var extendedFeaturePathCandidates = findFeaturePathCandidatesThatMatchUntil(referencedFeature, reference, referenceablesInReferencedBlock);
+				return extendedFeaturePathCandidates;
+			} else if (referencedByLeaf instanceof LocalVar localVar) {
+				var referencedBlock = EcoreUtil2.getContainerOfType(localVar, Block.class);
+				// parenStatement should be present here, a localVar is always part of a Stat
+				var parentStatement = LinkingAndScopingUtils.getParentStatement(assignedReferencing);
+				var referenceablesInReferencedBlock = LinkingAndScopingUtils.getReferenceablesForContextFromBlock(localVar, referencedBlock, parentStatement.get());
+				var localVarFqn = nameConverter.toQualifiedName(localVar.getName()); // localVars have a single-element name
+				var referenceableCandidatesForLocalVar = referenceablesInReferencedBlock.stream()
+											.filter(ref -> qualifiedNameProvider.getFullyQualifiedName(ref)
+																.startsWith(localVarFqn)
+											 ).toList();
+				// TODO: should maybe use something similar to the referencedByLeaf instanceof Feature-case here,
+				// i.e. some functionality analogous to findFeaturePathCandidatesThatMatchUntil?
+				var extendedFeaturePathCandidates = buildFeaturePathCandidates(referenceableCandidatesForLocalVar, localVarFqn.getSegmentCount());
+				return extendedFeaturePathCandidates;
+				
+			}	
+			else if (referencedByLeaf instanceof Arg) {
+				// Args should already be part of the Referenceables/featurePathCandidates
+				return Collections.emptyList();
+			}
+			// throw warning if the referenced leaf is a proxy object
+			else if (referencedByLeaf.eIsProxy()) {
+				LOGGER.warn("Found proxy object " + referencedByLeaf + " while attempting to resolve assigned referencing " + assignedReferencing);
+				return Collections.emptyList();
+			}
 			// there should be no other options then function calls and feature paths
 			else {
-				throw new RuntimeException("Unexpected type: " + referencedByLeaf + ", exprected function declaration or Feature.");
+				throw new RuntimeException("Unexpected type: " + referencedByLeaf + ", expected function declaration or Feature.");
 			}
 		} else {
 			throw new RuntimeException("Expected Feature type, but got " + assignedReferencing + ".");
@@ -655,27 +502,114 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     }
     
     /**
-     * Returns the FeaturePathCandidates found in the given features scope. The FeaturePathCandidate.indexToMatch
-     * is set to the features qualifiedName segmentCount.
-     * @param feature
+     * Returns the FeaturePathCandidates for a require call feature path, that is returns all candidates from the returned expression
+     * at index {@code returnExpIndex} for the given require call, with their {@link FeaturePathCandidate#indexToCheck} set to the index after
+     * the last segment of the require call feature feature path.</br>
+     * E.g.: a requireFuncCall in require(...).member returns FeaturePathCandidates from the file ... with the indexToCheck 
+     * set to the segment after "member".</br>
+     * The indexToCheck is always at least 1, since the name of the returned expression itself is always matched by the "require".
+     * 
+     * @param context the current context object.
+     * @param reference the current reference object.
+     * @param returnExpIndex the index for which the require return expression referenceables should be returned (e.g. a, b = require(...) for b -> returnExpIndex = 1)
+     * @param requireFuncCall the require Var (start of the require call feature path).
+     * @return the candidates with the indexToCheck set according to the require call feature path.
+     */
+    private List<FeaturePathCandidate> getAllFeaturePathCandidatesFromRequireCallFeaturePath(
+    		final EObject context, 
+    		final EReference reference, 
+    		final int returnExpIndex, 
+    		final Var requireFuncCall) {
+    	if (!LinkingAndScopingUtils.isRequireFunctionCall(requireFuncCall)) {
+    		throw new RuntimeException("requireFuncCall must be a require function call!");
+    	}
+    	
+    	final var lastFeature = LinkingAndScopingUtils.getFeaturePathLeaf(requireFuncCall);
+    	return getFeaturePathCandidatesFromRequireCallFeaturePathUntil(context, reference, returnExpIndex, requireFuncCall, lastFeature);
+    }
+    
+    /**
+     * Returns the FeaturePathCandidates for a require call feature path, that is returns all candidates from the returned expression
+     * at index {@code returnExpIndex} for the given require call, with their {@link FeaturePathCandidate#indexToCheck} set to the index after
+     * the last segment of the require call feature feature path that matches the given lastSegment.</br>
+     * E.g.: a requireFuncCall in require(...).member returns FeaturePathCandidates from the file ... with the indexToCheck 
+     * set to the segment after "member".</br>
+     * The indexToCheck is always at least 1, since the name of the returned expression itself is always matched by the "require".
+     * 
+     * 
+     * @param context the current context object.
+     * @param reference the current reference object.
+     * @param returnExpIndex the index for which the require return expression referenceables should be returned (e.g. a, b = require(...) for b -> returnExpIndex = 1)
+     * @param requireFuncCall the require Var (start of the require call feature path).
+     * @param lastFeature the last feature of the require func call feature path that should be included for candidate matching.
+     * @return the candidates with the indexToCheck set according to the require call feature path.
+     */
+    private List<FeaturePathCandidate> getFeaturePathCandidatesFromRequireCallFeaturePathUntil(
+    		final EObject context, 
+    		final EReference reference, 
+    		final int returnExpIndex, 
+    		final Var requireFuncCall,
+    		final Feature lastFeature) {
+    	
+    	if (!LinkingAndScopingUtils.isRequireFunctionCall(requireFuncCall)) {
+    		throw new RuntimeException("requireFuncCall must be a require function call!");
+    	}
+    	var requireCallReferenceables = getReferenceablesFromRequireCall(context, reference, returnExpIndex, requireFuncCall);
+    	if (LinkingAndScopingUtils.hasNextFeature(requireFuncCall)) {
+    		var funcCallFeature = LinkingAndScopingUtils.getNextFeature(requireFuncCall);
+    		var featurePathCandidates = buildFeaturePathCandidates(requireCallReferenceables, 1);
+    		// only filter and extend candidates if require() is followed by other features
+    		if (LinkingAndScopingUtils.hasNextFeature(funcCallFeature)) { 
+    			var nextFeature = LinkingAndScopingUtils.getNextFeature(funcCallFeature);
+        		// we start at indexToStart = 1 with the nextFeature since "require" would not match whatever the return value of the require function is called
+        		var filteredCandidates = filterAndExtendFeaturePathCandidatesFromFeatureToFeature(context, reference, nextFeature, lastFeature, featurePathCandidates);
+        		return filteredCandidates;
+    		}
+    		// else return all candidates of require function
+    		return featurePathCandidates;
+    	}
+    	return Collections.emptyList();
+    }
+    
+    
+    /**
+     * Returns the referenceable objects from the return expression at the given index of a call to the "require" function.
+     * @param context
+     * @param reference
+     * @param returnExpIndex
+     * @param requireFuncCall
      * @return
      */
-    /*
-    private List<FeaturePathCandidate> getFeaturePathCandidatesFromScopeForFeature(Feature feature) {
-		final IScope leafScope = getScope(feature, null);
-		if (leafScope != null) {
-			final var indexToCheckForCandidate = qualifiedNameProvider.getFullyQualifiedName(feature).getSegmentCount();
-			final var newCandidates = StreamSupport.stream(leafScope.getAllElements().spliterator(), false)
-					.map(description -> description.getEObjectOrProxy())
-					.filter(obj -> obj instanceof Referenceable)
-					.map(obj -> (Referenceable) obj)
-					.toList();
-			System.out.println("new candidates: " + newCandidates);
-			return buildFeaturePathCandidates(newCandidates, indexToCheckForCandidate);
-		}
-		return Collections.emptyList();
+    private List<Referenceable> getReferenceablesFromRequireCall(
+    		final EObject context, 
+    		final EReference reference, 
+    		final int returnExpIndex, 
+    		final Var requireFuncCall) {
+    	final var uriString = uriResolver.apply(requireFuncCall);
+    	if (uriString == null) {
+    		LOGGER.warn("Cannot get Referenceables from require func call " + requireFuncCall 
+    					+ " with suffix " + requireFuncCall.getSuffixExp() 
+    					+ " because the import uri String is null.");
+    		LOGGER.error("Implement some workaround or solution for local require = require (see apisix/balancer.lua).");
+    		
+    		return Collections.emptyList();
+    	}
+    	final var uri = URI.createURI(uriString);
+    	var requireCallReturnedScope = super.getGlobalScope(context.eResource(), 
+    											reference, 
+    											LuaGlobalScopeProvider.returnedExpAtIndexFilter(returnExpIndex, uri.toString())
+    											); 	
+    	
+    	// TODO: the "getAllElements" call here outputs the info:
+    	// "ImportedNamesAdapter  - getElements should be called with a QualifiedName during linking."
+    	// But we need all elements of the scope here, i.e. cannot filter by any qualified name
+    	return StreamSupport.stream(requireCallReturnedScope.getAllElements().spliterator(), false)
+    				.map(obj -> obj.getEObjectOrProxy())
+    				.filter(obj -> obj instanceof Referenceable)
+    				.map(obj -> (Referenceable) obj)
+    				.toList();
     }
-    */
+    
     private List<FeaturePathCandidate> buildFeaturePathCandidates(final Collection<? extends Referenceable> referenceables) {
     	return buildFeaturePathCandidates(referenceables, 0);
     }
@@ -685,137 +619,12 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     						 .map(referenceable -> buildFeaturePathCandidate(referenceable, startIndex))
     						 .toList();
     }
-    
-    private FeaturePathCandidate buildFeaturePathCandidate(final Referenceable referenceable) {
-    	return buildFeaturePathCandidate(referenceable, 0);
-    }
+
     
     private FeaturePathCandidate buildFeaturePathCandidate(final Referenceable referenceable, final int startIndex) {
     	final var fqn = qualifiedNameProvider.getFullyQualifiedName(referenceable);
     	return new FeaturePathCandidate(referenceable, fqn, startIndex);
-    }
-    
-    
-    
-    private int getFeaturePathCountUntilLastFunctionCallFeature(Feature feature) {
-    	if (feature == null || LinkingAndScopingUtils.isFunctionCallFeature(feature)) {
-    		return 0;
-    	}
-
-    	int length = 1; // we start at the given feature, i.e. path has at least one element
-    	// we use the fqn to ensure that the length returned here does not exceed the feature's fqn, e.g. when it stops at TableAccesses
-    	var fqn = qualifiedNameProvider.getFullyQualifiedName((Referenceable) feature);
-    	var parent = feature.eContainer();
-    	while (parent instanceof Feature f && length < fqn.getSegmentCount()) {
-    		// only count features with a name (i.e. Var, MemberAcces, TableAccess)
-    		if (!LinkingAndScopingUtils.isFunctionCallFeature(f)) {
-    			length++;
-    		}
-    		parent = parent.eContainer();
-    	}
-    	
-    	return length;
-    }
-    
-    private List<? extends Referenceable> findReferenceablesForFunctionReference(Referenceable functionReference) {
-    	var result = new ArrayList<Referenceable>();
-    	if (functionReference instanceof Referencing referencing) {
-    		// TODO: might need to get referenced function if the given functionReference is a Referencing object (e.g. func = func1, b = func())
-    		//    could use LinkingAndScopingUtils.tryGetAssignedValueFrom(referencing) or smth similar
-    	}
-    	if (LinkingAndScopingUtils.isFunctionDeclaration(functionReference)) {
-			System.out.println("fooooooUnctionDeclaration");
-			var funcBody = LinkingAndScopingUtils.getFuncBodyFromFuncObject(functionReference);
-			if (funcBody != null) {
-				var returnStatOpt = LinkingAndScopingUtils.findReturnStatInBlock(funcBody.getFuncBlock());
-				if (returnStatOpt.isPresent()) {
-					var referenceablesFromCandidate = LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStatOpt.get(), qualifiedNameProvider);
-					// only add candidates from first returned expression
-					if (!referenceablesFromCandidate.isEmpty()) {
-						result.addAll(referenceablesFromCandidate.get(0));
-					}
-					
-				}
-			}
-		}
-    	return result;
-    }
-    
-    private List<? extends Referenceable> findCandidatesForFunctionCalls(final Collection<? extends Referenceable> candidates) {
-    	var result = new ArrayList<Referenceable>();
-    	
-    	for (final var candidate : candidates) {
-        	if (LinkingAndScopingUtils.isFunctionDeclaration(candidate)) {
-    			System.out.println("fooooooUnctionDeclaration");
-    			var funcBody = LinkingAndScopingUtils.getFuncBodyFromFuncObject(candidate);
-    			if (funcBody != null) {
-    				var returnStatOpt = LinkingAndScopingUtils.findReturnStatInBlock(funcBody.getFuncBlock());
-    				if (returnStatOpt.isPresent()) {
-    					var referenceablesFromCandidate = LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStatOpt.get(), qualifiedNameProvider);
-    					// only add candidates from first returned expression
-    					if (!referenceablesFromCandidate.isEmpty()) {
-    						result.addAll(referenceablesFromCandidate.get(0));
-    					}
-    					
-    				}
-    			}
-    		}
-    	}
-    	
-    	return result;
-    }
-    
-
-    
-    private List<? extends Referenceable> temp(Feature current, Feature previous, final Collection<? extends Referenceable> candidates) {
-    	var result = new ArrayList<Referenceable>();
-    	
-    	return result;
-    }
-    
-
-    
-    private QualifiedName getFqnTail(QualifiedName forFqn, int startIndex) {
-    	var resultSegments = new ArrayList<String>();
-    	for (var i = 0; i < forFqn.getSegmentCount(); i++) {
-    		if (i >= startIndex) {
-    			resultSegments.add(forFqn.getSegment(i));
-    		}
-    	}
-    	
-    	if (resultSegments.isEmpty()) {
-    		throw new RuntimeException("Cannot get tail for " + forFqn + " with startIndex " + startIndex + "!");
-    	}
-    	
-    	var result = nameConverter.toQualifiedName(resultSegments.get(0));
-    	for (int i = 1; i < resultSegments.size(); i++) {
-    		result = result.append(resultSegments.get(i));
-    	}
-
-    	return result;
-    }
-    
-    private QualifiedName getFqnTailIncluding(QualifiedName forFqn, int startIndex) {
-    	var resultSegments = new ArrayList<String>();
-    	for (var i = 0; i < forFqn.getSegmentCount(); i++) {
-    		if (i >= startIndex) {
-    			resultSegments.add(forFqn.getSegment(i));
-    		}
-    	}
-    	
-    	if (resultSegments.isEmpty()) {
-    		return null;
-    		//throw new RuntimeException("Cannot get tail for " + forFqn + " with startIndex " + startIndex + "!");
-    	}
-    	
-    	var result = nameConverter.toQualifiedName(resultSegments.get(0));
-    	for (int i = 1; i < resultSegments.size(); i++) {
-    		result = result.append(resultSegments.get(i));
-    	}
-
-    	return result;
-    }
-    
+    }    
     
     /**
      * We always need to create descriptions (instead of returning Scopes.scopeFor(candidates)), since the 

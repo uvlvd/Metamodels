@@ -481,31 +481,8 @@ ArgList:
 
 // ****************************************************
 // SYNTHETIC
+
 // ****************************************************
-
-/*
- * We use the synthetic rule Referenceable to implement cross-references in this grammar. 
- * Referenceables have a feature/attribute called "name", that is used during the linking phase to resolve the cross-references.
- * Some Rules (e.g. the Label rule referenced by goto) parse the "name" attribute, and return the Referenceable type.
- * Others (e.g. Var) have no "name" attribute (instead, they have a ref cross-reference), but are sub-types of Referenceable,
- * that is the resulting EObjects carry a "name" attribute with the value null. This value is later set by the
- * LuaDerivedStateComputer class.
- */
-Referenceable:
-	name=LUA_NAME |
-	TableAccess |
-	MemberAccess |
-	Var |
-	//FuncName |
-	FunctionDeclaration |
-	LocalFunctionDeclaration |
-	Exp |
-	Label | 
-	Arg |
-	LocalVar |
-	Field
-;
-
 /*
  * We use the synthetic rule Feature for rules that may define some kind of access on a variable/table as part of a feature path. 
  * They may have a prefix and/or a suffix, e.g. a.member["tableAccess"].
@@ -517,6 +494,38 @@ Feature:
 	MemberAccess |
 	Var 
 ;
+
+NamedFeature: 
+	TableAccess |
+	MemberAccess |
+	Var
+;
+
+/*
+ * We use the synthetic rule Referenceable to implement cross-references in this grammar. 
+ * Referenceables have a feature/attribute called "name", that is used during the linking phase to resolve the cross-references.
+ * Some Rules (e.g. the Label rule referenced by goto) parse the "name" attribute, and return the Referenceable type.
+ * Others (e.g. Var) have no "name" attribute (instead, they have a ref cross-reference), but are sub-types of Referenceable,
+ * that is the resulting EObjects carry a "name" attribute with the value null. This value is later set by the
+ * LuaDerivedStateComputer class.
+ */
+Referenceable:
+	name=LUA_NAME |
+	NamedFeature |
+	//TableAccess |
+	//MemberAccess |
+	//Var |
+	//FuncName |
+	FunctionDeclaration |
+	LocalFunctionDeclaration |
+	Exp |
+	Label | 
+	Arg |
+	LocalVar |
+	Field
+;
+
+
 
 /**
  * Synthetic rule for all rules that contain a cross-reference

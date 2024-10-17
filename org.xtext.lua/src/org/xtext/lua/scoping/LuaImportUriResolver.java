@@ -13,7 +13,7 @@ import org.xtext.lua.lua.Var;
 import org.xtext.lua.utils.LinkingAndScopingUtils;
 
 public class LuaImportUriResolver extends ImportUriResolver {
-	private static final String REQUIRE_FUNC_NAME = "require";
+	public static final String REQUIRE_FUNC_NAME = "require";
 	
     @Override
     public String apply(EObject from) {
@@ -25,7 +25,7 @@ public class LuaImportUriResolver extends ImportUriResolver {
     			importUri += ".lua";
             }
     		
-    		System.out.println("ImportUri: " + importUri);
+    		//System.out.println("ImportUri: " + importUri);
     		return importUri;
     	}
 /*

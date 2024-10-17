@@ -49,7 +49,7 @@ public class LuaParserTest {
 		final var lua_test_suite_52 = "D:\\MA\\lua-5.2.0-tests"; // TODO: situate in project
 		final var apisix = "D:\\MA\\apisix\\apisix";
 		final var temp_testfolder = "D:\\MA\\repos\\temp";
-		var resourceSet = new LuaParser().parse(Paths.get(temp_testfolder));
+		var resourceSet = new LuaParser().parse(Paths.get(apisix));
 		
 		//checkPercentageOfResolvedProxies(resourceSet);
 		//final var unresolvedCrossReferences = EcoreUtil.UnresolvedProxyCrossReferencer.find(resourceSet);
@@ -72,10 +72,10 @@ public class LuaParserTest {
 			Assertions.assertTrue(strsEqual);
 		}
 		
-		printNumberOfModelElements(resourceSet);
-		checkPercentageOfResolvedProxies(resourceSet);
+		//printNumberOfModelElements(resourceSet);
+		//checkPercentageOfResolvedProxies(resourceSet);
 		
-		/*
+		
 		for (var resource : resourceSet.getResources()) {
 			System.out.println("Resolving all in resource " + resource.getURI());
 			for (var obj : resource.getContents()) {
@@ -90,7 +90,7 @@ public class LuaParserTest {
 			}
 			
 		}
-		*/
+		
 
 		
 

@@ -351,12 +351,13 @@ class LuaLocalScopingTest {
 		val SUT = '''
 		local function func(arg1, arg2) 
 			a = arg1
-			b = arg2
+			b = a
+			c = arg2
 		end
 		
 		local func = function (a, b)
 			a = a
-			-- b = b.b -- TODO: we dont know if b is a table, but this kind of access would indicate so.. -> implement trivial recovery?
+			b = b.b -- TODO: we dont know if b is a table, but this kind of access would indicate so.. -> implement trivial recovery?
 			b = b
 		end	
 		'''
@@ -392,6 +393,18 @@ class LuaLocalScopingTest {
 		m = c
 		f = func
 		
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
+	def void scopingLocalAssignmentToReferencingTest() { 
+		val SUT = '''
+		local a = {member = "member"}
+		local b = a
+		local c = b.member
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
@@ -599,6 +612,52 @@ class LuaLocalScopingTest {
 		  a = b 
 		  c = a.member
 		end
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+
+	@Test
+	def void tempTest() { 
+		val SUT = '''
+	
+		
+		local function var_sub(val)
+		    local err
+		    local var_used = false
+		    -- we use '${{var}}' because '$var' and '${var}' are taken
+		    -- by Nginx
+		   
+		    local new_val = val:gsub("%$%{%{%s*([%w_]+[%:%=]?.-)%s*%}%}", function(var)
+		        local i, j = var:find("%:%=")
+		        local default
+		        
+		        if i and j then
+		            default = var:sub(i + 2, #var)
+		            default = default:gsub('^%s*(.-)%s*$', '%1')
+		            var = var:sub(1, i - 1)
+		        end
+				
+		        local v = getenv(var) or default
+		        if v then
+		            if not exported_vars then
+		                exported_vars = {}
+		            end
+		
+		            exported_vars[var] = v
+		            var_used = true
+		            return v
+		        end
+		
+		        err = "failed to handle configuration: " ..
+		              "can't find environment variable " .. var
+		        
+		        return ""
+		    end)
+		    return new_val, var_used, err
+		end
+		
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

@@ -39,7 +39,9 @@ import org.xtext.lua.lua.LastStat;
 import org.xtext.lua.lua.LocalAssignment;
 import org.xtext.lua.lua.LocalFunctionDeclaration;
 import org.xtext.lua.lua.LocalVar;
+import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.MethodCall;
+import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.NumericFor;
 import org.xtext.lua.lua.PrefixExp;
 import org.xtext.lua.lua.Referenceable;
@@ -49,6 +51,7 @@ import org.xtext.lua.lua.Stat;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.TableConstructor;
 import org.xtext.lua.lua.Var;
+import org.xtext.lua.scoping.LuaImportUriResolver;
 
 public final class LinkingAndScopingUtils {
 	private static final Logger LOGGER = Logger.getLogger(LinkingAndScopingUtils.class);
@@ -95,7 +98,7 @@ public final class LinkingAndScopingUtils {
 				return false;
 			}
 					
-			if (isLeafOfFeaturePath(feature)) { // only leafs of a feature path are assignable
+			if (isNamedLeafOfFeaturePath(feature)) { // only leafs of a feature path are assignable
 				// check if an Assignment is parent and leaf is on lhs
 				return findParentAssignmentForAssignable(feature).isPresent();
 			}
@@ -103,14 +106,9 @@ public final class LinkingAndScopingUtils {
 		return false;
 	}
 	
-	private static boolean isLeafOfFeaturePath(Feature feature) {
-		var featureChildren = feature.eContents().stream().filter(child -> child instanceof Feature).toList();
-		if (feature instanceof TableAccess ta) {
-			// since a table access itself can be a leaf, but may also contain Features in its indexExp,
-			// we may only consider children that are not part of the indexExp as a continuation of the feature path.
-			return !featureChildren.stream().anyMatch(child -> !isPartOfTableAccessIndexExp(child, ta));
-		}
-		return featureChildren.isEmpty();
+	private static boolean isNamedLeafOfFeaturePath(Feature feature) {
+		final var namedLeaf = getFeaturePathNamedLeaf(feature);
+		return namedLeaf == feature;
 	}
 	
 	private static boolean isPartOfAnyTableAccessIndexExp(EObject obj) {
@@ -121,14 +119,6 @@ public final class LinkingAndScopingUtils {
 		if (parentTableAccess == null) return false;
 		
 		return isPartOfTableAccessIndexExp(obj, parentTableAccess);
-		/*
-		// check if obj is single index exp of closest parent table access
-		var indexExp = parentTableAccess.getIndexExp();
-		if (indexExp == obj) return true;
-		
-		// check if obj is part of index exp of closest parent table access
-		return parentTableAccess.getIndexExp().eContents().contains(obj);
-		*/
 	}
 	
 	private static boolean isPartOfTableAccessIndexExp(EObject obj, TableAccess ta) {
@@ -248,7 +238,7 @@ public final class LinkingAndScopingUtils {
 	}
 	
 	private static Exp findAssignedExpForFeature(final Feature feature) {
-		final var featurePathRootOpt = findFeaturePathRoot(feature);
+		final var featurePathRootOpt = findFeaturePathRootForAssignable(feature);
 		if (featurePathRootOpt.isEmpty()) {
 			return null;
 		}
@@ -294,7 +284,8 @@ public final class LinkingAndScopingUtils {
 	}
 	
 	// TODO: could conceivably also be a parenthesized Expression (exp).member...
-	private static Optional<Var> findFeaturePathRoot(Feature feature) {
+	// TODO: this function is a bit misleading and very close to getFeaturePathRoot...
+	private static Optional<Var> findFeaturePathRootForAssignable(Feature feature) {
 		var parent = feature.eContainer();
 		
 		if (parent == null) { // no parent
@@ -310,36 +301,46 @@ public final class LinkingAndScopingUtils {
 		}
 		
 		if (parent instanceof Feature parentFeature) {
-			return findFeaturePathRoot(parentFeature);
+			return findFeaturePathRootForAssignable(parentFeature);
 		} 
 		
 		// object is on rhs or not part of an assignment/feature path.
 		return Optional.empty();
 	}
 	
-	public static Var getFeaturePathRoot(Feature feature) {	
+	public static Optional<Var> getFeaturePathRoot(Feature feature) {	
 		if (feature instanceof Var var) { // found root
-			return var;
+			return Optional.of(var);
 		}
 		
 		var parent = feature.eContainer();
 		if (parent instanceof Feature parentFeature) {
 			return getFeaturePathRoot(parentFeature);
-		} 
+		} else { // prefix is grouped exp
+			// TODO: implement mock object/trivial recovery?
+			LOGGER.warn("Found non-Var feature path root: " + parent + ".");
+			return Optional.empty();
+		}
 		
-		// should never be null
-		throw new RuntimeException("Feature path root could not be found, this should not have happened..."); 
 	}
 	
+	// TODO: might want to return param feature if it is the named leaf?
 	public static Feature getFeaturePathNamedLeaf(Feature feature) {
-		return getFeaturePathNamedLeaf(feature, null);
+		return getFeaturePathNamedLeaf(feature, feature);
 	}
 	
-	private static Feature getFeaturePathNamedLeaf(Feature feature, Feature lastMatch) {
+	private static Feature getFeaturePathNamedLeaf(final Feature feature, Feature lastMatch) {
 		if (feature instanceof Referenceable referenceable) { // has name
 			lastMatch = feature;
 		}
 		
+		final var suffix = getSuffixExpFromFeature(feature);
+		if (suffix == null) {
+			return lastMatch; // might be null
+		}
+
+		return getFeaturePathNamedLeaf(suffix, lastMatch);
+		/*
 		Optional<Feature> featureChildOpt = feature.eContents().stream()
 								.filter(child -> child instanceof Feature)
 								.map(f -> (Feature) f) // cast to Feature type
@@ -352,10 +353,32 @@ public final class LinkingAndScopingUtils {
 		var featureChild = featureChildOpt.get();
 
 		
-		return getFeaturePathNamedLeaf(featureChild, lastMatch);
+		return getFeaturePathNamedLeaf(featureChild, lastMatch);*/
+	}
+	
+	private static Feature getSuffixExpFromFeature(Feature feature) {
+		if (feature instanceof Var var) {
+			return (Feature) var.getSuffixExp();
+		} else if (feature instanceof MemberAccess ma) {
+			return (Feature) ma.getSuffixExp();
+		} else if (feature instanceof TableAccess ta) {
+			return (Feature) ta.getSuffixExp();
+		} else if (feature instanceof FunctionCall fc) {
+			return (Feature) fc.getSuffixExp();
+		} else if (feature instanceof MethodCall mc) {
+			return (Feature) mc.getSuffixExp();
+		}
+		LOGGER.error("Cannot find Suffix for feature" + feature);
+		return null;
 	}
 	
 	public static Feature getFeaturePathLeaf(Feature feature) {
+		final var suffix = getSuffixExpFromFeature(feature);
+		if (suffix == null) {
+			return feature;
+		}
+		return getFeaturePathLeaf(suffix);
+		/*
 		Optional<Feature> featureChildOpt = feature.eContents().stream()
 				.filter(child -> child instanceof Feature)
 				.map(f -> (Feature) f) // cast to Feature type
@@ -365,22 +388,9 @@ public final class LinkingAndScopingUtils {
 			return getFeaturePathLeaf(featureChildOpt.get());
 		}
 		
-		return feature;
+		return feature;*/
 	}
 	
-	public static Var getFeaturePathParentForFilter(Feature feature) {	
-		if (feature instanceof Var var) { // found root
-			return var;
-		}
-		
-		var parent = feature.eContainer();
-		if (parent instanceof Feature parentFeature) {
-			return getFeaturePathRoot(parentFeature);
-		} 
-		
-		// should never be null
-		throw new RuntimeException("Feature path root could not be found, this should not have happened..."); 
-	}
 	
 	public static boolean hasNextFeature(Feature feature) {
 		return feature.eContents().stream().anyMatch(child -> child instanceof Feature);
@@ -392,6 +402,42 @@ public final class LinkingAndScopingUtils {
 			return (Feature) nextOpt.get();
 		}
 		return null;
+	}
+	
+	/**
+	 * Returns true if the given EObject is a Feature, the Var at the start of its feature path has
+	 * the require name {@link LuaImportUriResolver#REQUIRE_FUNC_NAME}, and that Var is followed by a 
+	 * FuncCall.
+	 * @param context the object.
+	 * @return true if the object's feature path starts with a require call: require(...). ... .context
+	 */
+	public static boolean isPartOfRequireFunctionCallFeaturePath(EObject context) {
+		if (context instanceof Feature feature) {
+        	var featurePathRootOpt = getFeaturePathRoot(feature);
+        	if (featurePathRootOpt.isPresent()) {
+        		// TODO: log some warning?
+        		return isRequireFunctionCall(featurePathRootOpt.get());
+        	}
+		}
+		return false;
+	}
+	
+	/**
+	 * Returns true if the given Var has the require name {@link LuaImportUriResolver#REQUIRE_FUNC_NAME} and
+	 * is followed by a FuncCall Feature: require(...).
+	 * @param var
+	 * @return
+	 */
+	public static boolean isRequireFunctionCall(Var var) {
+		if (var.getName().equals(LuaImportUriResolver.REQUIRE_FUNC_NAME)) {
+    		if (hasNextFeature(var)) {
+    			var next = LinkingAndScopingUtils.getNextFeature(var);
+    			if (next instanceof FunctionCall funcCall) {
+    				return true;
+    			}
+    		}
+    	}
+		return false;
 	}
 	
 	/**
@@ -583,6 +629,7 @@ public final class LinkingAndScopingUtils {
 	}
 
 
+
 	
 
 	private static Stream<? extends Stat> streamAllStatsFromBlock(final Block block) {
@@ -692,7 +739,7 @@ public final class LinkingAndScopingUtils {
 	private static String getNameOrFeaturePathRootName(Referenceable referenceable) {
 		var name = referenceable.getName();
 		if (referenceable instanceof Feature feature) {
-			final var featurePathRootOpt = findFeaturePathRoot(feature);
+			final var featurePathRootOpt = findFeaturePathRootForAssignable(feature);
 			if (featurePathRootOpt.isPresent()) {
 				name = featurePathRootOpt.get().getName();
 			}

@@ -1,5 +1,6 @@
 package org.xtext.lua.scoping;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -30,6 +31,42 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 	
 	@Inject
 	ImportUriResolver uriResolver;
+	
+	// see https://www.davidpace.de/library-bundles-for-your-xtext-dsl/
+	// and LuaParser.java for implicit library imports
+	public static final URI LIBRARY_URI_BASE = URI.createURI("platform:/plugin/org.xtext.lua.libraries/src/lua_libraries/");
+
+	// TODO: could get file names dynamically from folder
+	public static final List<URI> LIBRARY_URIS = Collections.unmodifiableList(
+		Arrays.asList(
+			createLibraryUriForFileStr("basic.lua"),
+			createLibraryUriForFileStr("bit.lua"),
+			createLibraryUriForFileStr("bit32.lua"),
+			createLibraryUriForFileStr("builtin.lua"),
+			createLibraryUriForFileStr("coroutine.lua"),
+			createLibraryUriForFileStr("debug.lua"),
+			createLibraryUriForFileStr("ffi.lua"),
+			createLibraryUriForFileStr("io.lua"),
+			createLibraryUriForFileStr("jit.lua"),
+			createLibraryUriForFileStr("math.lua"),
+			createLibraryUriForFileStr("os.lua"),
+			createLibraryUriForFileStr("package.lua"),
+			createLibraryUriForFileStr("string.lua"),
+			createLibraryUriForFileStr("table.lua"),
+			createLibraryUriForFileStr("utf8.lua")
+		)
+	);
+	
+	private static final URI createLibraryUriForFileStr(String fileStr) {
+		return URI.createURI(LIBRARY_URI_BASE + fileStr);
+	}
+	
+	@Override
+	protected LinkedHashSet<URI> getImportedUris(Resource resource) {
+		LinkedHashSet<URI> importedURIs = super.getImportedUris(resource);
+		importedURIs.addAll(LIBRARY_URIS);
+		return importedURIs;
+	}
 	
 	@Override
 	protected IScope getScope(Resource resource, boolean ignoreCase, EClass type, Predicate<IEObjectDescription> filter) {

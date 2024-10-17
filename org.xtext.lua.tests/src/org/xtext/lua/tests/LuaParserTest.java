@@ -72,10 +72,10 @@ public class LuaParserTest {
 			Assertions.assertTrue(strsEqual);
 		}
 		
-		//printNumberOfModelElements(resourceSet);
-		//checkPercentageOfResolvedProxies(resourceSet);
+		printNumberOfModelElements(resourceSet);
+		checkPercentageOfResolvedProxies(resourceSet);
 		
-		
+		/*
 		for (var resource : resourceSet.getResources()) {
 			System.out.println("Resolving all in resource " + resource.getURI());
 			for (var obj : resource.getContents()) {
@@ -88,8 +88,7 @@ public class LuaParserTest {
 			      resolveCrossReferences(childEObject);
 			    }
 			}
-			
-		}
+		}*/
 		
 
 		

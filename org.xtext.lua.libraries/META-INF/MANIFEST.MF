@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Libraries
+Bundle-SymbolicName: org.xtext.lua.libraries
+Bundle-Version: 1.0.0.qualifier
+Automatic-Module-Name: org.xtext.lua.libraries
+Bundle-RequiredExecutionEnvironment: JavaSE-17

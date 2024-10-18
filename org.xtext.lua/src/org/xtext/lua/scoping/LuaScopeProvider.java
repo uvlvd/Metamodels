@@ -240,6 +240,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     		return getReferenceablesForGoto(currentBlock, previousBlock);
     	}
     	
+    	
     	if (context instanceof Feature feature) {
     		var referenceables = getReferenceables(context, currentBlock);
     		return getCandidatesForFeature(feature, reference, referenceables);

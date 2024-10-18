@@ -60,6 +60,7 @@ public final class LinkingAndScopingUtils {
 	public static final String DERIVED_DUMMY_NAME = "derived_dummy_name";
 	// dummy name set for TableAccess if the indexExp cannot be resolved during Linking
 	public static final String LINKING_DUMMY_NAME = "linking_dummy_name";
+	public static final String SELF_PARAM_NAME = "self";
 	
 	private static final String NUMBER_NAME_STRING_PREFIX = "N__";
 	
@@ -708,6 +709,31 @@ public final class LinkingAndScopingUtils {
 			return argList.getArgs();
 		}
 		return Collections.emptyList();
+	}
+	
+	public static boolean referencesImplicitSelfParam(EObject context) {
+		if (!(context instanceof Feature)) {
+			return false;
+		}
+		var feature = (Feature) context;
+		
+		if (!(feature instanceof NamedFeature namedFeature) 
+			 || !namedFeature.getName().equals(SELF_PARAM_NAME)) {
+			return false;
+		}
+		// check if feature is contained in a function
+		var containingFuncBody = EcoreUtil2.getContainerOfType(feature, FuncBody.class);
+		if (containingFuncBody == null) {
+			return false;
+		}
+		// check if function args already contain a "self" parameter
+		var argList = containingFuncBody.getParList().getArgsList();
+		if (argList == null) {
+			// ExpVarArgs in parlist
+			return false;
+		}
+		return !argList.getArgs().stream()
+					  .anyMatch(arg -> arg.getName().equals(SELF_PARAM_NAME));
 	}
 	
 	

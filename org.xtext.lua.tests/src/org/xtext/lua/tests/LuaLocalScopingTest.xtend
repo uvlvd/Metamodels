@@ -347,6 +347,21 @@ class LuaLocalScopingTest {
 	}
 	
 	@Test
+	def void scopingMethodBodyArgsTest() { 
+		val SUT = '''
+		table = {}
+		function table:func(arg1) 
+			a = self
+			return arg1
+		end
+		b = table:func()
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
+	@Test
 	def void scopingLocalFuncBodyArgsTest() { 
 		val SUT = '''
 		local function func(arg1, arg2) 
@@ -577,7 +592,7 @@ class LuaLocalScopingTest {
 	@Test
 	def void scopingDoubleFunctionCallReturnFeatureTest() { 
 		val SUT = '''
-		 --local n = function ()
+		 local n = function ()
 		 --	local _M = {}
 		 --	_M.first = "first"
 		 --	return _M
@@ -621,114 +636,50 @@ class LuaLocalScopingTest {
 	@Test
 	def void tempTest() { 
 		val SUT = '''
-	---@meta package
-	
-	---
-	---Loads the given module, returns any value returned by the searcher(`true` when `nil`). Besides that value, also returns as a second result the loader data returned by the searcher, which indicates how `require` found the module. (For instance, if the module came from a file, this loader data is the file path.)
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-require"])
-	---
-	---@param modname string
-	---@return unknown
-	---@return unknown loaderdata
-	function require(modname) end
-	
-	---
-	---
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package"])
-	---
-	---@class packagelib
-	---
-	---The path used by `require` to search for a C loader.
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package.cpath"])
-	---
-	---@field cpath     string
-	---
-	---A table used by `require` to control which modules are already loaded.
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package.loaded"])
-	---
-	---@field loaded    table
-	---
-	---The path used by `require` to search for a Lua loader.
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package.path"])
-	---
-	---@field path      string
-	---
-	---A table to store loaders for specific modules.
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package.preload"])
-	---
-	---@field preload   table
-	package = {}
-	
-	---
-	---A string describing some compile-time configurations for packages.
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package.config"])
-	---
-	package.config = [[
-	/
-	;
-	?
-	!
-	-]]
-	
-	---@version <5.1
-	---
-	---A table used by `require` to control how to load modules.
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package.loaders"])
-	---
-	package.loaders = {}
-	
-	---
-	---Dynamically links the host program with the C library `libname`.
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package.loadlib"])
-	---
-	---@param libname string
-	---@param funcname string
-	---@return any
-	function package.loadlib(libname, funcname) end
-	
-	---
-	---A table used by `require` to control how to load modules.
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package.searchers"])
-	---
-	---@version >5.2
-	package.searchers = {}
-	
-	---
-	---Searches for the given `name` in the given `path`.
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package.searchpath"])
-	---
-	---@version >5.2,JIT
-	---@param name string
-	---@param path string
-	---@param sep? string
-	---@param rep? string
-	---@return string? filename
-	---@return string? errmsg
-	---@nodiscard
-	function package.searchpath(name, path, sep, rep) end
-	
-	---
-	---Sets a metatable for `module` with its `__index` field referring to the global environment, so that this module inherits values from the global environment. To be used as an option to function `module` .
-	---
-	---[View documents](command:extension.lua.doc?["en-us/54/manual.html/pdf-package.seeall"])
-	---
-	---@version <5.1
-	---@param module table
-	function package.seeall(module) end
-	
-	return package
-		
+
+function _M.require(attrs)
+    if not support_wasm then
+        return nil, "need to build APISIX-Runtime to support wasm"
+    end
+
+    local name = attrs.name
+    local priority = attrs.priority
+    local plugin, err = wasm.load(name, attrs.file)
+    if not plugin then
+        return nil, err
+    end
+
+    local mod = {
+        version = 0.1,
+        name = name,
+        priority = priority,
+        schema = schema,
+        check_schema = check_schema,
+        plugin = plugin,
+        type = "wasm",
+    }
+
+    if attrs.http_request_phase == "rewrite" then
+        mod.rewrite = function (conf, ctx)
+            return http_request_wrapper(mod, conf, ctx)
+        end
+    else
+        mod.access = function (conf, ctx)
+            return http_request_wrapper(mod, conf, ctx)
+        end
+    end
+
+    mod.header_filter = function (conf, ctx)
+        return header_filter_wrapper(mod, conf, ctx)
+    end
+
+    mod.body_filter = function (conf, ctx)
+        return body_filter_wrapper(mod, conf, ctx)
+    end
+
+    -- the returned values need to be the same as the Lua's 'require'
+    return true, mod
+end
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

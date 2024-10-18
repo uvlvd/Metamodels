@@ -23,6 +23,7 @@ import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Chunk;
 import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.TableAccess;
@@ -34,7 +35,10 @@ import com.google.inject.Inject;
 
 public class LuaLinkingService extends DefaultLinkingService {
 	private static final Logger LOGGER = Logger.getLogger(LuaLinkingService.class);
+	
 	public static final URI NIL_MOCK_URI = URI.createURI("dummy:/syntheticNilValues.lua");
+	
+	private ImplicitSelfArgs implicitSelfArgs = new ImplicitSelfArgs();
 	
   	@Inject
     private IQualifiedNameConverter nameConverter;
@@ -58,6 +62,19 @@ public class LuaLinkingService extends DefaultLinkingService {
 		}
 
 		var linkedObjects = super.getLinkedObjects(context, ref, node);
+		
+		if (linkedObjects.isEmpty()) {
+			
+        	// handle implicit self parameters for method declarations
+        	if (LinkingAndScopingUtils.referencesImplicitSelfParam(context)) {
+        		// referencesImplicitSelfParam ensures that funcBody is present
+        		var containingFuncBody = EcoreUtil2.getContainerOfType(context, FuncBody.class);
+        		var selfArg = implicitSelfArgs.getSelfArgFor(containingFuncBody);
+        		return Collections.singletonList(selfArg);
+        	}
+        	
+        	//createMockObjectFor(context);
+		}
 		
 		return linkedObjects;
 	}

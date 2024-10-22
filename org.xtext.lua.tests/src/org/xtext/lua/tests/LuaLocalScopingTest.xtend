@@ -622,7 +622,7 @@ class LuaLocalScopingTest {
 	@Test
 	def void scopingResolveParentBlockReferencedVarTest() { 
 		val SUT = '''
-		b = {member = "hellow world"}
+		b = {member = "hello world"}
 		do 
 		  a = b 
 		  c = a.member
@@ -636,50 +636,10 @@ class LuaLocalScopingTest {
 	@Test
 	def void tempTest() { 
 		val SUT = '''
-
-function _M.require(attrs)
-    if not support_wasm then
-        return nil, "need to build APISIX-Runtime to support wasm"
-    end
-
-    local name = attrs.name
-    local priority = attrs.priority
-    local plugin, err = wasm.load(name, attrs.file)
-    if not plugin then
-        return nil, err
-    end
-
-    local mod = {
-        version = 0.1,
-        name = name,
-        priority = priority,
-        schema = schema,
-        check_schema = check_schema,
-        plugin = plugin,
-        type = "wasm",
-    }
-
-    if attrs.http_request_phase == "rewrite" then
-        mod.rewrite = function (conf, ctx)
-            return http_request_wrapper(mod, conf, ctx)
-        end
-    else
-        mod.access = function (conf, ctx)
-            return http_request_wrapper(mod, conf, ctx)
-        end
-    end
-
-    mod.header_filter = function (conf, ctx)
-        return header_filter_wrapper(mod, conf, ctx)
-    end
-
-    mod.body_filter = function (conf, ctx)
-        return body_filter_wrapper(mod, conf, ctx)
-    end
-
-    -- the returned values need to be the same as the Lua's 'require'
-    return true, mod
-end
+		local func = function (a) 
+			b = a.member
+			c = a[1+1]
+		end
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));

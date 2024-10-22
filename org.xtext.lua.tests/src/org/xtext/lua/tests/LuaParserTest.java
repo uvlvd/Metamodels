@@ -72,10 +72,10 @@ public class LuaParserTest {
 			Assertions.assertTrue(strsEqual);
 		}
 		
-		//printNumberOfModelElements(resourceSet);
-		//checkPercentageOfResolvedProxies(resourceSet);
+		printNumberOfModelElements(resourceSet);
+		checkPercentageOfResolvedProxies(resourceSet);
 		
-		
+		/*
 		for (var resource : resourceSet.getResources()) {
 			System.out.println("Resolving all in resource " + resource.getURI());
 			for (var obj : resource.getContents()) {
@@ -89,7 +89,7 @@ public class LuaParserTest {
 			    }
 			}
 		}
-		
+		*/
 
 		
 
@@ -125,10 +125,15 @@ public class LuaParserTest {
 		final var allCrossReferences = EcoreUtil.CrossReferencer.find(resourceSet.getResources());
 		final var unresolvedCrossReferences = EcoreUtil.UnresolvedProxyCrossReferencer.find(resourceSet);
 		if (!unresolvedCrossReferences.isEmpty()) {
-			System.out.println(allCrossReferences.keySet().stream().findAny());
+			//System.out.println(allCrossReferences.keySet().stream().findAny());
+			System.out.println(unresolvedCrossReferences.keySet().stream().toList());
+			unresolvedCrossReferences.keySet().stream().forEach(cr -> {
+				System.out.println("Container: " + cr.eContainer() + ", cross-reference: " + cr);
+			});
 		}
 		var rel = ((double) (allCrossReferences.size() - unresolvedCrossReferences.size()))/allCrossReferences.size();
 		var percent =  Math.round(rel*10000.0)/100.0 ;
+		System.out.println("Cross references count " + allCrossReferences.size() + ", unresolved: " + unresolvedCrossReferences.size());
 		System.out.println(percent + "%");
 		
 		//Assertions.assertTrue(unresolvedCrossReferences.isEmpty());

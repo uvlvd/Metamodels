@@ -49,6 +49,9 @@ public class LuaLinkingService extends DefaultLinkingService {
 	@Inject
 	private IQualifiedNameProvider qualifiedNameProvider;
 	
+	@Inject
+	private IMockObjectCreator mockObjectCreator;
+	
 	private AtomicBoolean isTableAccessNamesResolved = new AtomicBoolean(false);
   	
 	@Override
@@ -73,11 +76,22 @@ public class LuaLinkingService extends DefaultLinkingService {
         		return Collections.singletonList(selfArg);
         	}
         	
-        	//createMockObjectFor(context);
+        	var mockedObject = mockObjectCreator.createMockObjectFor(context);
+        	if (mockedObject != null) {
+        		return Collections.singletonList(mockedObject);
+        	}
 		}
 		
 		return linkedObjects;
 	}
+	
+	// private List<EObject> createMockObjectFor(context) {
+	//    // check for arg table access
+	//    // check for unresolvable require call (probably external library)
+	//    // check for unresolvable table index expression
+	//    // check for unresolvable func/methodCall 
+	//          // only as part of a feature path?
+	//}
 	
 	
 	private void resolveAllTableAccessNamesAndRefsInContextRoot(EObject context) {

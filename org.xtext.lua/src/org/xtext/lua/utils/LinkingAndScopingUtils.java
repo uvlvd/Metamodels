@@ -723,7 +723,7 @@ public final class LinkingAndScopingUtils {
 		}
 		// check if feature is contained in a function
 		var containingFuncBody = EcoreUtil2.getContainerOfType(feature, FuncBody.class);
-		if (containingFuncBody == null) {
+		if (containingFuncBody == null || containingFuncBody.getParList() == null) {
 			return false;
 		}
 		// check if function args already contain a "self" parameter

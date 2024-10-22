@@ -28,9 +28,11 @@ import org.eclipse.xtext.scoping.IGlobalScopeProvider;
 import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.eclipse.xtext.util.concurrent.IUnitOfWork;
 import org.xtext.lua.converters.LuaValueConverterService;
+import org.xtext.lua.linking.IMockObjectCreator;
 import org.xtext.lua.linking.LuaLinker;
 import org.xtext.lua.linking.LuaLinkingDiagnosticMessageProvider;
 import org.xtext.lua.linking.LuaLinkingService;
+import org.xtext.lua.linking.MockObjectCreator;
 import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.postprocessing.LuaDerivedStateComputer;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
@@ -148,6 +150,9 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
         return LuaImportUriResolver.class;
     }
 
+    public Class<? extends IMockObjectCreator> bindMockObjectCreator() {
+        return MockObjectCreator.class;
+    }
 	
 
 }

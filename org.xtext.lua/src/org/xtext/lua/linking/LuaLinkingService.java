@@ -24,6 +24,7 @@ import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Chunk;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.FuncBody;
+import org.xtext.lua.lua.IndexExpField;
 import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.TableAccess;
@@ -61,7 +62,8 @@ public class LuaLinkingService extends DefaultLinkingService {
 		// (could probably also be handled in some other way in the scopeProvider implementation)
 		// TODO: would probably be better is this could somehow be executed as a "first step" of the linking via an api method
 		if (isTableAccessNamesResolved.compareAndSet(false, true)) {
-			resolveAllTableAccessNamesAndRefsInContextRoot(context);	
+			resolveAllTableAccessNamesAndRefsInContextRoot(context);
+			resolveAllFieldNamesAndRefsInContextRoot(context);
 		}
 
 		var linkedObjects = super.getLinkedObjects(context, ref, node);
@@ -105,6 +107,28 @@ public class LuaLinkingService extends DefaultLinkingService {
 					ta.setName(name);
 					linkingSupport.createAndSetProxy(ta, Literals.REFERENCING__REF, name);
 					ta.setRef(ta.getRef());
+				} else {
+					// TODO: set dummy name+reference (e.g. using trivial recovery)
+					//var nilValue = new SyntheticExpNil();
+					//ta.setRef(nilValue);
+					
+					// TODO: the dummy also needs to be inserted for memberAccesses on functioncalls, e.g. func().member
+				}
+			}
+		}
+	}
+	
+	private void resolveAllFieldNamesAndRefsInContextRoot(EObject context) {
+		var scopeRoot = EcoreUtil2.getRootContainer(context);
+		var indexExpFields = EcoreUtil2.getAllContentsOfType(scopeRoot, IndexExpField.class);
+		for (var indexExpField : indexExpFields) {
+			if (LinkingAndScopingUtils.isIndexExpFieldWithDummyName(indexExpField)) {
+				indexExpField.setName(LinkingAndScopingUtils.LINKING_DUMMY_NAME);
+				var name = LinkingAndScopingUtils.tryResolveExpressionToString(indexExpField.getIndexExp(), LinkingAndScopingUtils.LINKING_DUMMY_NAME);
+				if (name != null) {
+					indexExpField.setName(name);
+					linkingSupport.createAndSetProxy(indexExpField, Literals.REFERENCING__REF, name);
+					indexExpField.setRef(indexExpField.getRef());
 				} else {
 					// TODO: set dummy name+reference (e.g. using trivial recovery)
 					//var nilValue = new SyntheticExpNil();

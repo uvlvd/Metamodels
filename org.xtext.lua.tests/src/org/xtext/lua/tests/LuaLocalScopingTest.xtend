@@ -636,15 +636,71 @@ class LuaLocalScopingTest {
 	@Test
 	def void tempTest() { 
 		val SUT = '''
-		local func = function (a) 
-			b = a.member
-			c = a[1+1]
-		end
+		
+		local _M = {version = 0.2}
+		local GRAPHQL_DEFAULT_MAX_SIZE       = 1048576               -- 1MiB
+		local GRAPHQL_REQ_DATA_KEY           = "query"
+		local GRAPHQL_REQ_METHOD_HTTP_GET    = "GET"
+		local GRAPHQL_REQ_METHOD_HTTP_POST   = "POST"
+		local GRAPHQL_REQ_MIME_JSON          = "application/json"
+		
+		
+		local fetch_graphql_data = {
+		    [GRAPHQL_REQ_METHOD_HTTP_GET] = function(ctx, max_size)
+		        local body = request.get_uri_args(ctx)[GRAPHQL_REQ_DATA_KEY]
+		        if not body then
+		            return nil, "failed to read graphql data, args[" ..
+		                        GRAPHQL_REQ_DATA_KEY .. "] is nil"
+		        end
+		
+		        if type(body) == "table" then
+		            body = body[1]
+		        end
+		
+		        return body
+		    end,
+		
+		    [GRAPHQL_REQ_METHOD_HTTP_POST] = function(ctx, max_size)
+		        local body, err = request.get_body(max_size, ctx)
+		        if not body then
+		            return nil, "failed to read graphql data, " .. (err or "request body has zero size")
+		        end
+		
+		        if request.header(ctx, "Content-Type") == GRAPHQL_REQ_MIME_JSON then
+		            local res
+		            res, err = json.decode(body)
+		            if not res then
+		                return nil, "failed to read graphql data, " .. err
+		            end
+		
+		            if not res[GRAPHQL_REQ_DATA_KEY] then
+		                return nil, "failed to read graphql data, json body[" ..
+		                            GRAPHQL_REQ_DATA_KEY .. "] is nil"
+		            end
+		
+		            body = res[GRAPHQL_REQ_DATA_KEY]
+		        end
+		
+		        return body
+		    end
+		}
 		'''
 		val result = parseHelper.parse(SUT)
 		System.out.println(dump(result, ""));
 		check(result, SUT)
 	}
 
+	@Test
+	def void temp2Test() { 
+		val SUT = '''
+		local a = "a"
+		table = {
+			[a] = 10
+		}
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
 	
 }

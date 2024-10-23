@@ -599,7 +599,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     	var requireCallReturnedScope = super.getGlobalScope(context.eResource(), 
     											reference, 
     											LuaGlobalScopeProvider.returnedExpAtIndexFilter(returnExpIndex, uri.toString())
-    											); 	
+    											);
     	
     	// TODO: the "getAllElements" call here outputs the info:
     	// "ImportedNamesAdapter  - getElements should be called with a QualifiedName during linking."

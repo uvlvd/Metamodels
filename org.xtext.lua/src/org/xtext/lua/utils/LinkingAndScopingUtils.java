@@ -582,6 +582,10 @@ public final class LinkingAndScopingUtils {
 		return o instanceof TableAccess ta && ta.getName().equals(DERIVED_DUMMY_NAME);
 	}
 	
+	public static boolean isIndexExpFieldWithDummyName(EObject o) {
+		return o instanceof IndexExpField ief && ief.getName().equals(DERIVED_DUMMY_NAME);
+	}
+	
 	public static String removeQuotesFromString(String str) {
 		if (str != null && str.startsWith("\"") && str.endsWith("\"")) {
 			return str.substring(1, str.length() - 1);

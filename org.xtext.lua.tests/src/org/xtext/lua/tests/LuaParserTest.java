@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.xtext.lua.LuaParser;
 import org.xtext.lua.PreprocessingUtils;
+import org.xtext.lua.linking.SyntheticVar;
 
 
 public class LuaParserTest {
@@ -51,7 +52,7 @@ public class LuaParserTest {
 		final var lua_test_suite_52 = "D:\\MA\\lua-5.2.0-tests"; // TODO: situate in project
 		final var apisix = "D:\\MA\\apisix\\apisix";
 		final var temp_testfolder = "D:\\MA\\repos\\temp";
-		var resourceSet = new LuaParser().parse(Paths.get(lua_test_suite_52));
+		var resourceSet = new LuaParser().parse(Paths.get(apisix));
 		
 		//checkPercentageOfResolvedProxies(resourceSet);
 		//final var unresolvedCrossReferences = EcoreUtil.UnresolvedProxyCrossReferencer.find(resourceSet);
@@ -65,14 +66,15 @@ public class LuaParserTest {
 			
 			var originalPath = r.getURI().toFileString();
 			System.out.println(originalPath);
-			String original = Files.readString(Paths.get(originalPath), Charset.forName("ISO-8859-1"));
+			//String original = Files.readString(Paths.get(originalPath), Charset.forName("ISO-8859-1"));
+			String original = Files.readString(Paths.get(originalPath), Charset.forName("UTF-8"));
 			
 			var strsEqual = compareNormalizedStrings(original, parsedAndSerialized);
 			if (!strsEqual) {
 				System.out.println(originalPath);
 			}
 			
-			//Assertions.assertTrue(strsEqual);
+			Assertions.assertTrue(strsEqual);
 		}
 		
 		printNumberOfModelElements(resourceSet);
@@ -127,6 +129,9 @@ public class LuaParserTest {
 		// Check if all poxy object were resolved.
 		final var allCrossReferences = EcoreUtil.CrossReferencer.find(resourceSet.getResources());
 		final var unresolvedCrossReferences = EcoreUtil.UnresolvedProxyCrossReferencer.find(resourceSet);
+		final var mockedCrossReferences = allCrossReferences.keySet().stream()
+				.filter(cr -> cr instanceof SyntheticVar)
+				.toList();
 		if (!unresolvedCrossReferences.isEmpty()) {
 			//System.out.println(allCrossReferences.keySet().stream().findAny());
 			System.out.println(unresolvedCrossReferences.keySet().stream().toList());
@@ -134,12 +139,24 @@ public class LuaParserTest {
 				System.out.println("Container: " + cr.eContainer() + ", cross-reference: " + cr);
 			});
 		}
-		var rel = ((double) (allCrossReferences.size() - unresolvedCrossReferences.size()))/allCrossReferences.size();
-		var percent =  Math.round(rel*10000.0)/100.0 ;
-		System.out.println("Cross references count " + allCrossReferences.size() + ", unresolved: " + unresolvedCrossReferences.size());
-		System.out.println(percent + "%");
+		//var rel = ((double) (allCrossReferences.size() - unresolvedCrossReferences.size()))/allCrossReferences.size();
+		//var percent =  Math.round(rel*10000.0)/100.0 ;
+		final var allCrossReferencesCount = allCrossReferences.size();
+		final var unresolvedCrossReferencesCount = unresolvedCrossReferences.size();
+		final var mockedCrossReferencesCount = mockedCrossReferences.size();
+		final var resolvedPercent = getPercentage(unresolvedCrossReferencesCount, allCrossReferencesCount);
+		final var mockedPercent = 100d - getPercentage(mockedCrossReferencesCount, allCrossReferencesCount);
+		
+		System.out.println("Total cross references count: " + allCrossReferencesCount + ", unresolved: " + unresolvedCrossReferencesCount + ", mocked: " + mockedCrossReferencesCount);
+		System.out.println("Resolved references: " + resolvedPercent + "%");
+		System.out.println("Mocked references: " + mockedPercent + "%");
 		
 		//Assertions.assertTrue(unresolvedCrossReferences.isEmpty());
+	}
+	
+	private double getPercentage(final double of, final double from) {
+		final var rel = (from - of)/from;
+		return Math.round(rel*10000.0)/100.0;
 	}
 	
 	private void printNumberOfModelElements(ResourceSet resourceSet) {

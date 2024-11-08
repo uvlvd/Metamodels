@@ -168,7 +168,7 @@ Label:
  */
 AssignmentOrFunctionCall returns Stat:
 	PrefixExp (
-		({FunctionCall.functionCall=current}) |
+		({FunctionCallStat.functionCall=current}) |
 	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
 	)
 ;
@@ -496,9 +496,10 @@ Feature:
 ;
 
 NamedFeature: 
-	TableAccess |
-	MemberAccess |
-	Var
+	Var |
+	MethodCall |
+	TableAccess | // TableAccess has a "name" attribute which is set to the contained expression, if the expression is resolvable
+	MemberAccess 
 ;
 
 /*
@@ -532,10 +533,11 @@ Referenceable:
  */
 Referencing:
 	ref=[Referenceable|LUA_NAME] |
+	NamedFeature |
 	//ref=[Exp|LUA_NAME]  |
-	TableAccess |
-	MemberAccess |
-	Var |
+	//TableAccess |
+	//MemberAccess |
+	//Var |
 	LocalVar |
 	Field |
 	Goto

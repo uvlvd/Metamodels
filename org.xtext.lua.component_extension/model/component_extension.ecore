@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="pcm_extension" nsURI="http://www.example.org/pcm_extension"
-    nsPrefix="pcm_extension">
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="component_extension" nsURI="http://www.example.org/component_extension"
+    nsPrefix="component_extension">
   <eClassifiers xsi:type="ecore:EClass" name="Component">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="chunks" unique="false"
-        lowerBound="1" upperBound="-1" eType="#//NamedChunk" containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="chunks" lowerBound="1"
+        upperBound="-1" eType="#//NamedChunk"/>
   </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="CompositeComponent">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="components" upperBound="-1"
-        eType="#//Component" containment="true"/>
+  <eClassifiers xsi:type="ecore:EClass" name="Application">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="components" lowerBound="1"
+        upperBound="-1" eType="#//Component"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="NamedChunk">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>

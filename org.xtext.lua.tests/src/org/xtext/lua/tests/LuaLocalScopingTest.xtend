@@ -703,4 +703,19 @@ class LuaLocalScopingTest {
 		check(result, SUT)
 	}
 	
+	@Test
+	def void temp3Test() { 
+		val SUT = '''
+		a = {}
+		a.f = function () end
+		function func()
+		end
+		func()
+		a.f()
+		'''
+		val result = parseHelper.parse(SUT)
+		System.out.println(dump(result, ""));
+		check(result, SUT)
+	}
+	
 }

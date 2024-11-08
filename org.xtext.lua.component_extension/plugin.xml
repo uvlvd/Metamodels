@@ -7,19 +7,19 @@
 <plugin>
 
    <extension point="org.eclipse.emf.ecore.generated_package">
-      <!-- @generated pcm_extension -->
+      <!-- @generated component_extension -->
       <package
-            uri="http://www.example.org/pcm_extension"
-            class="org.xtext.lua.pcm_extension.Pcm_extensionPackage"
-            genModel="model/pcm_extension.genmodel"/>
+            uri="http://www.example.org/component_extension"
+            class="org.xtext.lua.component_extension.Component_extensionPackage"
+            genModel="model/component_extension.genmodel"/>
    </extension>
 
    <extension point="org.eclipse.emf.ecore.generated_package">
-      <!-- @generated pcm_extension -->
+      <!-- @generated component_extension -->
       <package
             uri="http://www.xtext.org/lua/Lua"
             class="lua.LuaPackage"
-            genModel="model/pcm_extension.genmodel"/>
+            genModel="model/component_extension.genmodel"/>
    </extension>
 
 </plugin>

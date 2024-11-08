@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<genmodel:GenModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" xmlns:genmodel="http://www.eclipse.org/emf/2002/GenModel"
+    modelDirectory="/org.xtext.lua.component_extension/src-gen" creationIcons="false"
+    editDirectory="/org.xtext.lua.component_extension.edit/src-gen" editorDirectory="/org.xtext.lua.component_extension.editor/src-gen"
+    modelPluginID="org.xtext.lua.component_extension" modelName="Component_extension"
+    rootExtendsClass="org.eclipse.emf.ecore.impl.MinimalEObjectImpl$Container" codeFormatting="true"
+    importerID="org.eclipse.emf.importer.ecore" complianceLevel="5.0" copyrightFields="false"
+    operationReflection="true" importOrganizing="true">
+  <foreignModel>component_extension.ecore</foreignModel>
+  <testsDirectory xsi:nil="true"/>
+  <genPackages prefix="Component_extension" basePackage="org.xtext.lua" disposableProviderFactory="true"
+      ecorePackage="component_extension.ecore#/">
+    <genClasses ecoreClass="component_extension.ecore#//Component">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute component_extension.ecore#//Component/name"/>
+      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference component_extension.ecore#//Component/chunks"/>
+    </genClasses>
+    <genClasses ecoreClass="component_extension.ecore#//Application">
+      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference component_extension.ecore#//Application/components"/>
+    </genClasses>
+    <genClasses ecoreClass="component_extension.ecore#//NamedChunk">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute component_extension.ecore#//NamedChunk/name"/>
+      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference component_extension.ecore#//NamedChunk/chunk"/>
+    </genClasses>
+  </genPackages>
+  <genPackages prefix="Lua" ecorePackage="../../org.xtext.lua/model/generated/Lua.ecore#/">
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Chunk">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//Chunk/block"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Block">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//Block/stats"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//Block/lastStat"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Stat"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//BlockWrapperWithArgs"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//FunctionDeclaration">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FunctionDeclaration/body"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//LocalFunctionDeclaration">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//LocalFunctionDeclaration/body"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//LocalAssignment">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//LocalAssignment/vars"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//LocalAssignment/expList"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Goto"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Label"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ElseIf">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ElseIf/condition"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ElseIf/block"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//LastStat"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Return">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//Return/expList"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Break"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpList">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpList/exps"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Exp"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpTerminal"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpLiteral"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpVarArgs"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//PrefixExp">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//PrefixExp/groupedExp"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//PrefixExp/suffixExp"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//SuffixExp"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Var"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//FunctionCall">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FunctionCall/functionCall"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FunctionCall/args"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FunctionCall/suffixExp"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//MethodCall">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute ../../org.xtext.lua/model/generated/Lua.ecore#//MethodCall/name"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//MethodCall/args"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//MethodCall/suffixExp"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//TableAccess">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//TableAccess/indexExp"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//TableAccess/suffixExp"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//MemberAccess">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//MemberAccess/suffixExp"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Args"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//TableConstructor">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//TableConstructor/fieldList"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//FieldList">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FieldList/fields"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Field"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//NameList">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//NameList/names"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//LocalVar"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpFunctionDeclaration">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpFunctionDeclaration/body"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//FuncBody">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FuncBody/parList"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FuncBody/funcBlock"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ParList">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ParList/argsList"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Arg"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ArgList">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ArgList/args"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Feature"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//NamedFeature"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Referenceable">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute ../../org.xtext.lua/model/generated/Lua.ecore#//Referenceable/name"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Referencing">
+      <genFeatures notify="false" createChild="false" propertySortChoices="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//Referencing/ref"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//DoEndBlock">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//DoEndBlock/block"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//WhileLoop">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//WhileLoop/condition"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//WhileLoop/block"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//RepeatLoop">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//RepeatLoop/block"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//RepeatLoop/condition"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//IfThenElse">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//IfThenElse/condition"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//IfThenElse/thenBlock"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//IfThenElse/elseIfs"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//IfThenElse/elseBlock"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//EmptyStat"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//NumericFor">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//NumericFor/arg"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//NumericFor/fromExp"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//NumericFor/toExp"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//NumericFor/stepExp"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//NumericFor/block"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//GenericFor">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//GenericFor/argList"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//GenericFor/expList"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//GenericFor/block"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Assignment">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//Assignment/vars"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//Assignment/expList"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpOr">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpOr/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpOr/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpAnd">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpAnd/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpAnd/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpGt">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpGt/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpGt/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpGeq">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpGeq/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpGeq/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpLt">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpLt/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpLt/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpLeq">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpLeq/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpLeq/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpEq">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpEq/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpEq/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpNeq">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpNeq/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpNeq/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpConcat">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpConcat/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpConcat/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpAdd">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpAdd/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpAdd/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpSub">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpSub/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpSub/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpMult">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpMult/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpMult/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpDiv">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpDiv/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpDiv/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpMod">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpMod/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpMod/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpNegate">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpNegate/exp"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpLength">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpLength/exp"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpInvert">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpInvert/exp"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpExponentiation">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpExponentiation/left"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpExponentiation/right"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpNil"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpFalse"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpTrue"/>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpNumberLiteral">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute ../../org.xtext.lua/model/generated/Lua.ecore#//ExpNumberLiteral/value"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpStringLiteral">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute ../../org.xtext.lua/model/generated/Lua.ecore#//ExpStringLiteral/value"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ParamArgs">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ParamArgs/params"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//LiteralStringArg">
+      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute ../../org.xtext.lua/model/generated/Lua.ecore#//LiteralStringArg/str"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//IndexExpField">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//IndexExpField/indexExp"/>
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//IndexExpField/valueExp"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//NameField">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//NameField/valueExp"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//ExpField">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//ExpField/exp"/>
+    </genClasses>
+  </genPackages>
+</genmodel:GenModel>

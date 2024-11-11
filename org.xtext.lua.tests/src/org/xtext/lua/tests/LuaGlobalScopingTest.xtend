@@ -218,4 +218,39 @@ class LuaGlobalScopingTest {
 		check(result2, REQUIRING_SUT)
 	}
 	
+	@Test
+	def void globalScopingRequireFunctionsTest() { 
+
+		val PROVIDING_SUT = '''
+			function require(modname) end
+			local _M = {}
+			_M.func1 = function() end
+			local function func2() end
+			_M.func2 = func2
+			return _M
+		'''
+		val result = parseHelper.parse(PROVIDING_SUT)
+		val resultUri = result.eResource.getURI	
+		val rs = result.eResource.getResourceSet
+		
+		val PROVIDING_SUT_UNUSED = 
+		'''
+			function require_unused(modname) end
+		'''
+		val result_unused = parseHelper.parse(PROVIDING_SUT_UNUSED, rs)
+		
+		val REQUIRING_SUT = 
+		'temp = require(\"' + resultUri + '\") ' +
+		'''
+			temp.func1()
+			temp.func2()
+		'''
+		val result2 = parseHelper.parse(REQUIRING_SUT, rs)
+		
+		System.out.println(dump(result, ""));
+		System.out.println(dump(result2, ""));
+		check(result, PROVIDING_SUT)
+		check(result2, REQUIRING_SUT)
+	}
+	
 }

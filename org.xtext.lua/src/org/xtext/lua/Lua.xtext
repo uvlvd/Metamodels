@@ -168,7 +168,7 @@ Label:
  */
 AssignmentOrFunctionCall returns Stat:
 	PrefixExp (
-		({FunctionCallStat.functionCall=current}) |
+		({FunctionCallStat.prefix=current}) |
 	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
 	)
 ;

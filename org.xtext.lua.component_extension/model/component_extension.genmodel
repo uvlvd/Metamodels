@@ -68,12 +68,10 @@
     <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//SuffixExp"/>
     <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Var"/>
     <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//FunctionCall">
-      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FunctionCall/functionCall"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FunctionCall/args"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FunctionCall/suffixExp"/>
     </genClasses>
     <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//MethodCall">
-      <genFeatures createChild="false" ecoreFeature="ecore:EAttribute ../../org.xtext.lua/model/generated/Lua.ecore#//MethodCall/name"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//MethodCall/args"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//MethodCall/suffixExp"/>
     </genClasses>
@@ -147,6 +145,9 @@
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//GenericFor/argList"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//GenericFor/expList"/>
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//GenericFor/block"/>
+    </genClasses>
+    <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//FunctionCallStat">
+      <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//FunctionCallStat/prefix"/>
     </genClasses>
     <genClasses ecoreClass="../../org.xtext.lua/model/generated/Lua.ecore#//Assignment">
       <genFeatures property="None" children="true" createChild="true" ecoreFeature="ecore:EReference ../../org.xtext.lua/model/generated/Lua.ecore#//Assignment/vars"/>

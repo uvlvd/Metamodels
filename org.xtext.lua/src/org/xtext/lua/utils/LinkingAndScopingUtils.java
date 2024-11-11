@@ -842,8 +842,6 @@ public final class LinkingAndScopingUtils {
 		return result;
 	}
 
-	
-
 	public static boolean isFunctionDeclaration(Referenceable referenceable) {
 		return getFuncBodyFromFuncObject(referenceable) != null;
 	}

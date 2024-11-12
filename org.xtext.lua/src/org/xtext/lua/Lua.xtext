@@ -508,7 +508,7 @@ NamedFeature:
  * Some Rules (e.g. the Label rule referenced by goto) parse the "name" attribute, and return the Referenceable type.
  * Others (e.g. Var) have no "name" attribute (instead, they have a ref cross-reference), but are sub-types of Referenceable,
  * that is the resulting EObjects carry a "name" attribute with the value null. This value is later set by the
- * LuaDerivedStateComputer class.
+ * LuaDerivedStateComputer class or during linking.
  */
 Referenceable:
 	name=LUA_NAME |

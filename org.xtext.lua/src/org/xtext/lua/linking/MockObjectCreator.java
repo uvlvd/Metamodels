@@ -24,6 +24,8 @@ public class MockObjectCreator implements IMockObjectCreator {
 	private Map<Integer, Var> varMap = new HashMap<>();
 	private Block mockBlock = null;
 	
+	// TODO: should handle require calls to external libraries differently, e.g. save the synthetic vars to special resources depending on the require
+	// calls parameter
 	public EObject createMockObjectFor(final EObject context) {
 		//System.out.println("Creating mock object for: " + context);
 		var mockBlock =  getOrCreateMockBlock(VAR_MOCK_URI, context);

@@ -592,7 +592,7 @@ class LuaLocalScopingTest {
 	@Test
 	def void scopingDoubleFunctionCallReturnFeatureTest() { 
 		val SUT = '''
-		 local n = function ()
+		 --local n = function ()
 		 --	local _M = {}
 		 --	_M.first = "first"
 		 --	return _M

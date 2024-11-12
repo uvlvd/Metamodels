@@ -3,6 +3,8 @@
  */
 package org.xtext.lua;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
@@ -12,6 +14,7 @@ import org.eclipse.xtext.diagnostics.IDiagnosticConsumer;
 import org.eclipse.xtext.linking.ILinker;
 import org.eclipse.xtext.linking.ILinkingDiagnosticMessageProvider;
 import org.eclipse.xtext.linking.ILinkingService;
+import org.eclipse.xtext.linking.impl.ImportedNamesAdapter;
 import org.eclipse.xtext.linking.impl.LinkingDiagnosticProducer;
 import org.eclipse.xtext.linking.lazy.LazyLinker;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
@@ -44,12 +47,22 @@ import org.xtext.lua.serialization.LuaTransientValueService;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import com.google.inject.Binder;
 
 /**
  * Use this class to register components to be used at runtime / without the
  * Equinox extension registry.
  */
 public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
+	
+	@Override
+	public void configure(Binder binder) {
+		// set the logging level of the ImportedNamesAdapter to warn to avoid info logs, see {@link LuaScopeProvider.getReferenceablesFromRequireCall}
+		Logger.getLogger(ImportedNamesAdapter.class).setLevel(Level.WARN);
+		
+		super.configure(binder);
+	}
+	
 	/**
 	 * Bind custom value converter to handle the conversion of parsed Lua values,
 	 * e.g. (hex) numbers.

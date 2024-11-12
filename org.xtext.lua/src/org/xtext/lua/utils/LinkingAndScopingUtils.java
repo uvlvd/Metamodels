@@ -894,4 +894,32 @@ public final class LinkingAndScopingUtils {
 	}
 	
 	
+	public static Optional<Referenceable> findAssignableForExp(final Exp exp) {
+		// handle expressions assigned to fields
+		final var expContainer = exp.eContainer();
+		if (expContainer instanceof Field field) {
+			// TODO: cases: IndexExpField, NameField, ExpField
+			return Optional.of(field);
+		}
+		// handle Assignment
+		if (expContainer instanceof ExpList expList) {
+			final var expListContainer = expList.eContainer();
+			final var expIndex = expList.getExps().indexOf(exp);
+			if (expIndex == -1) throw new RuntimeException("Could not find Exp " + exp + " in its parent ExpList " + expList +"!");
+			
+			if (expListContainer instanceof Assignment assignment) {
+				final var assignmentFeatureRoot = assignment.getVars().get(expIndex);
+				if (assignmentFeatureRoot instanceof Feature featureRoot) {
+					return Optional.of((NamedFeature) getFeaturePathNamedLeaf(featureRoot));
+				}
+			}
+			
+			if (expListContainer instanceof LocalAssignment localAssignment) {
+				final var vars = localAssignment.getVars().getNames();
+				return Optional.of(vars.get(expIndex));
+			}
+		}
+		LOGGER.warn("Cannot find Assignable for exp " + exp + " with container " + expContainer +" and container's container " + expContainer.eContainer() + "!");
+		return Optional.empty();
+	}
 }

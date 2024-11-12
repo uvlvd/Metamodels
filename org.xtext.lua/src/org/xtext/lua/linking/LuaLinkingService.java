@@ -22,7 +22,9 @@ import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Chunk;
+import org.xtext.lua.lua.ExpFunctionDeclaration;
 import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.IndexExpField;
 import org.xtext.lua.lua.LuaFactory;
@@ -64,6 +66,8 @@ public class LuaLinkingService extends DefaultLinkingService {
 		if (isTableAccessNamesResolved.compareAndSet(false, true)) {
 			resolveAllTableAccessNamesAndRefsInContextRoot(context);
 			resolveAllFieldNamesAndRefsInContextRoot(context);
+			// only call after other names have been resolved, makes use of TableAccess and Field names
+			resolveAllExpFunctionDeclarationNamesInContextRoot(context);
 		}
 
 		var linkedObjects = super.getLinkedObjects(context, ref, node);
@@ -136,6 +140,32 @@ public class LuaLinkingService extends DefaultLinkingService {
 					
 					// TODO: the dummy also needs to be inserted for memberAccesses on functioncalls, e.g. func().member
 				}
+			}
+		}
+	}
+	
+	/**
+	 * Sets the name of all {@link ExpFunctionDeclaration} contained in the given context to the name of their
+	 * corresponding assignable, if the assignable can be determined.</br>
+	 * E.g. For the Lua snippet: </br>
+	 * 		{@code func = function() end}</br> 
+	 * the {@code name} attribute of the {@link ExpFunctionDeclaration} {@code function() end} would be set to "func".</br></br>
+	 * 
+	 * <i>This assumes that the names for the corresponding assignables (e.g. TableAccesses, Fields, etc.) have been set beforehand!</i>
+	 * @param context
+	 */
+	private void resolveAllExpFunctionDeclarationNamesInContextRoot(final EObject context) {
+		final var scopeRoot = EcoreUtil2.getRootContainer(context);
+		final var expFunctionDecls = EcoreUtil2.getAllContentsOfType(scopeRoot, ExpFunctionDeclaration.class);
+		for (var expFunctionDecl : expFunctionDecls) {
+			final var assignableOpt = LinkingAndScopingUtils.findAssignableForExp(expFunctionDecl);
+			if (assignableOpt.isPresent()) {
+				final var assignable = assignableOpt.get();
+				// we assume that all possible assignables returned here have their name attribute already set
+				expFunctionDecl.setName(assignable.getName());
+			} else {
+				// We assume that all assignables are returned by the findAssignableForExp function
+				// and any other ExpFunctionDeclarations are unnamed functions (e.g. as part of the arguments of a function call)
 			}
 		}
 	}

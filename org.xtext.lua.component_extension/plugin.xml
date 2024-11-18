@@ -14,12 +14,4 @@
             genModel="model/component_extension.genmodel"/>
    </extension>
 
-   <extension point="org.eclipse.emf.ecore.generated_package">
-      <!-- @generated component_extension -->
-      <package
-            uri="http://www.xtext.org/lua/Lua"
-            class="lua.LuaPackage"
-            genModel="model/component_extension.genmodel"/>
-   </extension>
-
 </plugin>

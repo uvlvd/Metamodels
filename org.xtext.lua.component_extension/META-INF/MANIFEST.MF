@@ -8,15 +8,12 @@ Bundle-ClassPath: .
 Bundle-Vendor: %providerName
 Bundle-Localization: plugin
 Bundle-RequiredExecutionEnvironment: JavaSE-11
-Export-Package: lua,
- lua.impl,
- lua.util,
- org.xtext.lua.component_extension,
+Export-Package: org.xtext.lua.component_extension,
  org.xtext.lua.component_extension.impl,
  org.xtext.lua.component_extension.util
 Require-Bundle: org.eclipse.emf.ecore;visibility:=reexport,
  org.eclipse.core.runtime,
- org.xtext.lua;bundle-version="1.0.0",
+ org.xtext.lua;bundle-version="1.0.0";visibility:=reexport,
  org.eclipse.pde.core;bundle-version="3.15.300",
  org.eclipse.emf;bundle-version="2.8.0"
 Bundle-ActivationPolicy: lazy

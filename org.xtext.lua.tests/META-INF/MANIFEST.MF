@@ -9,9 +9,8 @@ Bundle-ActivationPolicy: lazy
 Require-Bundle: org.xtext.lua,
  org.eclipse.xtext.testing,
  org.eclipse.xtext.xbase.testing,
- org.eclipse.xtext.xbase.lib;bundle-version="2.34.0"
-Import-Package: org.apache.commons.lang3;version="3.14.0",
- org.apache.log4j;version="1.2.25",
+ org.eclipse.xtext.xbase.lib
+Import-Package: org.apache.commons.lang;version="2.6.0",
  org.junit.jupiter.api;version="[5.1.0,6.0.0)",
  org.junit.jupiter.api.extension;version="[5.1.0,6.0.0)"
 Bundle-RequiredExecutionEnvironment: JavaSE-17

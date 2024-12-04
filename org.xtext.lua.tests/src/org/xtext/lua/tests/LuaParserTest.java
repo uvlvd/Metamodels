@@ -8,8 +8,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.util.EcoreUtil;
@@ -45,8 +44,9 @@ public class LuaParserTest {
 	public void luaTestSuiteTest() throws IOException {
 		final var lua_test_suite_52 = "D:\\MA\\lua-5.2.0-tests"; // TODO: situate in project
 		final var apisix = "D:\\MA\\apisix\\apisix";
+		final var apisix_new = "D:\\MA\\own\\CIPM\\commit-based-cipm\\bundles\\si\\cipm.consistency.vsum.test\\ciTestRepos\\apisix";
 		final var temp_testfolder = "D:\\MA\\repos\\temp";
-		var resourceSet = new LuaParser().parse(Paths.get(apisix));
+		var resourceSet = new LuaParser().parse(Paths.get(apisix_new));
 		
 		//checkPercentageOfResolvedProxies(resourceSet);
 		//final var unresolvedCrossReferences = EcoreUtil.UnresolvedProxyCrossReferencer.find(resourceSet);

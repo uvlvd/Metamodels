@@ -223,7 +223,7 @@ class LuaGlobalScopingTest {
 
 		val PROVIDING_SUT = '''
 			function require(modname) end
-			local _M = {}
+			local _M = {func3 = function() end}
 			_M.func1 = function() end
 			local function func2() end
 			_M.func2 = func2
@@ -244,6 +244,7 @@ class LuaGlobalScopingTest {
 		'''
 			temp.func1()
 			temp.func2()
+			temp.func3()
 		'''
 		val result2 = parseHelper.parse(REQUIRING_SUT, rs)
 		

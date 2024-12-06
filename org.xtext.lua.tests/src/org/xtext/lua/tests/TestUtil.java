@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.junit.jupiter.api.Assertions;
@@ -19,6 +20,7 @@ import org.xtext.lua.lua.Chunk;
  *
  */
 public class TestUtil {
+	private static final Logger LOGGER = Logger.getLogger(TestUtil.class);
 	
 	private TestUtil() { }
 	
@@ -62,8 +64,9 @@ public class TestUtil {
 		final var mockedCrossReferences = allCrossReferences.keySet().stream()
 				.filter(cr -> cr instanceof SyntheticVar)
 				.toList();
-		Assertions.assertTrue(unresolvedCrossReferences.isEmpty(), "Unexpected unresolved cross-references found.");
-		Assertions.assertTrue(mockedCrossReferences.isEmpty(), "Unexpected mock-references found.");
+		Assertions.assertTrue(unresolvedCrossReferences.isEmpty(), 
+							  "Unexpected unresolved cross-references found:\n   " + unresolvedCrossReferences);
+		Assertions.assertTrue(mockedCrossReferences.isEmpty(), "Unexpected mock-references found:\n  " + mockedCrossReferences);
 	}
 	
 	/**
@@ -75,36 +78,30 @@ public class TestUtil {
 	private static void parsedAndSerializedEqualsOriginal(final Chunk chunk, final String original) {
 		try (var outputStream = new ByteArrayOutputStream()){
 			chunk.eResource().save(outputStream, new HashMap<>());
-			
 			final var parsedAndSerialized = outputStream.toString();
-			final var preprocessedOriginal = removeCommentsAndWhitespace(original);
-			final var preprocessedParsedAndSerialized = removeCommentsAndWhitespace(parsedAndSerialized);
-			final var equivalence = preprocessedOriginal.equals(preprocessedParsedAndSerialized);
-			
-			// print original and parsedAndSerialized when something goes wrong
-			if (!equivalence) {
-				System.out.println("===== Original: =====");
-				System.out.println(original);
-				System.out.println("===== Parsed and serialized: =====");
-				System.out.println(parsedAndSerialized);
-				
-				System.out.println("===== Original preprocessed: =====");
-				System.out.println(preprocessedOriginal);
-				System.out.println("===== Parsed and serialized preprocessed: =====");
-				System.out.println(preprocessedParsedAndSerialized);
-			}
-			Assertions.assertTrue(equivalence);
+			compareNormalizedStrings(original, parsedAndSerialized);
 		} catch (IOException e) {
-			Assertions.fail("Unexpected IOException thrown during tests: \\n" + e.getLocalizedMessage());
+			Assertions.fail("Unexpected IOException thrown during tests:\n  " + e.getLocalizedMessage());
 		}
 		
 	}
 	
-	private static String removeCommentsAndWhitespace(final String string) {
-		final var withoutComments = PreprocessingUtils.removeComments(string);
-		return PreprocessingUtils.removeAllWhiteSpacesAndNewLines(withoutComments);
+	public static boolean compareNormalizedStrings(final String original, final String parsedAndSerialized) {
+		final var s1 = PreprocessingUtils.removeCommentsAndWhiteSpacesAndNewLines(original);
+		final var s2 = PreprocessingUtils.removeCommentsAndWhiteSpacesAndNewLines(parsedAndSerialized);
+		final var result = s1.equals(s2);
+		
+		if (!result) {
+			var diffStr = StringUtils.difference(s2, s1);
+			diffStr = diffStr.substring(0, diffStr.length() < 101 ? diffStr.length() : 100);
+			LOGGER.error("Original and parsed and serialized Strings differ!\n"
+					+ "    Original: " + s1 + "\n"
+					+ "    Parsed  : " + s2 + "\n"
+					+ "    Diff at : " + diffStr);
+		}
+		
+		return result;
 	}
-	
 
 	/**
 	 * Creates a String representation of the given EObject. Used to print the parsed code snippets for 
@@ -116,9 +113,10 @@ public class TestUtil {
 	    //var res = indent + model.toString().replaceFirst (".*[.]impl[.](.*)Impl[^(]*", "$1 ");
 	    var res = indent + model.toString().replaceFirst(".*[.]impl[.](.*)Impl[@](.*)[^(]*", "$1 $2");
 	
-	    for (final var a : model.eCrossReferences()) 
+	    for (final var a : model.eCrossReferences()) {
 	        //res += " ->" + a.toString().replaceFirst(".*[.]impl[.](.*)Impl[^(]*", "$1 ");
 	    	res += " ->" + a.toString().replaceFirst (".*[.]impl[.](.*)Impl[@](.*)[^(]*", "$1 $2");
+	    }
 	    res += "\n";
 	    for (final var f : model.eContents()) {
 	        res += dump(f, indent+"    ");

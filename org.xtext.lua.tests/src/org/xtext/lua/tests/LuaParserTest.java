@@ -3,23 +3,31 @@ package org.xtext.lua.tests;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.commons.lang.StringUtils;
+
+import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.xtext.lua.LuaParser;
-import org.xtext.lua.PreprocessingUtils;
 import org.xtext.lua.linking.SyntheticVar;
 
 
 public class LuaParserTest {
+	private static final Logger LOGGER = Logger.getLogger(LuaParserTest.class);
+	
+	// TODO: remove
 	@Test
 	public void testMinimalParseTest() throws IOException {
 		final var apisix = "D:\\MA\\apisix\\apisix";
@@ -37,123 +45,67 @@ public class LuaParserTest {
 		
 		var resourceSet = new LuaParser().parse(Paths.get(lua_test_suite_52));
 		
-		printNumberOfModelElements(resourceSet);
+		//printNumberOfModelElements(resourceSet);
 	}
 	
+	private static final String EVAL_FOLDER_PATH = "evaluation_results\\";
+	
+	/**
+	 * Test used for the evaluation of the Lua code model. 
+	 * All projects configured in {@link TestConfig#EVAL_PROJECT_CONFIGS} are parsed and tested.
+	 * Results of the evaluation are written to a newly create evaluation file inside evaluation_results.
+	 * @throws IOException
+	 */
 	@Test
-	public void luaTestSuiteTest() throws IOException {
-		final var lua_test_suite_52 = "D:\\MA\\lua-5.2.0-tests"; // TODO: situate in project
-		final var apisix = "D:\\MA\\apisix\\apisix";
-		final var apisix_new = "D:\\MA\\own\\CIPM\\commit-based-cipm\\bundles\\si\\cipm.consistency.vsum.test\\ciTestRepos\\apisix";
-		final var temp_testfolder = "D:\\MA\\repos\\temp";
-		var resourceSet = new LuaParser().parse(Paths.get(apisix_new));
+	public void evaluationTest() throws IOException {
+		// this list is filled with evaluation results for each project and printed
+		// to an evaluation file at the end of the test.
+		var evaluationResults = new ArrayList<String>();
 		
-		//checkPercentageOfResolvedProxies(resourceSet);
-		//final var unresolvedCrossReferences = EcoreUtil.UnresolvedProxyCrossReferencer.find(resourceSet);
-		//System.out.println(unresolvedCrossReferences.size());
-		//EcoreUtil.resolveAll(resourceSet);
+		for (final var config : TestConfig.EVAL_PROJECT_CONFIGS) {
+			final var path = config.getPath();
+			evaluationResults.add("Results for project with path '" + path + "'...");
+			final var charSet = config.getCharSet();
+			final var verbose = config.isVerbose();
+			
+			var resourceSet = new LuaParser().parse(Paths.get(path));
+			
+			assertParsedAndSerializedEqualsOriginal(resourceSet, charSet);
+			printNumberOfModelElements(evaluationResults, resourceSet);
+			evaluateResolvedProxies(evaluationResults, resourceSet, verbose);
+		}
 		
+		writeEvaluationResults(evaluationResults);
+	}
+	
+	private void writeEvaluationResults(List<String> evaluationResults) throws IOException {
+		final var now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("ddMMuuuu_HHmmss"));
+		final var fileName = "eval_" + now + ".txt";
+		final var path = Paths.get(EVAL_FOLDER_PATH + fileName);
+		System.out.println("Test finished, printing evaluation results to file '" + path + "'...");
+		Files.write(path, evaluationResults, StandardCharsets.UTF_8);
+		System.out.println("Evaluation test concluded.");
+	}
+	
+	private void assertParsedAndSerializedEqualsOriginal(final ResourceSet resourceSet, final String charSet) throws IOException {
 		for (var r : resourceSet.getResources()) {
 			var outputStream = new ByteArrayOutputStream();
 			r.save(outputStream, new HashMap<>());
 			var parsedAndSerialized = outputStream.toString();
 			
 			var originalPath = r.getURI().toFileString();
-			System.out.println(originalPath);
-			//String original = Files.readString(Paths.get(originalPath), Charset.forName("ISO-8859-1"));
-			String original = Files.readString(Paths.get(originalPath), Charset.forName("UTF-8"));
+			String original = Files.readString(Paths.get(originalPath), Charset.forName(charSet));
 			
-			var strsEqual = compareNormalizedStrings(original, parsedAndSerialized);
+			var strsEqual = TestUtil.compareNormalizedStrings(original, parsedAndSerialized);
 			if (!strsEqual) {
 				System.out.println(originalPath);
 			}
 			
-			Assertions.assertTrue(strsEqual);
+			Assertions.assertTrue(strsEqual, "The original and the parsed and serialized code differ.");
 		}
-		
-		printNumberOfModelElements(resourceSet);
-		checkPercentageOfResolvedProxies(resourceSet);
-		
-		/*
-		for (var resource : resourceSet.getResources()) {
-			System.out.println("Resolving all in resource " + resource.getURI());
-			for (var obj : resource.getContents()) {
-				//System.out.println("Resolving all for object " + obj);
-				obj.eContainer();
-			    resolveCrossReferences(obj);
-			    for (Iterator<EObject> i = obj.eAllContents(); i.hasNext(); )
-			    {
-			      EObject childEObject = i.next();
-			      resolveCrossReferences(childEObject);
-			    }
-			}
-		}
-		*/
+	}
 
-		
-
-	}
-	
-	  private static void resolveCrossReferences(EObject eObject)
-	  {
-		//System.out.println("resolving for " + eObject);
-	    for (Iterator<EObject> i =  eObject.eCrossReferences().iterator();  i.hasNext(); i.next())
-	    {
-	      // The loop resolves the cross references by visiting them.
-	    }
-	  }
-	
-	private boolean compareNormalizedStrings(String str1, String str2) {
-		var s1 = PreprocessingUtils.removeCommentsAndWhiteSpacesAndNewLines(str1);
-		var s2 = PreprocessingUtils.removeCommentsAndWhiteSpacesAndNewLines(str2);
-		var result = s1.equals(s2);
-		
-		if (!result) {
-			var diffStr = StringUtils.difference(s2, s1);
-			System.out.println(s1);
-			System.out.println(s2);
-			System.out.println(diffStr.substring(0, diffStr.length() < 101 ? diffStr.length() : 100));
-		}
-		
-		return result;
-	}
-	
-	private void checkPercentageOfResolvedProxies(ResourceSet resourceSet) {
-		EcoreUtil.resolveAll(resourceSet);
-		// Check if all poxy object were resolved.
-		final var allCrossReferences = EcoreUtil.CrossReferencer.find(resourceSet.getResources());
-		final var unresolvedCrossReferences = EcoreUtil.UnresolvedProxyCrossReferencer.find(resourceSet);
-		final var mockedCrossReferences = allCrossReferences.keySet().stream()
-				.filter(cr -> cr instanceof SyntheticVar)
-				.toList();
-		if (!unresolvedCrossReferences.isEmpty()) {
-			//System.out.println(allCrossReferences.keySet().stream().findAny());
-			System.out.println(unresolvedCrossReferences.keySet().stream().toList());
-			unresolvedCrossReferences.keySet().stream().forEach(cr -> {
-				System.out.println("Container: " + cr.eContainer() + ", cross-reference: " + cr);
-			});
-		}
-		//var rel = ((double) (allCrossReferences.size() - unresolvedCrossReferences.size()))/allCrossReferences.size();
-		//var percent =  Math.round(rel*10000.0)/100.0 ;
-		final var allCrossReferencesCount = allCrossReferences.size();
-		final var unresolvedCrossReferencesCount = unresolvedCrossReferences.size();
-		final var mockedCrossReferencesCount = mockedCrossReferences.size();
-		final var resolvedPercent = getPercentage(unresolvedCrossReferencesCount, allCrossReferencesCount);
-		final var mockedPercent = 100d - getPercentage(mockedCrossReferencesCount, allCrossReferencesCount);
-		
-		System.out.println("Total cross references count: " + allCrossReferencesCount + ", unresolved: " + unresolvedCrossReferencesCount + ", mocked: " + mockedCrossReferencesCount);
-		System.out.println("Resolved references: " + resolvedPercent + "%");
-		System.out.println("Mocked references: " + mockedPercent + "%");
-		
-		//Assertions.assertTrue(unresolvedCrossReferences.isEmpty());
-	}
-	
-	private double getPercentage(final double of, final double from) {
-		final var rel = (from - of)/from;
-		return Math.round(rel*10000.0)/100.0;
-	}
-	
-	private void printNumberOfModelElements(ResourceSet resourceSet) {
+	private void printNumberOfModelElements(List<String> evaluationResults, final ResourceSet resourceSet) {
 		var counter = new AtomicInteger();
 		resourceSet.getResources().forEach(r -> 
 			r.getAllContents().forEachRemaining(
@@ -161,6 +113,74 @@ public class LuaParserTest {
 			)
 		);
 
-		System.out.println("Total number of resource elements: " + counter.get());
+		evaluationResults.add(" - Total number of resource elements: " + counter.get());
 	}
+
+	/**
+	 * Calculates the percentages of resolved and mocked proxies/references and prints the results to the console.
+	 * @param resourceSet the resourceSet
+	 * @param verbose [Attention: currently not working!] whether to print additional information about which reference is being resolved.
+	 */
+	private void evaluateResolvedProxies(List<String> evaluationResults, final ResourceSet resourceSet, final boolean verbose) {
+		// TODO: using verbose here does currently not work, leads to a ConcurrentModificationException
+		if (verbose) {
+			resolveCrossReferencesVerbose(resourceSet);
+		} else {
+			EcoreUtil.resolveAll(resourceSet);
+		}
+
+		final var allCrossReferences = EcoreUtil.CrossReferencer.find(resourceSet.getResources());
+		final var unresolvedCrossReferences = EcoreUtil.UnresolvedProxyCrossReferencer.find(resourceSet);
+		final var mockedCrossReferences = allCrossReferences.keySet().stream()
+				.filter(cr -> cr instanceof SyntheticVar)
+				.toList();
+
+		final var allCrossReferencesCount = allCrossReferences.size();
+		final var unresolvedCrossReferencesCount = unresolvedCrossReferences.size();
+		final var mockedCrossReferencesCount = mockedCrossReferences.size();
+		final var resolvedPercent = getPercentage(unresolvedCrossReferencesCount, allCrossReferencesCount);
+		final var mockedPercent = 100d - getPercentage(mockedCrossReferencesCount, allCrossReferencesCount);
+		
+		evaluationResults.add(" - Total cross references count: " + allCrossReferencesCount + ",\n    - unresolved: " + unresolvedCrossReferencesCount + ",\n    - mocked: " + mockedCrossReferencesCount);
+		evaluationResults.add(" - Resolved references: " + resolvedPercent + "% (needs to be 100% for CIPM)");
+		evaluationResults.add(" - Mocked references: " + mockedPercent + "%");
+		
+		Assertions.assertTrue(unresolvedCrossReferences.isEmpty());
+	}
+	
+	
+	//TODO: currently not working, see comment/TODO in evaluateResolvedProxies
+	/**
+	 * This method can be used to debug reference resolution. It logs the currently resolved resource and
+	 * EObject during resolution, s.t. the user can identify which parts of the model cause the problem.
+	 * @param resourceSet
+	 */
+	private static void resolveCrossReferencesVerbose(final ResourceSet resourceSet) {
+		final var resources = resourceSet.getResources();
+		for (final var resource : resources) {			
+			LOGGER.info("Resolving all in resource " + resource.getURI());
+			for (final var obj : resource.getContents()) {
+				LOGGER.info("Resolving all for object " + obj);
+				obj.eContainer();
+				resolveCrossReferences(obj);
+				for (Iterator<EObject> i = obj.eAllContents(); i.hasNext();) {
+					EObject childEObject = i.next();
+					resolveCrossReferences(childEObject);
+				}
+			}			
+		}
+	}
+	
+	private static void resolveCrossReferences(final EObject eObject) {
+		for (Iterator<EObject> i = eObject.eCrossReferences().iterator(); i.hasNext(); i.next()) {
+			// The loop resolves the cross references by visiting them.
+		}
+	}
+	
+	
+	private double getPercentage(final double of, final double from) {
+		final var rel = (from - of)/from;
+		return Math.round(rel*10000.0)/100.0;
+	}
+
 }

@@ -11,15 +11,16 @@ import org.xtext.lua.lua.Referencing
 import org.xtext.lua.lua.Var
 import org.xtext.lua.lua.ExpNumberLiteral
 import org.xtext.lua.lua.MemberAccess
+import org.xtext.lua.lua.ExpNil
 
 /**
  * Class containing tests for the local scoping (i.e. reference resolution).
  * @author jsaenz
  */
  // TODO: Most of the tests in this class do not contain testing functionalities other than 
- // the base tests performed by DefaultTestingParserHelper due to the prioritization of other requirements. 
+ // the base tests performed by DefaultTestingParserHelper due to the prioritisation of other requirements. 
  // Examples of how to extend the test cases can be found e.g. in the first few test cases, where a more detailed
- // testing is already implemented.
+ // testing was implemented.
 @ExtendWith(InjectionExtension)
 @InjectWith(LuaInjectorProvider)
 class LuaLocalScopingTest {
@@ -102,7 +103,7 @@ class LuaLocalScopingTest {
 	}
 	
 	@Test
-	def void scopingTableAccessStringLiteralTest() { 
+	def void tableAccessStringLiteralTest() { 
 		val SUT = '''
 			a = {}
 			a["member"] = 1
@@ -122,7 +123,7 @@ class LuaLocalScopingTest {
 	}
 	
 	@Test
-	def void scopingTableAccessNumberLiteralTest() { 
+	def void tableAccessNumberLiteralTest() { 
 		val SUT = '''
 			a = {}
 			a[0] = 2
@@ -137,7 +138,7 @@ class LuaLocalScopingTest {
 	 *  d -> a (in line 4), which contains [str], which points to a["member"], which points to 1.
 	 */
 	@Test
-	def void scopingTableAccessStringLiteralVariableTest() { 
+	def void tableAccessStringLiteralVariableTest() { 
 		val SUT = '''
 			a = {}
 			a["member"] = 1
@@ -148,38 +149,50 @@ class LuaLocalScopingTest {
 	}
 	
 	@Test
-	def void scopingTableAccessNumberLiteralVariableTest() { 
+	def void tableAccessNumberLiteralVariableTest() { 
 		val SUT = '''
 			a = {}
-		    a[0] = 1
-		    str = 0 
-		    d = a[str] 
+			a[0] = 1
+			str = 0 
+			 d = a[str] 
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 
 	
 	@Test
-	def void scopingMissingValueInExpressionTest() { 
+	def void missingValueInExpressionTest() { 
 		val SUT = '''
 			a, b = 1 -- b should reference a newly created ExpNil
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		val result = parseHelper.parseAndPerformBaseScopingTest(SUT)
+		val assignment = result.block.stats.get(0) as Assignment
+		val b = assignment.getVars.get(1) as Var
+		// could also test for SyntheticExpNil, but the general case seems better since it should
+		// not matter how b gets assigned the Nil value, as long as it is a Nil value
+		Assertions.assertTrue(b.getRef instanceof ExpNil)
 	}
 	
 	@Test
-	def void scopingLastAssignmentTest() { 
+	def void assignmentPrecedenceTest() { 
 		val SUT = '''
 			a = 1
 			a = 2
+			b = a -- b should reference a from a=2
 			a = 3
-			b = a -- b should reference a from a=3
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		val result = parseHelper.parseAndPerformBaseScopingTest(SUT)
+		val secondAssignment = result.block.stats.get(1) as Assignment
+		val thirdAssignment = result.block.stats.get(2) as Assignment
+		
+		val expectedA = secondAssignment.getVars().get(0) as Var
+		val b = thirdAssignment.getVars().get(0) as Var
+		val ba = b.getRef() as Var // a on rhs of b = a
+		Assertions.assertTrue(ba.getRef() == expectedA)
 	}
 	
 	@Test
-		def void scopingPartialTableAccessTest() { 
+		def void partialTableAccessTest() { 
 		val SUT = '''
 			b = {}
 			b.temp = 1 
@@ -187,26 +200,12 @@ class LuaLocalScopingTest {
 			a.b = b
 			c = a.b.temp
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
-	}
-		
-	// TODO: the result of this test should correspond to its goal, i.e.
-	// it should fail if the the second assignment is not referenced by the b = a
-	@Test
-	def void scopingAssignmentPrecedenceTest() { 
-		val SUT = '''
-		a = "this is a candidate"
-		a = "this should be the chosen candidate"
-		b = a
-		a = "this is not a candidate"
-		      
-		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
-		
+	// TODO: need to implement references to function return values where feasible
 	@Test
-	def void scopingFunctionDeclarationTest() { 
+	def void functionDeclarationTest() { 
 		val SUT = '''
 			a = {}
 			function a.f() end
@@ -219,26 +218,26 @@ class LuaLocalScopingTest {
 			a.x = b
 			a.x.memberFunc()
 			
-			--a.x.memberFunc()["member"]
+			a.x.memberFunc()["member"]
 			
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	
 	@Test
-	def void scopingNumericForTest() { 
+	def void numericForTest() { 
 		val SUT = '''
 		a = {}
 		for i = 1, 10 do
 		   a[i] = i
 		end
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	@Test
-	def void scopingGenericForTest() { 
+	def void genericForTest() { 
 		val SUT = '''
 		a = {}
 		b = {"hello", "world"}
@@ -251,11 +250,11 @@ class LuaLocalScopingTest {
 		   a[k] = v
 		end
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	@Test
-	def void scopingParamArgsTest() { 
+	def void paramArgsTest() { 
 		val SUT = '''
 		function func(arg)
 		end
@@ -266,11 +265,11 @@ class LuaLocalScopingTest {
 		func(a)
 		func(a.b)
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 
 	@Test
-	def void scopingFuncBodyArgsTest() { 
+	def void funcBodyArgsTest() { 
 		val SUT = '''
 		function func(arg1, arg2) 
 			a = arg1
@@ -283,11 +282,12 @@ class LuaLocalScopingTest {
 			b = b
 		end	
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
+	// TODO: fix test
 	@Test
-	def void scopingMethodBodyArgsTest() { 
+	def void methodBodyArgsTest() { 
 		val SUT = '''
 		table = {}
 		function table:func(arg1) 
@@ -296,11 +296,11 @@ class LuaLocalScopingTest {
 		end
 		b = table:func()
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	@Test
-	def void scopingLocalFuncBodyArgsTest() { 
+	def void localFuncBodyArgsTest() { 
 		val SUT = '''
 		local function func(arg1, arg2) 
 			a = arg1
@@ -310,15 +310,15 @@ class LuaLocalScopingTest {
 		
 		local func = function (a, b)
 			a = a
-			b = b.b -- TODO: we dont know if b is a table, but this kind of access would indicate so.. -> implement trivial recovery?
+			--b = b.b -- TODO: we dont know if b is a table, but this kind of access would indicate so.. -> implement trivial recovery?
 			b = b
 		end	
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	@Test
-	def void scopingLocalFuncDeclarationTest() { 
+	def void localFuncDeclarationTest() { 
 		val SUT = '''
 		local function func() end
 		local function func2() end	
@@ -327,11 +327,11 @@ class LuaLocalScopingTest {
 		b = func2
 		
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	@Test
-	def void scopingLocalAssignmentTest() { 
+	def void localAssignmentTest() { 
 		val SUT = '''
 		local a
 		local b,c = 1
@@ -343,21 +343,21 @@ class LuaLocalScopingTest {
 		f = func
 		
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	@Test
-	def void scopingLocalAssignmentToReferencingTest() { 
+	def void localAssignmentToReferencingTest() { 
 		val SUT = '''
 		local a = {member = "member"}
 		local b = a
 		local c = b.member
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	@Test
-	def void scopingTableConstructorTest() { 
+	def void tableConstructorTest() { 
 		val SUT = '''
 		a = {["one"] = 1, [2] = 2, 3, four = 4, 5}
 		local a = {["one"] = 1, [2] = 2, 3, four = 4, 5}
@@ -368,11 +368,11 @@ class LuaLocalScopingTest {
 		four2 = a["four"]
 		five = a[2]
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 
 	@Test
-	def void scopingNestedTableConstructorTest() { 
+	def void nestedTableConstructorTest() { 
 		val SUT = '''
 		a = {b = {c = {member = "hello world"}}}
 		d = a.b.c.member
@@ -380,25 +380,32 @@ class LuaLocalScopingTest {
 		m = {{{"hello again"}}}
 		n = m[1][1][1]
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	
 	// TODO: this should test that the TableConstructor fields in the functioncall are not candidates for the 
 	// Assignment b=a.
 	@Test
-	def void scopingNonReferenceableTableConstructorTest() { 
+	def void nonReferenceableTableConstructorTest() { 
 		val SUT = '''
 		func = function(a) end
 		func{1,2,3}
 		a = 1
 		b = a
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		val result = parseHelper.parseAndPerformBaseScopingTest(SUT)
+		val aAssignment = result.block.stats.get(2) as Assignment
+		val bAssignment = result.block.stats.get(3) as Assignment
+		val a = aAssignment.getVars().get(0) as Var
+		val b = bAssignment.getVars().get(0) as Var
+		val ba = b.getRef() as Var // a in b = a
+		Assertions.assertTrue(ba.getRef() == a)
+		
 	}
 	
 	@Test
-	def void scopingGotoLabelTest() { 
+	def void gotoLabelTest() { 
 		val SUT = '''
 		do
 			::label::
@@ -409,11 +416,11 @@ class LuaLocalScopingTest {
 		goto label2
 		::label2::
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	@Test
-	def void scopingVisibilityTest() { 
+	def void scopeVisibilityTest() { 
 		val SUT = '''
 		function print(str) end
 		
@@ -430,7 +437,7 @@ class LuaLocalScopingTest {
 		end
 		print(x)              --> 10  (the global one)
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 		// TODO: fix the problem described by the failed assertion below
 		//		(see also LinkingAndScopingUtils.getReferenceablesFromStat)
 		Assertions.assertTrue(
@@ -439,6 +446,7 @@ class LuaLocalScopingTest {
 		);
 	}
 	
+	// TODO: refactor to meaningful test cases
 	@Test
 	def void scopingTempTest() { 
 		val SUT = '''
@@ -469,22 +477,25 @@ class LuaLocalScopingTest {
 		   -- a[str] = 1
 		   -- c = a.member
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	
-	// TODO: never allow a rhs to reference its own lhs, 
-	// needs to be lhs of other Assignment
+	// never allow a rhs to reference its own lhs
 	@Test
-	def void scopingTemp3Test() { 
+	def void rhsNotReferencingAssignmentTest() { 
 		val SUT = '''
 			a = a
 		'''
 		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		val aAssignment = result.block.stats.get(0) as Assignment
+		val aLhs = aAssignment.getVars().get(0) as Var
+		val aRhs = aAssignment.getExpList().getExps().get(0) as Var
+		Assertions.assertFalse(aRhs.getRef == aLhs)
 	}
 	
 	@Test
-	def void scopingFunctionCallReturnFeatureTest() { 
+	def void functionCallReturnFeatureTest() { 
 		val SUT = '''
 		 m = function()
 		 	local _M = {}
@@ -498,13 +509,13 @@ class LuaLocalScopingTest {
 		 test2 = m().table
 		 test3 = test2.member
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	// TODO: returned function defined outside of returning function
 	// does not work, see scopingResolveParentBlockReferencedVarTest
 	@Test
-	def void scopingDoubleFunctionCallReturnFeatureTest() { 
+	def void doubleFunctionCallReturnFeatureTest() { 
 		val SUT = '''
 		 --local n = function ()
 		 --	local _M = {}
@@ -524,7 +535,7 @@ class LuaLocalScopingTest {
 		 end
 		 test = m()().first
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	// TODO: we need to include the previously searched scopes when collecting the 
@@ -532,7 +543,7 @@ class LuaLocalScopingTest {
 	// inner block, but a is not visible in the outer block , so the reference cannot be
 	// resolved)
 	@Test
-	def void scopingResolveParentBlockReferencedVarTest() { 
+	def void resolveParentBlockReferencedVarTest() { 
 		val SUT = '''
 		b = {member = "hello world"}
 		do 
@@ -540,7 +551,7 @@ class LuaLocalScopingTest {
 		  c = a.member
 		end
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 
 	@Test
@@ -595,7 +606,7 @@ class LuaLocalScopingTest {
 		    end
 		}
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseTest(SUT)
 	}
 
 	@Test
@@ -605,8 +616,9 @@ class LuaLocalScopingTest {
 		table = {
 			[a] = 10
 		}
+		b = table.a
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 	@Test
@@ -619,7 +631,7 @@ class LuaLocalScopingTest {
 		func()
 		a.f()
 		'''
-		val result = parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
 }

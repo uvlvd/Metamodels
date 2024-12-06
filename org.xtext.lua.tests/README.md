@@ -17,5 +17,5 @@ is expected to be executed using the LuaParser class from Java code.
 # Terminology
  - `SUT` = snippet/subject under test
 
-#TODOS and known problems:
+# TODOS and known problems:
  - `LuaParsingTest.invalidNumberTest` is currently not executed, because the grammar currently allows for invalid numbers (non-conformant to Lua syntax); since this is not problematic for the CIPM use-case, this issue was not yet resolved.

@@ -21,7 +21,7 @@ public class LuaParser {
 		}
 		
 		var resourceSet = new LuaStandaloneSetup().createInjectorAndDoEMFRegistration().getInstance(XtextResourceSet.class);
-
+		
 		// parse lua packages and libraries
 		registerAndParseImplicitImports(resourceSet);
 		

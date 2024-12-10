@@ -120,6 +120,7 @@ end
 --
 -- redefine dofile to run files through dump/undump
 --
+
 local function report (n) print("\n***** FILE '"..n.."'*****") end
 local olddofile = dofile
 dofile = function (n)

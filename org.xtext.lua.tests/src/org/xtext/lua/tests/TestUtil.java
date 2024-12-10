@@ -1,12 +1,16 @@
 package org.xtext.lua.tests;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.junit.jupiter.api.Assertions;
@@ -90,7 +94,6 @@ public class TestUtil {
 		final var s1 = PreprocessingUtils.removeCommentsAndWhiteSpacesAndNewLines(original);
 		final var s2 = PreprocessingUtils.removeCommentsAndWhiteSpacesAndNewLines(parsedAndSerialized);
 		final var result = s1.equals(s2);
-		
 		if (!result) {
 			var diffStr = StringUtils.difference(s2, s1);
 			diffStr = diffStr.substring(0, diffStr.length() < 101 ? diffStr.length() : 100);
@@ -107,7 +110,7 @@ public class TestUtil {
 	 * Creates a String representation of the given EObject. Used to print the parsed code snippets for 
 	 * inspection in testing.
 	 */
-	private static String dump(final EObject model, final String indent) {
+	public static String dump(final EObject model, final String indent) {
 		// use commented-out regexes if you wish to hide the eObject IDs in the output
 		
 	    //var res = indent + model.toString().replaceFirst (".*[.]impl[.](.*)Impl[^(]*", "$1 ");
@@ -123,4 +126,5 @@ public class TestUtil {
 	    }
 	    return res;
 	}
+
 }

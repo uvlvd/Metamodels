@@ -409,4 +409,30 @@ class LuaParsingTest {
 		parserHelper.parseAndPerformBaseTest(SUT)
 	}	
 	
+	@Test
+	def void firstlineShebangTest() {
+		val SUT = '''
+			#! line allowing the use of Lua as a script interpreter in Unix systems
+			a = 1
+			
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	/**
+	 * This code leads to an error in LuaParserTest.java (code is part of all.lua from the Lua 5.2 test suite), but not here.
+	 * // TODO
+	 */
+	@Test
+	def void commentIssueTest() {
+		val SUT = '''
+			  --
+			  -- redefine dofile to run files through dump/undump
+			  --
+			  local function report (n) print("\n***** FILE '"..n.."'*****") end
+			  local olddofile = dofile
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
 }

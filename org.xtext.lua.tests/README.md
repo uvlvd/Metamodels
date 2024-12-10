@@ -11,6 +11,25 @@ is expected to be executed using the LuaParser class from Java code.
  - `LuaGlobalScopingTest.xtend` contains unit tests for resolution of global linking and scoping (i.e. reference resolution).
  - `LuaParserTest.java` contains integration tests on complete Lua projects. These test will output evaluation data like percentage of resolved (non-mocked) references.
 
+# Requirements for projects to be parsed
+ - `UTF-8` encoding
+ - no special first-line comments (first line starting with `#`) in any files
+
+For the evaluation tests in `LuaParserTest.java` to run succesfully the input projects need to be encoded using `UTF-8`.
+The Lua test suite files were therefore converted to `UTF-8` using the python script in the `test_data` folder.
+Additionally, all special first-line comments (first line starting with a `#` in Lua files) were removed, since these comments can 
+currently not be parsed (see limitations of code model in global README and `org.xtext.lua.Lua.xtext`).
+
+There also seems to be a bug where an empty comment breaks the parser. As a result, a line break was inserted at line 123 of the test-suite files `all.lua`:
+```
+--
+-- redefine dofile to run files through dump/undump
+--
+local function report (n) print("\n***** FILE '"..n.."'*****") end
+```
+The `local function report [...]` is not parsed (appearently treated as part of the comment) without a line-break separating the 
+comment and the line after the comment. This issue only arises in `LuaParserTest.java`, not for the same code in `LuaParsingTest.xtend`.
+
 # Configuration file
  - `TestUtil.java` may be modified to configure the tests, e.g. to enable/disable the output of a String representation of the Models resulting from parsing the Lua code snippets in the test cases.
 

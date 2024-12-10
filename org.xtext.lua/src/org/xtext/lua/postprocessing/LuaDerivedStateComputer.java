@@ -1,35 +1,20 @@
 package org.xtext.lua.postprocessing;
 
-import java.util.UUID;
-
 import org.apache.log4j.Logger;
-import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.EcoreFactory;
-import org.eclipse.emf.ecore.util.EcoreUtil;
-import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.linking.ILinkingService;
 import org.eclipse.xtext.linking.impl.LinkingHelper;
+import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.resource.DerivedStateAwareResource;
 import org.eclipse.xtext.resource.IDerivedStateComputer;
-import org.eclipse.xtext.scoping.IScopeProvider;
-import org.xtext.lua.lua.Var;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
 import org.xtext.lua.Config;
 import org.xtext.lua.lua.Exp;
-import org.xtext.lua.lua.ExpField;
-import org.xtext.lua.lua.ExpStringLiteral;
-import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.Field;
-import org.xtext.lua.lua.IndexExpField;
 import org.xtext.lua.lua.LuaPackage.Literals;
-import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
-import org.eclipse.xtext.linking.lazy.LazyLinker;
-import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
-import org.eclipse.xtext.naming.IQualifiedNameProvider;
+import org.xtext.lua.utils.LinkingAndScopingUtils;
 
 import com.google.inject.Inject;
 

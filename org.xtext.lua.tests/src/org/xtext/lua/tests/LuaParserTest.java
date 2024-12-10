@@ -2,10 +2,11 @@ package org.xtext.lua.tests;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ public class LuaParserTest {
 	private static final Logger LOGGER = Logger.getLogger(LuaParserTest.class);
 	
 	// TODO: remove
-	@Test
+	//@Test
 	public void testMinimalParseTest() throws IOException {
 		final var apisix = "D:\\MA\\apisix\\apisix";
 		final var lua_test_suite_51 = "D:\\MA\\lua5.1-tests";
@@ -65,14 +66,19 @@ public class LuaParserTest {
 		for (final var config : TestConfig.EVAL_PROJECT_CONFIGS) {
 			final var path = config.getPath();
 			evaluationResults.add("Results for project with path '" + path + "'...");
-			final var charSet = config.getCharSet();
+			
 			final var verbose = config.isVerbose();
+			
+			var start = Instant.now();
 			
 			var resourceSet = new LuaParser().parse(Paths.get(path));
 			
-			assertParsedAndSerializedEqualsOriginal(resourceSet, charSet);
+			assertParsedAndSerializedEqualsOriginal(resourceSet);
 			printNumberOfModelElements(evaluationResults, resourceSet);
 			evaluateResolvedProxies(evaluationResults, resourceSet, verbose);
+			
+			var end = Instant.now();
+			evaluationResults.add(" - Duration: " + Duration.between(start, end));
 		}
 		
 		writeEvaluationResults(evaluationResults);
@@ -87,15 +93,15 @@ public class LuaParserTest {
 		System.out.println("Evaluation test concluded.");
 	}
 	
-	private void assertParsedAndSerializedEqualsOriginal(final ResourceSet resourceSet, final String charSet) throws IOException {
+	private void assertParsedAndSerializedEqualsOriginal(final ResourceSet resourceSet) throws IOException {
 		for (var r : resourceSet.getResources()) {
 			var outputStream = new ByteArrayOutputStream();
-			r.save(outputStream, new HashMap<>());
+			var options = new HashMap<>();
+			r.save(outputStream, options);
 			var parsedAndSerialized = outputStream.toString();
 			
 			var originalPath = r.getURI().toFileString();
-			String original = Files.readString(Paths.get(originalPath), Charset.forName(charSet));
-			
+			String original = Files.readString(Paths.get(originalPath));
 			var strsEqual = TestUtil.compareNormalizedStrings(original, parsedAndSerialized);
 			if (!strsEqual) {
 				System.out.println(originalPath);

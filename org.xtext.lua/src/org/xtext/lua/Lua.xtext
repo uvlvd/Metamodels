@@ -6,101 +6,15 @@ generate lua "http://www.xtext.org/lua/Lua"
 
 
 /**
+ * ## Overview ##
  * Grammar is based on the reference grammar given at https://www.lua.org/manual/5.2/manual.html#9 "9 – The Complete Syntax of Lua"
- * and based on the xText implementation of the Lua 5.1 grammar.
- */
-
-// TODO: might need to re-insert FunctionCall and Assignment as classes for later scoping/linking steps.
-// TODO: document differences between reference grammar and the implemented one (LLk, i.e. no left recursion and no ambiguities).
-
-// TODO: Lua long string literals (also used for comments)
-// TODO: currently, something like a=10r30 is possible ("r30" is detected as a functioncall directly after the last right-side-expression of an assignment), not sure how to fix
-// TODO: Single-line comments start with -- NOT followed by a LUA_STRING_LONG (else its a multiline comment), this currently does not work
-
-//TODO: better testing, split into unit tests for grammar without scoping and scoping tests (see itemis/xtext-testint on github maybe?)
-//TODO: add typing?  https://dslmeinte.wordpress.com/2012/08/03/polymorphic-dispatch-in-xtend/
-
-// A shebang (#!) at the beginning of a lua script is possible in lua but can not (currently) be parsed by this grammar, i.e. if the first line starts with '#' is is considered a comment
-
-Chunk:
-	//SPECIAL_COMMENT?
-	block=Block
-;
-
- 
-//terminal SPECIAL_COMMENT:
-//	('#' -> '\n')
-//;
-
-Block: 
-	{Block} (stats+=Stat (=>';')?)* (lastStat=LastStat (=>';')?)? 
-;
-
-/**
- * We need to define actions here to differentiate between e.g. different loops:
- * E.g.: If Stat contains the alternatives
-    'while' condition=Exp 'do' block=Block 'end' |
-    'repeat' block=Block 'until' condition=Exp
- * without actions (i.e. {WhileLoop}, {RepeatLoop}) the serialization would create a while-loop when the original contained a repeat-loop.
- */
-Stat returns Stat:
-	AssignmentOrFunctionCall |
-	//FunctionCall |
-	//Assignment |
-	//FuncCallLhs |
-	//VarRhs |
-	//Assignment |
-    {DoEndBlock} 'do' block=Block 'end' |
-    {WhileLoop} 'while' condition=Exp 'do' block=Block 'end' |
-    {RepeatLoop}'repeat' block=Block 'until' condition=Exp |
-    {IfThenElse} 'if' condition=Exp 'then' thenBlock=Block (elseIfs+=ElseIf)* ('else' elseBlock=Block)? 'end' |
-    //{NumericFor} 'for' LUA_NAME '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end' |
-    //{GenericFor} 'for' forArgs=NameList 'in' expList=ExpList 'do' block=Block 'end' |
-    NumericFor |
-    GenericFor |
-    
-    //{FunctionDeclaration} 'function' name=FuncName body=FuncBody |
-    FunctionDeclaration |
-    //FunctionOrMethodDeclaration  |
-    //{LocalFunctionDeclaration} 'local' 'function' name=LUA_NAME body=FuncBody |
-    LocalFunctionDeclaration |
-    //{LocalNameListDeclaration} 'local' vars=NameList ('=' expList=ExpList)? |
-    LocalAssignment |
-    // since Lua 5.2
-    {EmptyStat} ';' |
-    Goto |
-    Label
-;
-
-NumericFor returns BlockWrapperWithArgs:
-	//{NumericFor} 'for' arg=LUA_NAME '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end'
-	{NumericFor} 'for' arg=Arg '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end'
-;
-
-GenericFor returns BlockWrapperWithArgs:
-	//{GenericFor} 'for' args=NameList 'in' expList=ExpList 'do' block=Block 'end'
-	{GenericFor} 'for' argList=ArgList 'in' expList=ExpList 'do' block=Block 'end'
-;
-
-FunctionDeclaration:
-	{FunctionDeclaration} 'function' name=FuncName body=FuncBody
-;
-
-LocalFunctionDeclaration:
-	{LocalFunctionDeclaration} 'local' 'function' name=LUA_NAME body=FuncBody 
-;
-
-LocalAssignment:
-	{LocalAssignment} 'local' vars=NameList ('=' expList=ExpList)?
-;
-/* 
-FunctionOrMethodDeclaration:
-	{FunctionDeclaration} 'function' funcName=FuncName body=FuncBody  |
-	{MethodDeclaration} 'function' funcName=MethodName body=FuncBody  
-;	 
-*/
-
-/**
+ * and based on the previous Xtext implementation of the Lua 5.1 grammar.
+ * 
+ * ## Code-styling guidelines ##
+ *  - | are used in front of each alternative for easier debugging (can comment the line without having to also comment the |)
+ * 
+ * 
+ * ## Extensible grammars for each Lua version: ##
  * Initially, the idea was to create a new xText grammar for Lua5.2, extending the Lua5.1 grammar.
  * Unfortunately, the AssignmentOrFunctionCall Production rule prevents the extension in a sensible way, since large parts of this grammar (Lua5.1)
  * would need to be duplicated in the extension (see https://github.com/eclipse/xtext/issues/2593).
@@ -117,22 +31,62 @@ FunctionOrMethodDeclaration:
 	//[...]
  */
 
-//Lua52Stat returns Stat:
-//	{EmptyStat} ';' |
-//	{Label} '::' name=LUA_NAME '::'
-//;
+//************** Known Limitations/TODOs **************//
+// TODO: might need to re-insert FunctionCall and Assignment as classes for later scoping/linking steps.
+// TODO: document differences between reference grammar and the implemented one (LLk, i.e. no left recursion and no ambiguities).
 
-// TODO: needs to be sub-type of Referencing
-Goto:
-	{Goto} 'goto' ref=[Label|LUA_NAME]
-	//{Goto} 'goto' label=LUA_NAME
+// TODO: Lua long string literals (also used for comments)
+// TODO: currently, something like a=10r30 is possible ("r30" is detected as a functioncall directly after the last right-side-expression of an assignment), not sure how to fix
+// TODO: Single-line comments start with -- NOT followed by a LUA_STRING_LONG (else its a multiline comment), this currently does not work
+
+// TODO: better testing, split into unit tests for grammar without scoping and scoping tests (see itemis/xtext-testint on github maybe?)
+// TODO: add typing?  https://dslmeinte.wordpress.com/2012/08/03/polymorphic-dispatch-in-xtend/
+
+// TODO: A shebang (#!) at the beginning of a lua script is possible in lua but can not (currently) be parsed by this grammar, i.e. if the first line starts with '#' is is considered a comment
+//************************************************//
+
+Chunk:
+	//TODO: SPECIAL_COMMENT (#!) is defined as first line starting with #, not #! in Lua reference
+	SPECIAL_COMMENT?
+	block=Block
 ;
 
-Label:
-	{Label} '::' name=LUA_NAME '::'
+
+Block: 
+	{Block} (stats+=Stat (=>';')?)* (lastStat=LastStat (=>';')?)? 
 ;
 
+/**
+ * We need to define actions here to differentiate between e.g. different loops:
+ * E.g.: If Stat contains the alternatives
+    'while' condition=Exp 'do' block=Block 'end' |
+    'repeat' block=Block 'until' condition=Exp
+ * without actions (i.e. {WhileLoop}, {RepeatLoop}) the serialization would create a while-loop when the original contained a repeat-loop.
+ */
+Stat returns Stat:
+	{EmptyStat} ';'
+	| AssignmentOrFunctionCall // Assignment and function call of reference grammar are joined in one rule to allow for disambiguation
+	| Label
+	| Break // TODO: test, this was initially overlooked when implementing the grammar
+    | Goto
+    | {DoEndBlock} 'do' block=Block 'end'
+    | {WhileLoop} 'while' condition=Exp 'do' block=Block 'end'
+    | {RepeatLoop}'repeat' block=Block 'until' condition=Exp
+    | {IfThenElse} 'if' condition=Exp 'then' thenBlock=Block (elseIfs+=ElseIf)* ('else' elseBlock=Block)? 'end'
+    | NumericFor
+    | GenericFor
+    | FunctionDeclaration
+    | LocalFunctionDeclaration
+    | LocalAssignment 
+;
 
+LastStat: 
+	Return
+;
+
+Return:
+	{Return} 'return' (expList=ExpList)?
+;
 
 /**
  * Explanation for AssignmentOrFunctionCall rule:
@@ -168,46 +122,53 @@ Label:
  */
 AssignmentOrFunctionCall returns Stat:
 	PrefixExp (
-		({FunctionCallStat.prefix=current}) |
-	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
+		({FunctionCallStat.prefix=current})
+	   	| ({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
 	)
 ;
 
-
-//VarList returns VarList:
-//	vars+=PrefixLhs (=>',' vars+=PrefixLhs)*
-//;
-
-ElseIf:
-	'elseif' condition=Exp 'then' block=Block
-;
-
-LastStat: 
-	Return |
-    Break
-;
-
-Return:
-	{Return} 'return' (expList=ExpList)?
+Label:
+	{Label} '::' name=LUA_NAME '::'
 ;
 
 Break:
 	{Break} 'break'
 ;
 
+Goto:
+	{Goto} 'goto' ref=[Label|LUA_NAME]
+;
 
-//Arg:
-//	name=LUA_NAME
-//;
+ElseIf:
+	'elseif' condition=Exp 'then' block=Block
+;
 
-// Expressions
+NumericFor returns BlockWrapperWithArgs:
+	{NumericFor} 'for' arg=Arg '=' fromExp=Exp ',' toExp=Exp (',' stepExp=Exp)? 'do' block=Block 'end'
+;
+
+GenericFor returns BlockWrapperWithArgs:
+	{GenericFor} 'for' argList=ArgList 'in' expList=ExpList 'do' block=Block 'end'
+;
+
+FunctionDeclaration:
+	{FunctionDeclaration} 'function' name=FuncName body=FuncBody
+;
+
+LocalFunctionDeclaration:
+	{LocalFunctionDeclaration} 'local' 'function' name=LUA_NAME body=FuncBody 
+;
+
+LocalAssignment:
+	{LocalAssignment} 'local' vars=NameList ('=' expList=ExpList)?
+;
 
 ExpList: 
-	// TODO: the previous alternative: (exps+=Exp ',')* exps+=Exp caused a non-LL(*) error due to recursive rule invocations, find out why
-	//(=>exps+=Exp ',')* exps+=Exp
-	//=>(exps+=Exp ',')* exps+=Exp 
 	 exps+=Exp ( =>',' exps+=Exp)*
 ;
+
+
+//**** Expressions ****//
 
 Exp:
 	ExpOr
@@ -216,7 +177,6 @@ Exp:
 // Or: left associative, priority 0
 ExpOr returns Exp:
 	ExpAnd ('or' {ExpOr.left=current} right=ExpAnd)*
-	//Exp_Primary ('or' {Exp_Or.left=current} right=Exp_Primary)*
 ;
 
 // And: left associative, priority 1
@@ -225,12 +185,12 @@ ExpAnd returns Exp:
 
 // Comparisons: left associative, priority 2
 ExpCompare returns Exp:
-	ExpConcat (('>' {ExpGt.left=current} right=ExpConcat) |
-	('>=' {ExpGeq.left=current} right=ExpConcat) |
-	('<' {ExpLt.left=current} right=ExpConcat) |
-	('<=' {ExpLeq.left=current} right=ExpConcat) |
-	('==' {ExpEq.left=current} right=ExpConcat) |
-	('~=' {ExpNeq.left=current} right=ExpConcat))*;
+	ExpConcat (('>' {ExpGt.left=current} right=ExpConcat)
+	| ('>=' {ExpGeq.left=current} right=ExpConcat)
+	| ('<' {ExpLt.left=current} right=ExpConcat)
+	| ('<=' {ExpLeq.left=current} right=ExpConcat)
+	| ('==' {ExpEq.left=current} right=ExpConcat)
+	| ('~=' {ExpNeq.left=current} right=ExpConcat))*;
 
 // Concatenation: right associative, priority 3
 ExpConcat returns Exp:
@@ -238,21 +198,21 @@ ExpConcat returns Exp:
 
 // addition/subtraction: left associative, priority 4
 ExpAddSub returns Exp:
-	ExpMultDivMod (('+' {ExpAdd.left=current} right=ExpMultDivMod) |
-	('-' {ExpSub.left=current} right=ExpMultDivMod))*;
+	ExpMultDivMod (('+' {ExpAdd.left=current} right=ExpMultDivMod)
+	| ('-' {ExpSub.left=current} right=ExpMultDivMod))*;
 
 // multiplication/division, left associative, priority 5
 ExpMultDivMod returns Exp:
-	ExpUnary (('*' {ExpMult.left=current} right=ExpUnary) |
-	('/' {ExpDiv.left=current} right=ExpUnary) |
-	('%' {ExpMod.left=current} right=ExpUnary))*;
+	ExpUnary (('*' {ExpMult.left=current} right=ExpUnary)
+	| ('/' {ExpDiv.left=current} right=ExpUnary)
+	| ('%' {ExpMod.left=current} right=ExpUnary))*;
 
 // Unary operators: right associative, priority 6
 ExpUnary returns Exp:
-	ExpExponentiation |
-	('not' {ExpNegate} exp=ExpUnary) |
-	('#' {ExpLength} exp=ExpUnary) |
-	('-' {ExpInvert} exp=ExpUnary);
+	ExpExponentiation
+	| ('not' {ExpNegate} exp=ExpUnary)
+	| ('#' {ExpLength} exp=ExpUnary)
+	| ('-' {ExpInvert} exp=ExpUnary);
 
 // exponentiation: right associative, priority 7
 ExpExponentiation returns Exp:
@@ -260,46 +220,58 @@ ExpExponentiation returns Exp:
 ;
  
 ExpPrimary returns Exp:
-	ExpTerminal |
-	ExpLiteral | 
-	ExpVarArgs |
-	ExpFunctionDeclaration |
-	PrefixExp |
-	TableConstructor
+	ExpTerminal
+	| ExpLiteral
+	| ExpVarArgs
+	| ExpFunctionDeclaration
+	| PrefixExp
+	| TableConstructor
 	// exp binop exp | unop exp from the reference are handled without left-recursion and describing operator precedences by Exp starting with ExpOr
 ;
 
 ExpTerminal:
-	{ExpNil} 'nil' | 
-	{ExpFalse} 'false' | 
-	{ExpTrue} 'true' 
+	{ExpNil} 'nil'
+	| {ExpFalse} 'false'
+	| {ExpTrue} 'true' 
 ;
 
 ExpLiteral:
-	{ExpNumberLiteral} value=NUMBER_LITERAL | 
-	{ExpStringLiteral} value=LUA_STRING 
+	{ExpNumberLiteral} value=NUMBER_LITERAL
+	| {ExpStringLiteral} value=LUA_STRING 
 ;
 
 ExpVarArgs:
 	{ExpVarArgs} '...' 
 ;
 
-PrefixExp:
-	 //{Var} ref=[Var|LUA_NAME] =>suffixExp=SuffixExp? | 
-	 Var |
-	 '(' groupedExp=Exp ')' =>suffixExp=SuffixExp? // TODO: this alternative is not really Referencing
-;
+// **** Prefix/suffixExp **** //
+/**
+ * Prefixexp, functioncall and var rules from the reference are joined in this grammar, resulting in so called Features and FeaturePaths.
+ * Variable names, table accesses, function calls and expressions may be combined in Lua for accesses and assignments, resulting in FeaturePaths, e.g.
+ * var = table.member.func().
+ * Features are described by synthetic rules at the end of this grammar, as super-types of Prefix and SuffixExps.
+ */
 
-SuffixExp:
-	FunctionCall | // from FunctionCall in reference
-	MethodCall | // from FunctionCall in reference
-	TableAccess | // from Var in reference
-	MemberAccess // from Var in reference
-	//{MemberAccess} '.' ref=[Var|LUA_NAME] =>suffixExp=SuffixExp? // from Var in reference
+/**
+ * "Root" of a FeaturePath.
+ */
+PrefixExp:
+	 Var
+	 | '(' groupedExp=Exp ')' =>suffixExp=SuffixExp?
 ;
 
 Var:
 	{Var} name=LUA_NAME =>suffixExp=SuffixExp?
+;
+
+/**
+ * Continuation of a FeaturePath.
+ */
+SuffixExp:
+	FunctionCall // from FunctionCall in reference
+	| MethodCall // from FunctionCall in reference
+	| TableAccess // from Var in reference
+	| MemberAccess // from Var in reference
 ;
 
 FunctionCall:
@@ -307,7 +279,6 @@ FunctionCall:
 ;
 
 MethodCall:
-	 //(':' {MethodCall} ref=[Exp|LUA_NAME] args=Args =>suffixExp=SuffixExp?)
 	 (':' {MethodCall} name=LUA_NAME args=Args =>suffixExp=SuffixExp?)
 ;
 
@@ -320,141 +291,35 @@ MemberAccess:
 ;
 
 Args: 
-	{ParamArgs} '(' (params=ExpList)? ')' | 
-	//{ParamArgs} '(' (params=[ExpList|NameList])? ')' | 
-	TableConstructor |
-	{LiteralStringArg} str=LUA_STRING 
+	{ParamArgs} '(' (params=ExpList)? ')'
+	| TableConstructor
+	| {LiteralStringArg} str=LUA_STRING 
 ;
 
 TableConstructor:
 	{TableConstructor} '{' (fieldList=FieldList)? '}'
 ;
 
-//FieldList:
-//	fields+=Field (FIELD_SEP fields+=Field)* (FIELD_SEP)?
-//;
-
 FieldList:
 	fields+=Field (=>(','|';') fields+=Field)* (=>(','|';'))? 
 ;
 
 Field:
-	{IndexExpField} '[' indexExp=Exp ']' '=' valueExp=Exp | 
-	{NameField} name=LUA_NAME '=' valueExp=Exp | 
-	{ExpField} exp=Exp
+	{IndexExpField} '[' indexExp=Exp ']' '=' valueExp=Exp
+	| {NameField} name=LUA_NAME '=' valueExp=Exp
+	| {ExpField} exp=Exp
 ;
 
 FuncName:
 	LUA_NAME ('.' LUA_NAME)* (':' LUA_NAME)?
 ;
 
-/* 
-FuncName:
-	{FuncName} name=LUA_NAME |
-	//Var (MemberAccess)* ('.' name=LUA_NAME | ':' name=LUA_NAME)
-	//ref=[Exp|LUA_NAME] =>suffix=FuncNameSuffix
-	
-	//refs+=[Exp|LUA_NAME] ('.' refs+=[Exp|LUA_NAME])* '.' name=LUA_NAME |
-	//refs+=[Exp|LUA_NAME] ('.' refs+=[Exp|LUA_NAME])* ':' name=LUA_NAME 
-	{FuncName} prefix=FuncNamePathPrefix =>('.' name=LUA_NAME) |
-	{MethodName} prefix=FuncNamePathPrefix =>(':' name=LUA_NAME) 
-;
-*/
-
-/* 
-FuncNameOrPath:
-	FuncName (
-		({FuncName.name=current}) |
-		({FuncPath.start = current})
-	)
-;
-
-AssignmentOrFunctionCall returns Stat:
-	PrefixExp (
-		({FunctionCall.functionCall=current}) |
-	   	({Assignment.vars+=current} (',' vars+=PrefixExp)* =>'=' expList=ExpList)
-	)
-;
-
-FuncName:
-	FuncNamePath
-;
-
-FuncNamePathPrefix:
-	ref=[Exp|LUA_NAME] =>suffix=FuncNamePathInfix?
-;
-
-FuncNamePathInfix:
-	'.' ref=[Exp|LUA_NAME] suffix=FuncNamePathInfix |
-	FuncNameEnd
-;
-
-FuncNameEnd:
-	'.' name=LUA_NAME |
-	':' name=LUA_NAME 
-;
-
-FuncNamePath:
-	{FuncNamePath} ref=[Exp|LUA_NAME] suffix=FuncNamePathInfix
-;
-
-FuncNameSuffix:
-	'.' ref=[Exp|LUA_NAME] suffix=FuncNameSuffix |
-	//=>MemberAccess =>suffix=FuncNameSuffix? |
-	'.' name=LUA_NAME |
-	':' name=LUA_NAME
-;
-*/
-
-//FuncName:
-//	{FuncName} name=LUA_NAME |
-//	{FuncName} refs+=Referencing ('.' refs+=Referencing)* '.' name=LUA_NAME |
-//	{MethodName} refs+=Referencing ('.' refs+=Referencing)* ':' name=LUA_NAME
-//;
-
-/* 
-FuncName:
-	{FuncName} name=LUA_NAME |
-	{FuncNamePrefix} (ref=[Var|LUA_NAME] '.') next=FuncName |
-	
-	// TODO: das ist quatsch, da darf kein ref drin sein
-	//   - evtl. doch zwischen FunctionDeclaration und MethodDeclaration unterscheiden?
-	{MethodName} (ref=[Var|LUA_NAME] ':') name=LUA_NAME
-
-;
-*/
-
-/* 
-FuncName:
-	{FuncName} name=LUA_NAME |
-	ref=[Var|LUA_NAME] next=FuncNamePrefix
-;
-
-FuncNamePrefix:
-	'.' next=FuncNamePrefix |
-	{FuncName} name=LUA_NAME
-;
-*/
-
-/* 
-FuncNameHead returns FuncName:
-	{FuncName} name=LUA_NAME |
-	ref=[Var|LUA_NAME] next=FuncNamePath
-;
-
-FuncNamePath returns FuncName:
-	'.' ref=[Var|LUA_NAME] next=FuncNamePath |
-	{FuncName} '.' name=LUA_NAME |
-	{MethodName} ':' name=LUA_NAME
-;
-*/
-
 NameList: 
 	names+=LocalVar (',' names+=LocalVar)*
 ;
 
-LocalVar: // Referenceable name
-	name=LUA_NAME
+LocalVar:
+	{LocalVar} name=LUA_NAME
 ;
 
 ExpFunctionDeclaration:
@@ -466,12 +331,12 @@ FuncBody:
 ;
 
 ParList:
-	argsList=ArgList (',' '...')? |
-	ExpVarArgs
+	argsList=ArgList (',' '...')?
+	| ExpVarArgs
 ;
 
 Arg:
-	name = LUA_NAME
+	{Arg} name = LUA_NAME
 ;
 
 ArgList: 
@@ -479,106 +344,97 @@ ArgList:
 ;
 
 
-// ****************************************************
-// SYNTHETIC
+// **** Synthetic rules **** //
+/**
+ * The synthetic rules are used to create super-types that are used in the java classes handling the later parsing steps (e.g. linking, scoping).
+ */
 
-// ****************************************************
 /*
  * We use the synthetic rule Feature for rules that may define some kind of access on a variable/table as part of a feature path. 
  * They may have a prefix and/or a suffix, e.g. a.member["tableAccess"].
  */
 Feature:
-	FunctionCall | // should never be leaf of a path (never on lhs of Assignment)
-	MethodCall | // should never be leaf of a path (never on lhs of Assignment)
-	TableAccess |
-	MemberAccess |
-	Var 
+	FunctionCall // should never be leaf of a path (never on lhs of Assignment)
+	| MethodCall // should never be leaf of a path (never on lhs of Assignment)
+	| TableAccess
+	| MemberAccess
+	| Var 
 ;
 
 NamedFeature: 
-	Var |
-	MethodCall |
-	TableAccess | // TableAccess has a "name" attribute which is set to the contained expression, if the expression is resolvable
-	MemberAccess 
+	Var
+	| MethodCall
+	| TableAccess // TableAccess has a "name" attribute which is set to the contained expression (indexExp), if the expression is resolvable
+	| MemberAccess
 ;
 
 /*
- * We use the synthetic rule Referenceable to implement cross-references in this grammar. 
- * Referenceables have a feature/attribute called "name", that is used during the linking phase to resolve the cross-references.
- * Some Rules (e.g. the Label rule referenced by goto) parse the "name" attribute, and return the Referenceable type.
- * Others (e.g. Var) have no "name" attribute (instead, they have a ref cross-reference), but are sub-types of Referenceable,
- * that is the resulting EObjects carry a "name" attribute with the value null. This value is later set by the
- * LuaDerivedStateComputer class or during linking.
+ * We use the synthetic rule Referenceable to implement cross-references in this grammar. Any model object that can be referenced is a Referenceable with the
+ * attribute "name", that can be used during linking to resolve the reference.
+ * Many objects/rules are Referenceable and Referencing at the same time, which means they need a "name" attribute (to be Referenceable) AND a "ref" cross-reference
+ * (to trigger linking in later parsing phases). Since "name" and "ref" are defined through the same token (i.e. a variable called "var" would have the name "var" and would reference "var"),
+ * we cannot set both attribute and cross-reference in the respective rules (at least as far as I understand Xtext grammars).
+ * E.g.: In the following code snippet
+  		var = {1,2,3}
+  		a = var[0]
+ * the "var" in the second assignment is a Referenceable (referenced by "a") and a Referencing (referencing the "var" in the first assignment) at the same time.
  */
 Referenceable:
-	name=LUA_NAME |
-	NamedFeature |
-	//TableAccess |
-	//MemberAccess |
-	//Var |
-	//FuncName |
-	FunctionDeclaration |
-	LocalFunctionDeclaration |
-	Exp |
-	Label | 
-	Arg |
-	LocalVar |
-	Field
+	name=LUA_NAME
+	| NamedFeature
+	| FunctionDeclaration
+	| LocalFunctionDeclaration
+	| Exp
+	| Label
+	| Arg
+	| LocalVar
+	| Field
 ;
 
-
-
 /**
- * Synthetic rule for all rules that contain a cross-reference
+ * Synthetic rule for all rules that contain a cross-reference, i.e. reference some other model object (Referenceable).
  */
 Referencing:
-	ref=[Referenceable|LUA_NAME] |
-	NamedFeature |
-	//ref=[Exp|LUA_NAME]  |
-	//TableAccess |
-	//MemberAccess |
-	//Var |
-	LocalVar |
-	Field |
-	Goto
+	ref=[Referenceable|LUA_NAME]
+	| NamedFeature
+	| LocalVar
+	| Field
+	| Goto
 ;
 
 
 BlockWrapperWithArgs:
-	NumericFor |
-	GenericFor |
-	FuncBody
+	NumericFor
+	| GenericFor
+	| FuncBody
 ;
 
-// ****************************************************
-// TERMINALS
-// ****************************************************
+// **** TERMINALS **** //
 
 // Identifiers can be any string of letters, digits, and underscores, but mustn't begin with a digit.
 terminal LUA_NAME returns ecore::EString:
 	('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')*
 ;
 
-
 // Literal Strings can be defined between single or double quotes. They can also be defined using a long format enclosed by long brackets.
 // https://www.lua.org/manual/5.1/manual.html#2.1 ("2.1 – Lexical Conventions")
 // E.g. [[...]], [=[...]=]
 terminal LUA_STRING:
-	'"' ('\\' . | !('\\' | '"'))* '"' |
-	"'" ('\\' . | !('\\' | "'"))* "'"  
+	'"' ('\\' . | !('\\' | '"'))* '"'
+	| "'" ('\\' . | !('\\' | "'"))* "'"  
 	| LUA_STRING_LONG
 ;
 
 /* TODO: this is a workaround, long strings should be implemented for an arbitrary number of equals-signs. Attempt below failed. */
 terminal LUA_STRING_LONG:
-	'[[' -> ']]'  |
-	'[=[' -> ']=]' |
-	'[==[' -> ']==]' |
-	'[===[' -> ']===]' |
-	'[====[' -> ']====]' |
-	'[=====[' -> ']=====]' |
-	'[======[' -> ']======]' |
-	'[=======[' -> ']=======]' 
+	'[[' -> ']]' 
+	| '[=[' -> ']=]'
+	| '[==[' -> ']==]'
+	| '[===[' -> ']===]'
+	| '[====[' -> ']====]'
+	| '[=====[' -> ']=====]'
+	| '[======[' -> ']======]'
+	| '[=======[' -> ']=======]' 
 ;
 
 // Attempt to implement long strings for arbitrary number of equal signs:
@@ -616,15 +472,15 @@ terminal fragment MATCH_UNTIL_LINE_BREAK:
 ;
 
 terminal SL_COMMENT:
-	'--' !'[' MATCH_UNTIL_LINE_BREAK |
-	'--[' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[=' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[==' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[===' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[====' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[=====' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[======' !('['|'=') MATCH_UNTIL_LINE_BREAK |
-	'--[=======' !('['|'=') MATCH_UNTIL_LINE_BREAK 	
+	'--' !'[' MATCH_UNTIL_LINE_BREAK
+	| '--[' !('['|'=') MATCH_UNTIL_LINE_BREAK
+	| '--[=' !('['|'=') MATCH_UNTIL_LINE_BREAK
+	| '--[==' !('['|'=') MATCH_UNTIL_LINE_BREAK
+	| '--[===' !('['|'=') MATCH_UNTIL_LINE_BREAK
+	| '--[====' !('['|'=') MATCH_UNTIL_LINE_BREAK
+	| '--[=====' !('['|'=') MATCH_UNTIL_LINE_BREAK
+	| '--[======' !('['|'=') MATCH_UNTIL_LINE_BREAK
+	| '--[=======' !('['|'=') MATCH_UNTIL_LINE_BREAK 	
 ;
 
 terminal NUMBER_LITERAL returns ecore::EDouble:
@@ -655,5 +511,8 @@ terminal HEX_LITERAL returns ecore::EDouble:
 terminal WS:
 	(' ' | '\t' | '\r' | '\n')+
 ; 
-	
+
+terminal SPECIAL_COMMENT:
+	('#!' -> ('\n' | '\r'))
+;
 

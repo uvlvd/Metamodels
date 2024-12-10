@@ -4,5 +4,6 @@ xtend-gen/
 generated/
 bin/
 test-bin
+evaluation_results/
 
 *.xml_gen

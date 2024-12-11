@@ -32,17 +32,9 @@ generate lua "http://www.xtext.org/lua/Lua"
  */
 
 //************** Known Limitations/TODOs **************//
-// TODO: might need to re-insert FunctionCall and Assignment as classes for later scoping/linking steps.
-// TODO: document differences between reference grammar and the implemented one (LLk, i.e. no left recursion and no ambiguities).
-
-// TODO: Lua long string literals (also used for comments)
 // TODO: currently, something like a=10r30 is possible ("r30" is detected as a functioncall directly after the last right-side-expression of an assignment), not sure how to fix
-// TODO: Single-line comments start with -- NOT followed by a LUA_STRING_LONG (else its a multiline comment), this currently does not work
-
-// TODO: better testing, split into unit tests for grammar without scoping and scoping tests (see itemis/xtext-testint on github maybe?)
 // TODO: add typing?  https://dslmeinte.wordpress.com/2012/08/03/polymorphic-dispatch-in-xtend/
-
-// TODO: A shebang (#!) at the beginning of a lua script is possible in lua but can not (currently) be parsed by this grammar, i.e. if the first line starts with '#' is is considered a comment
+// TODO: Lua allows for a special comment at the beginning of a script that starts with #. This is currently not supported by this grammar (only special comments starting with #! are supported)
 //************************************************//
 
 Chunk:
@@ -253,11 +245,11 @@ ExpVarArgs:
  */
 
 /**
- * "Root" of a FeaturePath.
+ * "Root" of a FeaturePath, either a Var or a GroupedExp.
  */
 PrefixExp:
 	 Var
-	 | '(' groupedExp=Exp ')' =>suffixExp=SuffixExp?
+	 | {GroupedExp} '(' exp=Exp ')' =>suffixExp=SuffixExp?
 ;
 
 Var:
@@ -307,7 +299,7 @@ FieldList:
 Field:
 	{IndexExpField} '[' indexExp=Exp ']' '=' valueExp=Exp
 	| {NameField} name=LUA_NAME '=' valueExp=Exp
-	| {ExpField} exp=Exp
+	| {ExpField} valueExp=Exp
 ;
 
 FuncName:
@@ -327,11 +319,11 @@ ExpFunctionDeclaration:
 ;
 
 FuncBody:
-	'(' (parList=ParList)? ')' funcBlock=Block 'end'
+	'(' (parList=ParList)? ')' block=Block 'end'
 ;
 
 ParList:
-	argsList=ArgList (',' '...')?
+	argsList=ArgList (',' varArgs=ExpVarArgs)?
 	| ExpVarArgs
 ;
 
@@ -354,16 +346,14 @@ ArgList:
  * They may have a prefix and/or a suffix, e.g. a.member["tableAccess"].
  */
 Feature:
-	FunctionCall // should never be leaf of a path (never on lhs of Assignment)
-	| MethodCall // should never be leaf of a path (never on lhs of Assignment)
-	| TableAccess
-	| MemberAccess
-	| Var 
+	PrefixExp
+	| FunctionCall // should never be leaf of a path (never on lhs of Assignment)
+	| NamedFeature
 ;
 
 NamedFeature: 
 	Var
-	| MethodCall
+	| MethodCall // should never be leaf of a path (never on lhs of Assignment)
 	| TableAccess // TableAccess has a "name" attribute which is set to the contained expression (indexExp), if the expression is resolvable
 	| MemberAccess
 ;

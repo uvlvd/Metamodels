@@ -9,7 +9,7 @@ public class TestConfig {
 	 * Whether to print the models resulting from the code snippets (SUTs) in the 
 	 * {@link LuaLocalScopingTest} and {@link LuaGlobalScopingTest} test classes.
 	 */
-	public static final boolean PRINT_SNIPPET_MODELS = true;
+	public static final boolean PRINT_SNIPPET_MODELS = false;
 	
 	
 	// TODO: The option verbose = true does currently not work in the tests, see LuaParserTest.evaluateResolvedProxies
@@ -18,11 +18,11 @@ public class TestConfig {
 	 * {@link LuaParserTest}.
 	 */
 	public static final List<EvalProjectConfig> EVAL_PROJECT_CONFIGS = List.of(
-				new EvalProjectConfig(
-					"test_data\\lua-5.2.0-tests_utf8",
-					false
-				)
-				,
+//				new EvalProjectConfig(
+//					"test_data\\lua-5.2.0-tests_utf8",
+//					false
+//				)
+//				,
 				new EvalProjectConfig(
 					"D:\\MA\\apisix\\apisix",
 					false

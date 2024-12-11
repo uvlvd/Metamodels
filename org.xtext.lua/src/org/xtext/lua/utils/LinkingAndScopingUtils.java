@@ -905,7 +905,7 @@ public final class LinkingAndScopingUtils {
 			
 			if (expListContainer instanceof Assignment assignment) {
 				final var assignmentFeatureRoot = assignment.getVars().get(expIndex);
-				if (assignmentFeatureRoot instanceof Feature featureRoot) {
+				if (assignmentFeatureRoot instanceof Var featureRoot) {
 					return Optional.of((NamedFeature) getFeaturePathNamedLeaf(featureRoot));
 				}
 			}

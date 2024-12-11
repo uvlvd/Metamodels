@@ -187,15 +187,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
      * Since not all names for fields can be computed, some fields may get assigned a dummy name.
      */
     private IScope getScopeForField(Field field) {
-    	Exp value = null;
-    	if (field instanceof IndexExpField indexExpField) {
-    		value = indexExpField.getValueExp();
-    	} else if (field instanceof NameField nameField) {
-    		value = nameField.getValueExp();
-    	} else if (field instanceof ExpField expField) {
-    		value = expField.getExp();
-    	}
-    	
+    	var value = field.getValueExp(); 	
     	if (value == null) {
     		throw new RuntimeException("Could not determine value expression for field " + field);
     	}
@@ -476,7 +468,7 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
     		return Collections.emptyList();
     	}
     
-		final var containingBlock = funcBody.getFuncBlock();
+		final var containingBlock = funcBody.getBlock();
 		List<FeaturePathCandidate> result = new ArrayList<>();
 		
 		final var returnStatOpt = LinkingAndScopingUtils.findReturnStatInBlock(containingBlock);

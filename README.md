@@ -42,12 +42,14 @@ The linking process calls the `LuaScopeProvider` to find candidates for referenc
  - `LuaAssignmentScopeProvider` for reference resolution of assignable-to-value references (in `Assignments` and table `Fields`)
  - `LuaBlockScopeProvider` for reference resolution considering block scopes, this delegates to:
     - `LuaFeatureScopeHelper` for reference resolution of `Feature`s
+ - `LuaGlobalScopeProvider` if no candidates were found by the other steps.
 
 ### Terminology
  - `FeaturePath`: a path consisting of `PrefixExp`s (e.g. `Var`) and `SuffixExp`s (e.g. `MemberAccess`, `TableAccess` or `FunctionCall`)
         e.g. `table.member.func()`, `table[0]`
  - `Assignable`: `Feature` or `FeaturePath` on lhs of an `Assignment` that may have an assigned Exp (i.e. ends with a `NamedFeature`)
  - `Assigned`: `Exp` assigned to an `Assignable`
+ - `Referencing`: References a `Referenceable`
  - lhs, rhs: left-hand-side, right-hand-side
 
 ## Tests & Evaluation

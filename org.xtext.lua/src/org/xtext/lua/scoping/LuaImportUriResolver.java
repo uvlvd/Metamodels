@@ -3,14 +3,13 @@ package org.xtext.lua.scoping;
 import java.util.Optional;
 
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.LiteralStringArg;
 import org.xtext.lua.lua.ParamArgs;
 import org.xtext.lua.lua.Var;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
+import org.xtext.lua.utils.ExpUtil;
 
 public class LuaImportUriResolver extends ImportUriResolver {
 	public static final String REQUIRE_FUNC_NAME = "require";
@@ -54,7 +53,7 @@ public class LuaImportUriResolver extends ImportUriResolver {
     			
     			// return literal String argument
     			if (funcCall.getArgs() instanceof LiteralStringArg literalStringArg) {
-    				var importUri = LinkingAndScopingUtils.removeQuotesFromString(literalStringArg.getStr());
+    				var importUri = ExpUtil.removeQuotesFromString(literalStringArg.getStr());
     				return Optional.of(importUri);
     			}
     			// check if has paramargs
@@ -64,7 +63,7 @@ public class LuaImportUriResolver extends ImportUriResolver {
 		    					.findFirst()
 		    					.map(arg -> {
 		    						if (arg instanceof ExpStringLiteral stringLiteral) {
-		    							return LinkingAndScopingUtils.removeQuotesFromString(stringLiteral.getValue());
+		    							return ExpUtil.removeQuotesFromString(stringLiteral.getValue());
 		    						}
 		    						return null;
 		    					});

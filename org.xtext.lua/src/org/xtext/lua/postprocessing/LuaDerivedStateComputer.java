@@ -1,50 +1,35 @@
 package org.xtext.lua.postprocessing;
 
 import org.apache.log4j.Logger;
-import org.eclipse.xtext.linking.ILinkingService;
-import org.eclipse.xtext.linking.impl.LinkingHelper;
 import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.resource.DerivedStateAwareResource;
 import org.eclipse.xtext.resource.IDerivedStateComputer;
-import org.xtext.lua.Config;
 import org.xtext.lua.lua.Exp;
 import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.LuaPackage.Literals;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
+import org.xtext.lua.utils.ExpUtil;
+import org.xtext.lua.utils.FieldUtil;
+import org.xtext.lua.utils.LuaConstants;
 
 import com.google.inject.Inject;
 
 public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	private static final Logger LOGGER = Logger.getLogger(LuaDerivedStateComputer.class);
 	
-	@Inject 
-	private LinkingHelper linkingHelper;
-	
 	@Inject
 	private SyntheticLinkingSupport linkingSupport;
-	
-	@Inject
-	private ILinkingService linkingService;
 	
 	@Override
 	public void installDerivedState(DerivedStateAwareResource resource, boolean preLinkingPhase) {		
 		resource.getAllContents().forEachRemaining(obj -> {
-			
 			// handle table access
 			if (obj instanceof TableAccess tableAccess) {
-				
-				if (Config.TABLE_ACCESS_REFERENCES) {
-					// Effectively makes tableAccess Referenceable and Referencing
-					setTableAccessNameAndRef(tableAccess);
-				} else {
-					// Efectively makes tableAccess Referenceable
-					setTableAccessName(tableAccess);
-				}
-				
+				// Effectively makes tableAccess Referenceable and Referencing
+				setTableAccessNameAndRef(tableAccess);
 			} else if (obj instanceof Field field) {
 				setFieldNameAndRef(field);
 			}
@@ -53,19 +38,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 				//setLinkTextAsName(refble);
 				setNameAsRef(refble);
 			}
-			
-			
 		});
-
-	}
-	
-	/**
-	 * Sets the TableAccess' "name" attribute if it's indexExp can be resolved.
-	 * @param tableAccess the TableAccess.
-	 */
-	private void setTableAccessName(TableAccess tableAccess) {
-		final var name = LinkingAndScopingUtils.tryResolveExpressionToString(tableAccess.getIndexExp(), LinkingAndScopingUtils.DERIVED_DUMMY_NAME);
-		tableAccess.setName(name);
 	}
 	
 	/**
@@ -74,7 +47,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	 * @param tableAccess the TableAccess.
 	 */
 	private void setTableAccessNameAndRef(TableAccess tableAccess) {
-		final var name = LinkingAndScopingUtils.tryResolveExpressionToString(tableAccess.getIndexExp(), LinkingAndScopingUtils.DERIVED_DUMMY_NAME);
+		final var name = ExpUtil.tryResolveExpressionToString(tableAccess.getIndexExp(), LuaConstants.DERIVED_DUMMY_NAME);
 		//set name attribute
 		tableAccess.setName(name);
 		//set cross-reference linkText 
@@ -86,7 +59,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	 * @param field the Field.
 	 */
 	private void setFieldNameAndRef(Field field) {
-		var name = LinkingAndScopingUtils.tryGetNameForField(field, LinkingAndScopingUtils.DERIVED_DUMMY_NAME);
+		var name = FieldUtil.tryGetNameForField(field, LuaConstants.DERIVED_DUMMY_NAME);
 		//set name attribute
 		field.setName(name);
 		//set cross-reference linkText  to name
@@ -120,33 +93,6 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 		}
 	}
 	
-	/**
-	 * Sets the "name" attribute of the given Referenceable to the link text from its cross-reference
-	 * if the "name" attribute is null. </br>
-	 * This assumes that the cross-reference is not null.
-	 * @param refble the Referenceable.
-	 */
-	private void setLinkTextAsName(Referenceable refble) {
-		String linkText = refble.getName();
-		if (linkText == null && refble instanceof Referencing referencing) {
-			var refNodes = NodeModelUtils.findNodesForFeature(referencing, Literals.REFERENCING__REF);
-			if (refNodes.isEmpty()) {
-				refble.setName(null);
-				LOGGER.warn("Attempting to create 'name' attribute from ref node, but ref node is not present.");
-				return;
-				//throw new RuntimeException("Attempting to create 'name' attribute from ref node, but ref node is not present.");
-			}
-			var refNode = refNodes.get(0);
-		    linkText = linkingHelper.getCrossRefNodeAsString(refNode, true);
-		}
-		
-		if (linkText == null) {
-			throw new RuntimeException("Could not set value for 'name' attribute for Referenceable " + refble + ".");
-		}
-		
-    	refble.setName(linkText);
-	}
-
 	@Override
 	public void discardDerivedState(DerivedStateAwareResource resource) {
 		LOGGER.warn("Discarding derived state, is this working correctly...?");
@@ -154,10 +100,6 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 			// discard "name" attribute
 			if (obj instanceof Referenceable refble && obj instanceof Referencing) {
 				refble.setName(null);
-			}
-			// discard synthetic reference from TableAccesses
-			if (obj instanceof TableAccess tableAccess && Config.TABLE_ACCESS_REFERENCES) {
-				tableAccess.setRef(null);
 			}
 		});
 	}

@@ -2,7 +2,6 @@ package org.xtext.lua.scoping;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
@@ -16,8 +15,7 @@ import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.Goto;
 import org.xtext.lua.lua.Label;
-import org.xtext.lua.lua.Referenceable;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
+import org.xtext.lua.utils.ReferenceableUtil;
 import org.xtext.lua.utils.StatUtil;
 
 import com.google.inject.Inject;
@@ -99,7 +97,7 @@ public class LuaBlockScopeProvider implements IScopeProvider {
     	}
     	final var contextParentStatement = contextParentStatementOpt.get();
     	
-    	var referenceables = LinkingAndScopingUtils.getReferenceablesForContextFromBlock(feature, contextBlock, contextParentStatement);
+    	var referenceables = ReferenceableUtil.getReferenceablesForContextFromBlock(feature, contextBlock, contextParentStatement);
 
     	return featureScopeHelper.getScopeForFeatureFromReferenceables(feature, reference, referenceables);
     }

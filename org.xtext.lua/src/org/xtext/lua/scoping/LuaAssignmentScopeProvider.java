@@ -13,7 +13,9 @@ import org.xtext.lua.linking.SyntheticExpNil;
 import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Referenceable;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
+import org.xtext.lua.utils.AssignmentUtil;
+import org.xtext.lua.utils.FieldUtil;
+import org.xtext.lua.utils.LuaConstants;
 
 import com.google.inject.Inject;
 
@@ -44,7 +46,7 @@ public class LuaAssignmentScopeProvider implements IScopeProvider {
         	return getScopeForField(field);
         }
     	// assignables (variables that get assigned a value in an Assignment) reference their assigned value
-        if (LinkingAndScopingUtils.isAssignable(context)) {
+        if (AssignmentUtil.isAssignable(context)) {
         	return getScopeForAssignable(context);
         }
         
@@ -65,8 +67,8 @@ public class LuaAssignmentScopeProvider implements IScopeProvider {
     	}
     	
     	var name = field.getName();
-    	if (name.equals(LinkingAndScopingUtils.DERIVED_DUMMY_NAME)) {
-    		name = LinkingAndScopingUtils.tryGetNameForField(field, LinkingAndScopingUtils.LINKING_DUMMY_NAME);
+    	if (name.equals(LuaConstants.DERIVED_DUMMY_NAME)) {
+    		name = FieldUtil.tryGetNameForField(field, LuaConstants.LINKING_DUMMY_NAME);
     	}
     	
     	var fqn = nameConverter.toQualifiedName(name);
@@ -90,7 +92,7 @@ public class LuaAssignmentScopeProvider implements IScopeProvider {
 		}
 		
     	final var fqn = nameConverter.toQualifiedName(name);
-    	final var value = LinkingAndScopingUtils.findAssignedExp(assignable);
+    	final var value = AssignmentUtil.findAssignedExp(assignable);
 		if (value == null) {
 			// create synthetic nil value if ExpList does not contains value for assignable
 			var nilValue = new SyntheticExpNil();

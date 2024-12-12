@@ -17,7 +17,6 @@ Require-Bundle: org.eclipse.xtext,
  org.eclipse.xtext.util
 Bundle-RequiredExecutionEnvironment: JavaSE-17
 Export-Package: org.xtext.lua,
- org.xtext.lua.utils,
  org.xtext.lua.generator,
  org.xtext.lua.linking,
  org.xtext.lua.lua,
@@ -28,5 +27,7 @@ Export-Package: org.xtext.lua,
  org.xtext.lua.scoping,
  org.xtext.lua.serializer,
  org.xtext.lua.services,
- org.xtext.lua.validation
+ org.xtext.lua.utils,
+ org.xtext.lua.validation,
+ org.xtext.lua.wrappers
 Import-Package: org.apache.log4j

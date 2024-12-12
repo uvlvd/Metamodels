@@ -1,28 +1,23 @@
 package org.xtext.lua.scoping;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.xtext.EcoreUtil2;
-import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.resource.impl.DefaultResourceDescriptionStrategy;
 import org.eclipse.xtext.util.IAcceptor;
-import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Chunk;
-import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Return;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
+import org.xtext.lua.utils.ReferenceableUtil;
+import org.xtext.lua.utils.ReturnUtil;
 
 import com.google.common.base.Predicate;
-import com.google.inject.Inject;
 
 
 public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionStrategy {
@@ -66,11 +61,11 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
             return true;
         } else if (eObject instanceof Block block && eObject.eContainer() instanceof Chunk) {
             // always traverse root block in a chunk
-        	LinkingAndScopingUtils.streamExternallyVisibleReferenceablesFromBlock(block)
+        	ReferenceableUtil.streamExternallyVisibleReferenceablesFromBlock(block)
         		.forEach(assignable -> createEObjectDescription(acceptor, assignable));
             return true;
         } else if (eObject instanceof Return returnStat) {
-        	final var referenceablesFromReturnExps = LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStat, getQualifiedNameProvider());
+        	final var referenceablesFromReturnExps = ReturnUtil.getReferenceablesFromReturnStat(returnStat, getQualifiedNameProvider());
         	final var returnExpsCount = referenceablesFromReturnExps.size();
         	
         	for (int i = 0; i < returnExpsCount; i++) {

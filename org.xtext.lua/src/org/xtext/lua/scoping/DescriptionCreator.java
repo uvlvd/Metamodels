@@ -2,7 +2,6 @@ package org.xtext.lua.scoping;
 
 import java.util.Collection;
 
-import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.resource.IEObjectDescription;

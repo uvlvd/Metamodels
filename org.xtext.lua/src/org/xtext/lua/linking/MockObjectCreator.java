@@ -10,12 +10,9 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Chunk;
-import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.NamedFeature;
-import org.xtext.lua.lua.Stat;
 import org.xtext.lua.lua.Var;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
 
 public class MockObjectCreator implements IMockObjectCreator {
 	private static final URI VAR_MOCK_URI = URI.createURI("dummy:/syntheticVars.lua");
@@ -27,7 +24,6 @@ public class MockObjectCreator implements IMockObjectCreator {
 	// TODO: should handle require calls to external libraries differently, e.g. save the synthetic vars to special resources depending on the require
 	// calls parameter
 	public EObject createMockObjectFor(final EObject context) {
-		//System.out.println("Creating mock object for: " + context);
 		var mockBlock =  getOrCreateMockBlock(VAR_MOCK_URI, context);
 		
 		if (context instanceof NamedFeature namedFeature) {
@@ -45,18 +41,6 @@ public class MockObjectCreator implements IMockObjectCreator {
 			syntheticAssignment.getVars().add(syntheticVar);
 			mockBlock.getStats().add(syntheticAssignment);
 			return syntheticVar;
-			/*
-			final var featurePathRootOpt = LinkingAndScopingUtils.getFeaturePathRoot(feature);
-			if (featurePathRootOpt.isPresent()) {
-				final var featurePathRoot = featurePathRootOpt.get();
-				final var block = EcoreUtil2.getContainerOfType(feature, Block.class);
-				final var hash = featurePathRoot.getName().hashCode() + block.hashCode();
-				final var root = varMap.get(hash);
-				if (root == null) {
-					
-				}
-			}
-			*/
 		}
 		
 		return null;
@@ -70,11 +54,6 @@ public class MockObjectCreator implements IMockObjectCreator {
 		varMap.put(createVarMapKey(name, containingBlock), syntheticVar);
 		return syntheticVar;
 		
-	}
-	
-	private void addToMockBlock(EObject context, Stat containingStat) {
-		final var block = getOrCreateMockBlock(VAR_MOCK_URI, context);
-		block.getStats().add(containingStat);
 	}
 	
 	private int createVarMapKey(String name, Block containingBlock) {

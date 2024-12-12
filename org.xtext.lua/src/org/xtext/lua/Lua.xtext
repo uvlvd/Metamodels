@@ -348,6 +348,7 @@ ArgList:
 Feature:
 	PrefixExp
 	| SuffixExp
+	| NamedFeature
 ;
 
 NamedFeature: 

@@ -35,8 +35,8 @@ public class FeaturePath extends AbstractFeaturePath {
 	public static Optional<FeaturePath> of(final Feature origin) {
 		var featurePath = new FeaturePath(origin);
 		
-		final var rootOpt = FeaturePathUtil.getFeaturePathRoot(featurePath.getOrigin());
-		final var namedLeafOpt = FeaturePathUtil.getFeaturePathNamedLeaf(featurePath.getOrigin());
+		final var rootOpt = FeaturePathUtil.getFeaturePathRoot(featurePath.getContext());
+		final var namedLeafOpt = FeaturePathUtil.getFeaturePathNamedLeaf(featurePath.getContext());
 		
 		if (rootOpt.isEmpty() || namedLeafOpt.isEmpty()) {
 			return Optional.empty();

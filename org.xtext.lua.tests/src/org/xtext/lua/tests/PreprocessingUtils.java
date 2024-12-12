@@ -1,4 +1,4 @@
-package org.xtext.lua;
+package org.xtext.lua.tests;
 
 public class PreprocessingUtils {
 	/**
@@ -10,18 +10,6 @@ public class PreprocessingUtils {
 	private static final String LUA_SINGLE_LINE_COMMENT_REGEX = "--.*\\R?"; 
 	private static final String LUA_MULTI_LINE_COMMENT_REGEX = "--\\[(=*)\\[(?s).*?\\]\\1\\]"; // use backreference to match multi-line comments with arbitrary number of "="
 	
-	/**
-	 * Returns the given String without leading whitespace characters and the special first-line comment allowed in Lua scripts.
-	 * The special first-line comment is denoted by a "#" as the first non-whitespace character in a Lua file.
-	 */
-	public static final String removeFirstLineSpecialComment(String fileStr) {
-		//return fileStr.stripLeading() // remove leading whitespace
-		System.out.println("TODO: implement removeFirstLineSpecialComment()");
-		return "";
-	}
-	
-	
-	// TODO: the below methods are no preprocessing methods, just used for testing stuff
 	public static final String removeCommentsAndWhiteSpacesAndNewLines(String str) {
 		return removeAllWhiteSpacesAndNewLines(removeComments(str));
 	}

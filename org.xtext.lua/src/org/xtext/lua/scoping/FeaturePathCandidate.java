@@ -2,11 +2,10 @@ package org.xtext.lua.scoping;
 
 import java.util.List;
 
-import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.naming.QualifiedName;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
+import org.xtext.lua.utils.AssignmentUtil;
 
 // Contract:
 //   1. The FeaturePathCandidate.indexToCheck is always the index that is to be checked next for the candidate
@@ -58,7 +57,7 @@ public class FeaturePathCandidate {
 	/**
 	 * Checks if the contained context has an assigned exp, i.e. checks: </ br>
 	 * 1. If the candidate's segments were all matched ( => no further segments)
-	 * 2. If the candidate's context object is an assignable ( => appears on rhs of an assignment).
+	 * 2. If the candidate's context object is an assignable ( => appears on lhs of an assignment).
 	 * @return
 	 */
 	public boolean referencesReferencing() {
@@ -66,7 +65,7 @@ public class FeaturePathCandidate {
 		return isCompletelyMatched() 	
 				&& context instanceof Referencing referencing
 				&& referencing.getRef() instanceof Referencing
-				&& LinkingAndScopingUtils.isAssignable(context);
+				&& AssignmentUtil.isAssignable(context);
 	}
 	
 	/**

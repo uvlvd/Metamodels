@@ -6,8 +6,7 @@ import java.util.Map;
 import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.LuaFactory;
-import org.xtext.lua.lua.impl.ArgImpl;
-import org.xtext.lua.utils.LinkingAndScopingUtils;
+import org.xtext.lua.utils.LuaConstants;
 
 public class ImplicitSelfArgs {
 	private Map<FuncBody, Arg> funcBodyToSelfArg = new HashMap<>();
@@ -17,7 +16,7 @@ public class ImplicitSelfArgs {
 			return funcBodyToSelfArg.get(funcBody);
 		}
 		var selfArg = LuaFactory.eINSTANCE.createArg();
-		selfArg.setName(LinkingAndScopingUtils.SELF_PARAM_NAME);
+		selfArg.setName(LuaConstants.SELF_PARAM_NAME);
 		funcBodyToSelfArg.put(funcBody, selfArg);
 		return selfArg;
 	}

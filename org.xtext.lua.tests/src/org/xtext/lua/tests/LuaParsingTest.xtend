@@ -16,7 +16,7 @@ class LuaParsingTest {
 	
 	@Inject
 	DefaultTestingParserHelper parserHelper
-
+	
 	@Test
 	def void ifThenElseTest() {
 		// SUT = Snippet Under Test 

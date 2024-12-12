@@ -305,6 +305,7 @@ public final class LinkingAndScopingUtils {
 		return Optional.empty();
 	}
 	
+	// TODO: moved to FeaturePath
 	public static Optional<Var> getFeaturePathRoot(Feature feature) {	
 		if (feature instanceof Var var) { // found root
 			return Optional.of(var);
@@ -321,6 +322,8 @@ public final class LinkingAndScopingUtils {
 		
 	}
 	
+	
+	// TODO: moved to FeaturePath
 	// TODO: might want to return param feature if it is the named leaf?
 	public static Feature getFeaturePathNamedLeaf(Feature feature) {
 		return getFeaturePathNamedLeaf(feature, feature);
@@ -369,6 +372,7 @@ public final class LinkingAndScopingUtils {
 		return null;
 	}
 	
+	// TODO: moved to FeaturePath, also getSuffixExpFromFeature is probably no longer needed
 	public static Feature getFeaturePathLeaf(Feature feature) {
 		final var suffix = getSuffixExpFromFeature(feature);
 		if (suffix == null) {
@@ -589,14 +593,7 @@ public final class LinkingAndScopingUtils {
 		return str;
 	}
 	
-	public static Optional<Stat> getParentStatement(EObject obj) {
-		// since all PrefixExps extend Stat, we need to return the Stat from the Block, not
-		// the direct parent of the object
-		var parentBlock = EcoreUtil2.getContainerOfType(obj, Block.class);
-		return EcoreUtil2.getAllContentsOfType(parentBlock, Stat.class).stream()
-				.filter(stat -> EcoreUtil2.isAncestor(stat, obj))
-				.findAny();
-	}
+
 	
 
 

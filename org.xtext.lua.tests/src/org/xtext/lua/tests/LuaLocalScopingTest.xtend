@@ -114,6 +114,14 @@ class LuaLocalScopingTest {
 			f = a.member
 			str2 = "2"
 			d = a[str]
+		'''
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
+	}
+	
+	@Test
+	def void tableAccessDotInStringLiteralTest() { 
+		val SUT = '''
+			a = {}
 			a["hello.world"] = 2
 			b = a["hello.world"]
 		'''

@@ -31,6 +31,25 @@ b) `f` references `func` on the rhs, `func` being of type `Var` (also a `Referen
     f = func 
 ```
 
+### Project Structure
+
+**Grammar**
+
+**DerivedStateComputer**
+
+**ScopeProviders**
+The linking process calls the `LuaScopeProvider` to find candidates for reference resolution, which delegates to the other `ScopeProviders`:
+ - `LuaAssignmentScopeProvider` for reference resolution of assignable-to-value references (in `Assignments` and table `Fields`)
+ - `LuaBlockScopeProvider` for reference resolution considering block scopes, this delegates to:
+    - `LuaFeatureScopeHelper` for reference resolution of `Feature`s
+
+### Terminology
+ - `FeaturePath`: a path consisting of `PrefixExp`s (e.g. `Var`) and `SuffixExp`s (e.g. `MemberAccess`, `TableAccess` or `FunctionCall`)
+        e.g. `table.member.func()`, `table[0]`
+ - `Assignable`: `Feature` or `FeaturePath` on lhs of an `Assignment` that may have an assigned Exp (i.e. ends with a `NamedFeature`)
+ - `Assigned`: `Exp` assigned to an `Assignable`
+ - lhs, rhs: left-hand-side, right-hand-side
+
 ## Tests & Evaluation
 More details can be found in the README of the test package `org.xtext.lua.tests`.
 1. The tests in `org.xtext.lua52.tests` can be executed with right click -> Run As -> JUnit Test:

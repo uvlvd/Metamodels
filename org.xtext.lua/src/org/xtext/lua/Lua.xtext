@@ -260,7 +260,7 @@ Var:
  * Continuation of a FeaturePath.
  */
 SuffixExp:
-	FunctionCall // from FunctionCall in reference
+	FunctionCall // from FunctionCall in reference, should never be leaf of a path (never on lhs of Assignment)
 	| MethodCall // from FunctionCall in reference
 	| TableAccess // from Var in reference
 	| MemberAccess // from Var in reference
@@ -347,8 +347,7 @@ ArgList:
  */
 Feature:
 	PrefixExp
-	| FunctionCall // should never be leaf of a path (never on lhs of Assignment)
-	| NamedFeature
+	| SuffixExp
 ;
 
 NamedFeature: 

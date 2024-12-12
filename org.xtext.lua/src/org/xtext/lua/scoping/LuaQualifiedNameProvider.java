@@ -1,5 +1,6 @@
 package org.xtext.lua.scoping;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.function.Predicate;
 
@@ -11,6 +12,8 @@ import org.eclipse.xtext.naming.DefaultDeclarativeQualifiedNameProvider;
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
+import org.eclipse.xtext.resource.EObjectDescription;
+import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.util.PolymorphicDispatcher;
 import org.eclipse.xtext.util.Strings;
 import org.xtext.lua.linking.LuaLinkingService;
@@ -27,6 +30,7 @@ import org.xtext.lua.utils.LinkingAndScopingUtils;
 import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.NameField;
 import org.xtext.lua.lua.ParamArgs;
+import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
@@ -84,7 +88,8 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
 		}
 		return qualifiedNameFromConverter;
 	}
-	
+
+
 	private boolean isStopConditionFor(EObject obj) {
 		final var isParamArg = EcoreUtil2.getContainerOfType(obj, ParamArgs.class) != null;
 		final var isVarInsideTableAcccess = !(obj instanceof TableAccess) 

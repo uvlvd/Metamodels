@@ -5,21 +5,11 @@ package org.xtext.lua;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.eclipse.emf.common.util.TreeIterator;
-import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.EStructuralFeature;
-import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.xtext.conversion.IValueConverterService;
-import org.eclipse.xtext.diagnostics.IDiagnosticConsumer;
-import org.eclipse.xtext.linking.ILinker;
 import org.eclipse.xtext.linking.ILinkingDiagnosticMessageProvider;
 import org.eclipse.xtext.linking.ILinkingService;
 import org.eclipse.xtext.linking.impl.ImportedNamesAdapter;
-import org.eclipse.xtext.linking.impl.LinkingDiagnosticProducer;
-import org.eclipse.xtext.linking.lazy.LazyLinker;
-import org.eclipse.xtext.naming.IQualifiedNameConverter;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
-import org.eclipse.xtext.nodemodel.INode;
 import org.eclipse.xtext.parsetree.reconstr.ITransientValueService;
 import org.eclipse.xtext.resource.DerivedStateAwareResource;
 import org.eclipse.xtext.resource.DerivedStateAwareResourceDescriptionManager;
@@ -29,24 +19,23 @@ import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.resource.XtextResource;
 import org.eclipse.xtext.scoping.IGlobalScopeProvider;
 import org.eclipse.xtext.scoping.impl.ImportUriResolver;
-import org.eclipse.xtext.util.concurrent.IUnitOfWork;
 import org.xtext.lua.converters.LuaValueConverterService;
 import org.xtext.lua.linking.IMockObjectCreator;
-import org.xtext.lua.linking.LuaLinker;
 import org.xtext.lua.linking.LuaLinkingDiagnosticMessageProvider;
 import org.xtext.lua.linking.LuaLinkingService;
 import org.xtext.lua.linking.MockObjectCreator;
-import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.postprocessing.LuaDerivedStateComputer;
+import org.xtext.lua.scoping.DescriptionCreator;
+import org.xtext.lua.scoping.FeaturePathCandidateBuilder;
+import org.xtext.lua.scoping.FeatureScopeHelper;
+import org.xtext.lua.scoping.LuaAssignmentScopeProvider;
+import org.xtext.lua.scoping.LuaBlockScopeProvider;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.scoping.LuaImportUriResolver;
-import org.xtext.lua.scoping.LuaQualifiedNameConverter;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
 import org.xtext.lua.scoping.LuaResourceDescriptionStrategy;
 import org.xtext.lua.serialization.LuaTransientValueService;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 import com.google.inject.Binder;
 
 /**
@@ -166,6 +155,26 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
     public Class<? extends IMockObjectCreator> bindMockObjectCreator() {
         return MockObjectCreator.class;
     }
-	
+    
+    public Class<LuaAssignmentScopeProvider> bindAssignmentScopeProvider() {
+        return LuaAssignmentScopeProvider.class;
+    }
+    public Class<LuaBlockScopeProvider> bindBlockScopeProvider() {
+        return LuaBlockScopeProvider.class;
+    }
+    
+    public Class<FeatureScopeHelper> bindFeatureScopeHelper() {
+        return FeatureScopeHelper.class;
+    }
+
+    
+    public Class<DescriptionCreator> bindCandidateDescriptionCreator() {
+        return DescriptionCreator.class;
+    }
+    
+    public Class<FeaturePathCandidateBuilder> bindFeaturePathCandidateBuilder() {
+        return FeaturePathCandidateBuilder.class;
+    }
+
 
 }

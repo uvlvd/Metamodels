@@ -27,28 +27,6 @@ import org.xtext.lua.mocking.SyntheticVar;
 
 public class LuaParserTest {
 	private static final Logger LOGGER = Logger.getLogger(LuaParserTest.class);
-	
-	// TODO: remove
-	//@Test
-	public void testMinimalParseTest() throws IOException {
-		final var apisix = "D:\\MA\\apisix\\apisix";
-		final var lua_test_suite_51 = "D:\\MA\\lua5.1-tests";
-		final var lua_test_suite_52 = "D:\\MA\\lua-5.2.0-tests";
-		
-		// neovim plugins
-		final var nvimDbee = "D:\\MA\\repos\\nvim_plugins\\nvim-dbee"; // has lots of go code
-		final var mason = "D:\\MA\\repos\\nvim_plugins\\mason.nvim"; // at least Lua 5.3
-		final var lualine = "D:\\MA\\repos\\nvim_plugins\\lualine.nvim";
-		final var telescope = "D:\\MA\\repos\\nvim_plugins\\telescope.nvim";
-		final var trouble = "D:\\MA\\repos\\nvim_plugins\\trouble.nvim";
-		
-		final var temp_testfolder = "D:\\MA\\repos\\temp";
-		
-		var resourceSet = new LuaParser().parse(Paths.get(lua_test_suite_52));
-		
-		//printNumberOfModelElements(resourceSet);
-	}
-	
 	private static final String EVAL_FOLDER_PATH = "evaluation_results\\";
 	
 	/**

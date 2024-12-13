@@ -19,7 +19,9 @@ import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.Block;
+import org.xtext.lua.lua.ExpLiteral;
 import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.LocalVar;
@@ -28,6 +30,7 @@ import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.Var;
+import org.xtext.lua.mocking.MockInfoCollector;
 import org.xtext.lua.utils.FeatureUtil;
 import org.xtext.lua.utils.FunctionUtil;
 import org.xtext.lua.utils.LuaRequireUtil;
@@ -57,6 +60,9 @@ public class LuaFeatureScopeProvider extends LuaAbstractBlockScopeProvider {
 	
 	@Inject
 	private ImportUriResolver uriResolver;
+	
+	@Inject
+	private MockInfoCollector mockInfoCollector;
 	
 	@Override
 	protected IScope getScopeFromBlock(final EObject context, final EReference reference, final Block currentBlock, final Block previousBlock) {
@@ -300,6 +306,20 @@ public class LuaFeatureScopeProvider extends LuaAbstractBlockScopeProvider {
 			else if (referencedByLeaf instanceof Arg) {
 				// Args should already be part of the Referenceables/featurePathCandidates
 				return Collections.emptyList();
+			}
+			
+			else if (referencedByLeaf instanceof Field field) {
+				final var valueExp = field.getValueExp();
+				if (valueExp instanceof Feature featureValue) {
+					var referencedBlock = EcoreUtil2.getContainerOfType(featureValue, Block.class);
+					var parentStatement = StatUtil.getParentStatement(assignedReferencing);
+					var referenceablesInReferencedBlock = ReferenceableUtil.getReferenceablesForContextFromBlock(featureValue, referencedBlock, parentStatement.get());
+					return findFeaturePathCandidatesThatMatchUntil(featureValue, reference, referenceablesInReferencedBlock);
+				}
+				if (valueExp instanceof ExpLiteral) {
+					return Collections.emptyList();
+				}
+				throw new RuntimeException("Unexpected type: " + valueExp + ", expected Feature for value expression.");
 			}
 			
 			// throw warning if the referenced leaf is a proxy object

@@ -47,8 +47,8 @@ The linking process calls the `LuaScopeProvider` to find candidates for referenc
 ### Terminology
  - `FeaturePath`: a path consisting of `PrefixExp`s (e.g. `Var`) and `SuffixExp`s (e.g. `MemberAccess`, `TableAccess` or `FunctionCall`)
         e.g. `table.member.func()`, `table[0]`
- - `Assignable`: `Feature` or `FeaturePath` on lhs of an `Assignment` that may have an assigned Exp (i.e. ends with a `NamedFeature`)
- - `Assigned`: `Exp` assigned to an `Assignable`
+ - Assignable: `Feature` or `FeaturePath` on lhs of an `Assignment` that may have an assigned Exp (i.e. ends with a `NamedFeature`)
+ - Assigned: `Exp` assigned to an `Assignable`
  - `Referencing`: References a `Referenceable`
  - lhs, rhs: left-hand-side, right-hand-side
 

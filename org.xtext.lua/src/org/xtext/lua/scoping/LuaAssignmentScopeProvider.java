@@ -10,17 +10,14 @@ import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.IScopeProvider;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.lua.linking.SyntheticExpNil;
-import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.utils.AssignmentUtil;
-import org.xtext.lua.utils.FieldUtil;
-import org.xtext.lua.utils.LuaConstants;
 
 import com.google.inject.Inject;
 
 /**
- * {@link IScopeProvider} implementation responsible for resolving assignable-to-value references in {@link Assignment}s or {@link Field}s.
+ * {@link IScopeProvider} implementation responsible for resolving assignable-to-value references in {@link Assignment}s.
  * @author jsaenz
  *
  */
@@ -41,39 +38,11 @@ public class LuaAssignmentScopeProvider implements IScopeProvider {
      * @return the scope, or null if the context object is not an assignable or Field.
      */
     private IScope getScopeForAssignableToValue(EObject context) {
-        // fields (in TableConstructors) also reference their assigned value
-        if (context instanceof Field field) {
-        	return getScopeForField(field);
-        }
     	// assignables (variables that get assigned a value in an Assignment) reference their assigned value
         if (AssignmentUtil.isAssignable(context)) {
         	return getScopeForAssignable(context);
         }
-        
-        return null;
-    }
-    
-    
-    //TODO: this does not seem like the right location for this method, since the field names are computed here
-    //      but the tableAccess names are computed in LuaLinkingService...
-    /**
-     * Returns the Scope for Fields. Every field has a value, which is the candidate returned in the returned scope.
-     * Since not all names for fields can be computed, some fields may get assigned a dummy name.
-     */
-    private IScope getScopeForField(Field field) {
-    	var value = field.getValueExp(); 	
-    	if (value == null) {
-    		throw new RuntimeException("Could not determine value expression for field " + field);
-    	}
-    	
-    	var name = field.getName();
-    	if (name.equals(LuaConstants.DERIVED_DUMMY_NAME)) {
-    		name = FieldUtil.tryGetNameForField(field, LuaConstants.LINKING_DUMMY_NAME);
-    	}
-    	
-    	var fqn = nameConverter.toQualifiedName(name);
-    	var assignedValueDescription = EObjectDescription.create(fqn, value);
-    	return new SimpleScope(Collections.singletonList(assignedValueDescription));
+        throw new RuntimeException("LuaAssignmentScopeProvider called with non-assignment object " + context);
     }
 
     /**

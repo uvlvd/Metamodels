@@ -22,7 +22,7 @@ public class FunctionUtil {
 		} else if (funcObject instanceof ExpFunctionDeclaration funcDecl) {
 			return Optional.of(funcDecl.getBody());
 		} else if (funcObject instanceof Referencing referencing) {
-			var value = AssignmentUtil.tryGetAssignedValueFrom(referencing);
+			var value = AssignmentUtil.tryGetReferencedExp(referencing);
 			if (value instanceof ExpFunctionDeclaration funcDecl) {
 				return Optional.of(funcDecl.getBody());
 			}

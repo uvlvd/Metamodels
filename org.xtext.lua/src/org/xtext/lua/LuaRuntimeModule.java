@@ -27,9 +27,6 @@ import org.xtext.lua.linking.MockObjectCreator;
 import org.xtext.lua.postprocessing.LuaDerivedStateComputer;
 import org.xtext.lua.scoping.DescriptionCreator;
 import org.xtext.lua.scoping.FeaturePathCandidateBuilder;
-import org.xtext.lua.scoping.FeatureScopeHelper;
-import org.xtext.lua.scoping.LuaAssignmentScopeProvider;
-import org.xtext.lua.scoping.LuaBlockScopeProvider;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.scoping.LuaImportUriResolver;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
@@ -155,17 +152,31 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
     public Class<? extends IMockObjectCreator> bindMockObjectCreator() {
         return MockObjectCreator.class;
     }
+//    
+//    public Class<LuaAssignmentScopeProvider> bindAssignmentScopeProvider() {
+//        return LuaAssignmentScopeProvider.class;
+//    }
+//    
+//    public Class<LuaFieldScopeProvider> bindFieldScopeProvider() {
+//        return LuaFieldScopeProvider.class;
+//    }
+//    
+//    public Class<LuaGotoScopeProvider> bindLuaGotoScopeProvider() {
+//        return LuaGotoScopeProvider.class;
+//    }
+//    
+//    public Class<LuaFeatureScopeProvider> bindLuaFeatureScopeProvider() {
+//        return LuaFeatureScopeProvider.class;
+//    }
+
     
-    public Class<LuaAssignmentScopeProvider> bindAssignmentScopeProvider() {
-        return LuaAssignmentScopeProvider.class;
-    }
-    public Class<LuaBlockScopeProvider> bindBlockScopeProvider() {
-        return LuaBlockScopeProvider.class;
-    }
+//    public Class<LuaBlockScopeProvider> bindBlockScopeProvider() {
+//        return LuaBlockScopeProvider.class;
+//    }
     
-    public Class<FeatureScopeHelper> bindFeatureScopeHelper() {
-        return FeatureScopeHelper.class;
-    }
+//    public Class<FeatureScopeHelper> bindFeatureScopeHelper() {
+//        return FeatureScopeHelper.class;
+//    }
 
     
     public Class<DescriptionCreator> bindCandidateDescriptionCreator() {

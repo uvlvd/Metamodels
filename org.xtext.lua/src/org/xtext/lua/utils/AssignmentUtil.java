@@ -107,35 +107,36 @@ public class AssignmentUtil {
 		return Optional.empty();
 	}
 	
-	
-	public static Exp tryGetAssignedValueFrom(Referencing ref) {
-		return tryGetAssignedValueFrom(ref, 0, 1000);
+	/**
+	 * Attempts to find the referenced {@link Exp} by traversing the reference chain, i.e. repeatedly accessing 
+	 * {@link Referencing#getRef} until an {@link Exp}.
+	 * @param ref the Referencing
+	 * @return the Exp, or null if none is found.
+	 */
+	public static Exp tryGetReferencedExp(Referencing ref) {
+		return tryGetReferencedExp(ref, 0, 1000);
 	}
 	
 	// TODO: may lead to StackOverflow, limit depth?
-	private static Exp tryGetAssignedValueFrom(Referencing ref, int currDepth, final int maxDepth) {
+	private static Exp tryGetReferencedExp(Referencing ref, int currDepth, final int maxDepth) {
 		if (currDepth > maxDepth) {
 			LOGGER.error("Reached max depth while attempting to get assigned value from " + ref);
 			return null;
 		}
 		if (ref.getRef() == null || ref.getRef().eIsProxy()) {
-			//System.out.println("ref's "+ ref + " ref null?: " + ref.getRef());
 			return null;
 		}
 		// TODO: this can probably be removed, since now synthetic NIL exps are assigned 
-		if (ref.getRef().equals(ref)) { // reference to self means no value was assigned (i.e. the value is 'nil')
-			//System.out.println("ref to self?: " + ref.getRef());
-			return null;
-		}
+//		if (ref.getRef().equals(ref)) { // reference to self means no value was assigned (i.e. the value is 'nil')
+//			return null;
+//		}
 		if (ref.getRef() instanceof Referencing refsRef) {
-			//System.out.println("get next ref: " + ref.getRef());
-			return tryGetAssignedValueFrom(refsRef, ++currDepth, maxDepth);
-			//return tryGetAssignedValueFrom(refsRef, 0, maxDepth);
+			return tryGetReferencedExp(refsRef, ++currDepth, maxDepth);
 		}
-		//System.out.println("ref found: " + ref.getRef());
 		if (ref.getRef() instanceof Exp exp) {
 			return exp;
 		}
+		// TODO: could we just stop when getRef() does not return a Referencing? That would be the end of the reference chain
 		return null;
 	}
 	

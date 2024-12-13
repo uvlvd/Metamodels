@@ -47,7 +47,7 @@ public class ExpUtil {
 		if (exp instanceof ExpLiteral literal) {
 			name = resolveExpLiteralToNameString(literal);
 		} else if (exp instanceof Referencing ref) {
-			var assignedValue = AssignmentUtil.tryGetAssignedValueFrom(ref);
+			var assignedValue = AssignmentUtil.tryGetReferencedExp(ref);
 			if (assignedValue != null) {
 				if (assignedValue instanceof ExpLiteral literal) {
 					name = resolveExpLiteralToNameString(literal);

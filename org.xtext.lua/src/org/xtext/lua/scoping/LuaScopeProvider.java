@@ -9,6 +9,10 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.impl.SimpleLocalScopeProvider;
+import org.xtext.lua.lua.Field;
+import org.xtext.lua.lua.Goto;
+import org.xtext.lua.utils.AssignmentUtil;
+import org.xtext.lua.utils.LuaRequireUtil;
 
 import com.google.inject.Inject;
 
@@ -24,10 +28,13 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
 	private LuaAssignmentScopeProvider assignmentScopeProvider;
 	
 	@Inject
-	private LuaBlockScopeProvider blockScopeProvider;
+	private LuaFieldScopeProvider fieldScopeProvider;
 	
 	@Inject
-	private FeatureScopeHelper featureScopeHelper;
+	private LuaGotoScopeProvider gotoScopeProvider;
+	
+	@Inject
+	private LuaFeatureScopeProvider featureScopeProvider;
 	
 	/**
 	 * NOTE: Always create IEObjectDescriptions using the qualifiedNameConverter when creating
@@ -40,26 +47,35 @@ public class LuaScopeProvider extends SimpleLocalScopeProvider {
             return IScope.NULLSCOPE;
         }
         
-        // try to get scope for features of require function calls
-        var scope = featureScopeHelper.getScopeForFeatureOfRequireFuncCallFeaturePath(context, reference);
+        IScope scope = null;
         
-        // try to get scope for assignables (i.e. end of feature path on rhs of assignment)
-        if (scope == null) {
+        // try to get scope for features of require function calls
+        if (LuaRequireUtil.isPartOfRequireFunctionCallFeaturePath(context)) {
+            scope = featureScopeProvider.getScopeForFeatureOfRequireFuncCallFeaturePath(context, reference);
+        }
+
+        if (context instanceof Field) {
+        	scope = fieldScopeProvider.getScope(context, reference);
+        }
+
+        if (AssignmentUtil.isAssignable(context)) {
         	scope = assignmentScopeProvider.getScope(context, reference);
+        }
+        
+        if (context instanceof Goto) {
+        	scope = gotoScopeProvider.getScope(context, reference);
         }
         
         // try to get scope for other references
         if (scope == null) {
-        	// we pass context and reference for calls to "require" (need to call the global scope, see getReferenceablesFromRequireCall)
-        	//scope = getScopeByTraversingBlocks(context, reference);
-        	scope = blockScopeProvider.getScope(context, reference);
+        	scope = featureScopeProvider.getScope(context, reference);
         }
         
         // return scope if any was found
         if (scope != null) {
         	return scope;
         }
-        
+
 		// else search global scope
         // For assignments where an assignable is assigned to a require-call, 
         // the global scope is resolved when searching referenceable candidates for features

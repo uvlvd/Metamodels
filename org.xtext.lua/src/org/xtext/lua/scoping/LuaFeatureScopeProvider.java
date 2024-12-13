@@ -35,8 +35,8 @@ import org.xtext.lua.utils.StatUtil;
 
 import com.google.inject.Inject;
 
-public class FeatureScopeHelper {
-	private static final Logger LOGGER = Logger.getLogger(FeatureScopeHelper.class);
+public class LuaFeatureScopeProvider extends LuaAbstractBlockScopeProvider {
+	private static final Logger LOGGER = Logger.getLogger(LuaFeatureScopeProvider.class);
 	
 	@Inject
 	private IGlobalScopeProvider globalScopeProvider;
@@ -55,6 +55,24 @@ public class FeatureScopeHelper {
 	
 	@Inject
 	private ImportUriResolver uriResolver;
+	
+	@Override
+	protected IScope getScopeFromBlock(final EObject context, final EReference reference, final Block currentBlock, final Block previousBlock) {
+		if (context instanceof Feature feature) {
+			// we use the parentStatement to decide where to stop searching for candidates (i.e. only consider statements before the context's statement)
+			final var contextParentStatementOpt = StatUtil.getParentStatement(feature);
+	    	if (!contextParentStatementOpt.isPresent()) {
+	    		LOGGER.warn("Found no contextParentStatement for obj " + feature);
+	    		return null;
+	    	}
+	    	
+	    	final var contextParentStatement = contextParentStatementOpt.get();	
+	    	final var referenceables = ReferenceableUtil.getReferenceablesForContextFromBlock(feature, currentBlock, contextParentStatement);
+
+	    	return getScopeForFeatureFromReferenceables(feature, reference, referenceables);
+		}
+		return null;
+	}
 
 	protected IScope getScopeForFeatureFromReferenceables(final Feature feature, final EReference reference, final Collection<? extends Referenceable> referenceables) {
 		final var candidates = getCandidatesForFeature(feature, reference, referenceables);
@@ -260,7 +278,7 @@ public class FeatureScopeHelper {
 			}
 			
 			// throw warning if the referenced leaf is a proxy object
-			else if (referencedByLeaf.eIsProxy()) {
+			else if (referencedByLeaf != null && referencedByLeaf.eIsProxy()) {
 				LOGGER.warn("Found proxy object " + referencedByLeaf + " while attempting to resolve assigned referencing " + assignedReferencing);
 				return Collections.emptyList();
 			} else {
@@ -445,4 +463,6 @@ public class FeatureScopeHelper {
     				.map(obj -> (Referenceable) obj)
     				.toList();
     }
+
+
 }

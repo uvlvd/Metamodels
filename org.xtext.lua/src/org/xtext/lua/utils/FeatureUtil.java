@@ -15,7 +15,7 @@ public class FeatureUtil {
 	/**
 	 * Returns true if the given feature is a FunctionCall or MethodCall-
 	 */
-	public static boolean isFunctionCallFeature(Feature feature) {
+	public static boolean isFunctionOrMethodCallFeature(Feature feature) {
 		return feature instanceof FunctionCall || feature instanceof MethodCall;
 
 	}

@@ -9,7 +9,7 @@ public class TestConfig {
 	 * Whether to print the models resulting from the code snippets (SUTs) in the 
 	 * {@link LuaLocalScopingTest} and {@link LuaGlobalScopingTest} test classes.
 	 */
-	public static final boolean PRINT_SNIPPET_MODELS = false;
+	public static final boolean PRINT_SNIPPET_MODELS = true;
 	
 	
 	// TODO: The option verbose = true does currently not work in the tests, see LuaParserTest.evaluateResolvedProxies

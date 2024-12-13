@@ -3,6 +3,7 @@ package org.xtext.lua.scoping;
 import java.util.Collection;
 
 import org.eclipse.xtext.naming.IQualifiedNameConverter;
+import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.resource.IEObjectDescription;
 import org.xtext.lua.lua.FunctionDeclaration;
@@ -13,6 +14,9 @@ import com.google.inject.Inject;
 public class DescriptionCreator {
 	@Inject
     private IQualifiedNameConverter nameConverter;
+	
+	@Inject
+	private IQualifiedNameProvider qualifiedNameProvider;
     
     /**
      * We always need to create descriptions (instead of returning Scopes.scopeFor(candidates)), since the 
@@ -40,8 +44,8 @@ public class DescriptionCreator {
     }
     
     private String getLastSegmentFromFunctionDeclarationName(FunctionDeclaration fd) {
-    	var qn = nameConverter.toQualifiedName(fd.getName());
-    	return qn.getLastSegment();
+    	final var fqn = qualifiedNameProvider.getFullyQualifiedName(fd);
+    	return fqn.getLastSegment();
     } 
 	
 }

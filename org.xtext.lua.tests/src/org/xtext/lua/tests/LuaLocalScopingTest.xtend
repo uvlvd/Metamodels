@@ -308,6 +308,19 @@ class LuaLocalScopingTest {
 	}
 	
 	@Test
+	def void methodReturnTableTest() { 
+		val SUT = '''
+		table = {}
+		function table:func() 
+			a = {test = "test"}
+			return a
+		end
+		b = table:func().test
+		'''
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
+	}
+	
+	@Test
 	def void localFuncBodyArgsTest() { 
 		val SUT = '''
 		local function func(arg1, arg2) 

@@ -21,7 +21,9 @@ import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.Block;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.FuncBody;
+import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.LocalVar;
+import org.xtext.lua.lua.MethodCall;
 import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
@@ -66,7 +68,7 @@ public class LuaFeatureScopeProvider extends LuaAbstractBlockScopeProvider {
 	    		return null;
 	    	}
 	    	
-	    	final var contextParentStatement = contextParentStatementOpt.get();	
+	    	final var contextParentStatement = contextParentStatementOpt.get();
 	    	final var referenceables = ReferenceableUtil.getReferenceablesForContextFromBlock(feature, currentBlock, contextParentStatement);
 
 	    	return getScopeForFeatureFromReferenceables(feature, reference, referenceables);
@@ -167,27 +169,32 @@ public class LuaFeatureScopeProvider extends LuaAbstractBlockScopeProvider {
     
     	var result = new ArrayList<FeaturePathCandidate>();
 
-    	//TODO: probably need to handle methodCall differntly to function call, since method call contains a name
-    	
-    	
     	// handle current is function/methodCall feature
-    	if (FeatureUtil.isFunctionCallFeature(current)) {
+    	if (current instanceof FunctionCall) {
     		// We have two possibilities here: 1. previous is named feature or 2. previous itself was functionCallFeature:
     		// In both cases the remaining candidates should already contain only viable candidates from a previous call of this function.
     		for (var candidate : candidates) {
-    			if (candidate.isCompletelyMatched()) { // candidate can only be functionCallCandidate if it is completely matched
-    				final var candidateContext = candidate.getReferenceable();
-    				final var candidateFuncBodyOpt = FunctionUtil.findFuncBodyFromFuncObject(candidateContext);
-    				if (candidateFuncBodyOpt.isPresent()) {
-    					result.addAll(getFeaturePathCandidatesFromFuncBody(candidateFuncBodyOpt.get()));
-    				}
+    			result.addAll(getCandidatesFromCall(candidate));
+    		}
+    		return result;
+    	}
+    	
+    	//TODO: probably need to handle methodCall differntly to function call, since method call contains a name
+    	if (current instanceof MethodCall methodCall) {
+    		// In contrast to the FunctionCall case, a MethodCall has a name which we need to check before computing the candidates from the 
+    		// referenced function's body
+    		final var currentFqn = qualifiedNameProvider.getFullyQualifiedName(methodCall);
+        	final var currentName = currentFqn.getLastSegment();
+    		for (var candidate : candidates) {
+    			if (candidate.checkAndIncrementIndex(currentName)) {
+    				result.add(candidate); // add the candidate itself (since it had a matching name)
+    				result.addAll(getCandidatesFromCall(candidate)); // add the candidates resulting from the call
     			}
     		}
     		return result;
     	}
     	
-    	// handle current is named feature (i.e. Var, MemberAccess or TableAccess)
-    	// => from here, we assume that current is a Referenceable (since named features are referenceables)
+    	// handle current is non-call named feature (i.e. Var, MemberAccess or TableAccess)
     	assert(current instanceof NamedFeature); // TODO: throw exception instead
     	final var currentFqn = qualifiedNameProvider.getFullyQualifiedName(current);
     	final var currentName = currentFqn.getLastSegment();
@@ -207,6 +214,24 @@ public class LuaFeatureScopeProvider extends LuaAbstractBlockScopeProvider {
     	}
 
     	return result;
+    }
+    
+    /**
+     * Returns the candidates resulting from a function/method call of a candidate.
+     * @param candidate
+     * @return
+     */
+    private List<FeaturePathCandidate> getCandidatesFromCall(final FeaturePathCandidate candidate) {
+    	// candidate can only be functionCall/methodCall-Candidate if it is completely matched, if the candidate's feature path
+    	// continues, it is not a matching candidate function/methodCall for the currently considered context object
+    	if (candidate.isCompletelyMatched()) { 
+			final var candidateContext = candidate.getReferenceable();
+			final var candidateFuncBodyOpt = FunctionUtil.findFuncBodyFromFuncObject(candidateContext);
+			if (candidateFuncBodyOpt.isPresent()) {
+				return getFeaturePathCandidatesFromFuncBody(candidateFuncBodyOpt.get());
+			}
+		}
+    	return Collections.emptyList();
     }
 
     // TODO: this method is too complex, should be split into multiple methods for each case.

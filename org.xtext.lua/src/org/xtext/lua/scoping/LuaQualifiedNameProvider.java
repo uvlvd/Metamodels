@@ -20,6 +20,12 @@ import org.xtext.lua.utils.FieldUtil;
 
 
 
+/**
+ * Provides names separated by ".". {@link TableAccess} and {@link MemberAccess} names are further encased in "[" "]", 
+ * e.g. table[var] produces the fqn table.[var].
+ * @author jsaenz
+ *
+ */
 public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNameProvider {
 	
 	@Override
@@ -27,12 +33,7 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
 		QualifiedName name = null;
 		
 		name = super.computeFullyQualifiedName(obj);
-        if (name == null) { // TODO: only used for debug
-        	//System.out.println(obj);
-        } else {
-        	//System.out.println("FQN: " + name);
-        }
-        
+
         return name;
 
     }
@@ -40,6 +41,7 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
 	@Override
 	protected QualifiedName computeFullyQualifiedNameFromNameAttribute(EObject obj) {
 		String name = getNameStr(obj);
+
 		if (Strings.isEmpty(name)) {
 			name = getResolver().apply(obj);
 		}
@@ -119,16 +121,16 @@ public class LuaQualifiedNameProvider extends DefaultDeclarativeQualifiedNamePro
 	}
 	
 	private String getMemberAccessNameStr(String name) {
-		//return "[\"" + name + "\"]";
 		return "[" +  name + "]";
 	}
 	
 	private String getFunctionDeclarationNameStr(FunctionDeclaration decl) {
 		var name = decl.getName();
+		// we need to replace member function separator ':' with '.' for qualified name computation
+		name = name.replace(":", ".");
 		var qn = getConverter().toQualifiedName(name);
 		if (qn.getSegmentCount() > 1) {
 			var last = qn.getLastSegment();
-			last = "[" + last + "]";
 			var result = qn.skipLast(1);
 			result = result.append(last);
 			return result.toString();

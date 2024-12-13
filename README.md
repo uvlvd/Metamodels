@@ -1,8 +1,8 @@
 # Lua Parsing using Xtext 2.37
-Lua parser and serializer implemented with Xtext implementing the syntax described in the [Lua 5.2 Reference Manual](https://www.lua.org/manual/5.2/manual.html#9). 
+Lua parser and serializer implemented with Xtext following the Lua grammar as described in the [Lua 5.2 Reference Manual](https://www.lua.org/manual/5.2/manual.html#9). 
 This project was originally based on the grammar from the [Melange Project](http://melange.inria.fr/), but has since been completely overhauled according to the reference manual linked above as well as some ideas from the [Ometa Lua-grammar implementation](https://github.com/progranet/OMeta.Lua).
 
-The grammar was tested using the [lua 5.2 test suite](https://www.lua.org/tests/).
+The parser was tested using the [lua 5.2 test suite](https://www.lua.org/tests/), see the package `org.xtext.lua.tests`.
 
 ## Setup
 In order to run this project, you'll need Eclipse Modeling Tools version 2022-09 with Xtext (tested with version 2.37.0) installed from the marketplace. Java 11 needs to be selected via "Window - Preferences - Java - Installed JREs".
@@ -17,7 +17,7 @@ The following gives an overview over the project idea and structure.
 The goal in designing the grammar was to represent the grammar from the Lua reference manual (see link above) as closely as possible. 
 Since the reference grammar is given in extended BNF while Xtext requires LL* grammars, left recursion and ambiguities had to be removed, along with other adjustments.
 
-### References
+### References and reference resolution
 References are implemented using the types `Referenceable` and `Referencing`, where a `Referencing` references a `Referenceable`. A `Referencing` always references the next element in the reference chain, which ends with a reference to e.g. a function declaration or a value in an assignment.
 Examples:
 a) Comments in code snippet
@@ -31,18 +31,18 @@ b) `f` references `func` on the rhs, `func` being of type `Var` (also a `Referen
     f = func 
 ```
 
-### Project Structure
-The project structure in terms of the packages is largely aligned with default Xtext projects. A utility package `org.xtext.lua.utils` is present containing
-utility functions and constants for the parser.
-
-**Grammar**
-
-**DerivedStateComputer**
+**EReference definition in the grammar**
+The grammar does mainly parse the `name` attributes for `Referencing` objects (the only exception being the `Goto` object), since most `Referncing` objects can themselves be referenced. The `ref` attribute is set to `null` during parsing, and then to the `name` attribute in a post-processing step via the `DerivedStateComputer`.
 
 **ScopeProviders**
  - The linking process calls the `LuaScopeProvider` to find candidates for reference resolution, which delegates to the other `ScopeProviders`.
  - Implementations of `LuaAbstractBlockScopeProvider` traverse blocks for scoping.
  - `LuaGlobalScopeProvider` is delegated to if no candidates were found by the other scope providers.
+
+### Project Structure
+The project structure in terms of the packages is largely aligned with default Xtext projects. Notable exceptions are the utility package `org.xtext.lua.utils`, which contains
+utility functions and constants for the parser, and the mock package `org.xtext.lua.mocking`, which contains the logic for mocking unresolved references.
+
 
 ### Terminology
  - `FeaturePath`: a path consisting of `PrefixExp`s (e.g. `Var`) and `SuffixExp`s (e.g. `MemberAccess`, `TableAccess` or `FunctionCall`)
@@ -68,6 +68,3 @@ More details can be found in the README of the test package `org.xtext.lua.tests
 
 ## TODOs
  - Fix the limitations mentioned above if possible.
- - Add more documentation
- - Grammar cleanup
- - Tests cleanup

@@ -2,7 +2,6 @@ package org.xtext.lua.postprocessing;
 
 import org.apache.log4j.Logger;
 import org.eclipse.xtext.linking.lazy.SyntheticLinkingSupport;
-import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.resource.DerivedStateAwareResource;
 import org.eclipse.xtext.resource.IDerivedStateComputer;
 import org.xtext.lua.lua.Exp;
@@ -79,13 +78,6 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 		}
 		
 		if (refble instanceof Referencing referencing) {
-			// TODO: The grammar should never produce Referenceables that already have their "ref" cross-reference set.
-			//       => This check could be removed once the grammar is not changed anymore for some optimization.
-			var refNodes = NodeModelUtils.findNodesForFeature(referencing, Literals.REFERENCING__REF);
-			if (!refNodes.isEmpty()) {
-				LOGGER.warn("Attempting to create 'ref' cross-reference from 'name' attribute for for " + refble + ", but ref node is not present.");
-			}
-			
 			linkingSupport.createAndSetProxy(referencing, Literals.REFERENCING__REF, name);
 		} else {
 			//LOGGER.warn("Attempting to create 'ref' cross-reference from 'name' attribute for for " + refble + ", which is not Referencing.");

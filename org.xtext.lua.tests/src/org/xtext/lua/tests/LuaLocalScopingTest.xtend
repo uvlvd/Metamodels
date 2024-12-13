@@ -125,8 +125,7 @@ class LuaLocalScopingTest {
 			a["hello.world"] = 2
 			b = a["hello.world"]
 		'''
-		// TODO: this currently fails in the last two rows, the TableAccess b = a["hello.world"]
-		// does not correctly point to the assignment a["hello.world"]
+		// TODO: fix, dots in String seem to cause problems, does not correctly point to the assignment a["hello.world"]
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
@@ -211,7 +210,7 @@ class LuaLocalScopingTest {
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
-	// TODO: need to implement references to function return values where feasible
+	// TODO: need to implement references to function return values where feasible to fix test
 	@Test
 	def void functionDeclarationTest() { 
 		val SUT = '''
@@ -426,16 +425,32 @@ class LuaLocalScopingTest {
 	}
 	
 	@Test
-	def void gotoLabelTest() { 
+	def void gotoLabelTest() {
 		val SUT = '''
-		do
+			do
+				::label::
+				goto label
+			end
 			::label::
 			goto label
-		end
-		::label::
-		goto label
-		goto label2
-		::label2::
+			goto label2
+			::label2::
+		'''
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
+	}
+	
+	/**
+	 * Test that label outside of block scope is found if other
+	 * labels are present in block.
+	 */
+	@Test
+	def void gotoLabelNameTest() {
+		val SUT = '''
+			do
+				::l2:: 
+				goto l3
+			end
+			::l3::
 		'''
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
@@ -459,48 +474,13 @@ class LuaLocalScopingTest {
 		print(x)              --> 10  (the global one)
 		'''
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
-		// TODO: fix the problem described by the failed assertion below
-		//		(see also LinkingAndScopingUtils.getReferenceablesFromStat)
+		// TODO: fix the problem described by the failed assertion below see also LinkingAndScopingUtils.getReferenceablesFromStat)
+		//    update: should already be fixed, need to extend test to test that the correct vars are referenced
 		Assertions.assertTrue(
 			false, 
 			"The print(x) in the last line should reference the global x, but references a local one (the one in the first block x=x+1)."
 		);
 	}
-	
-	// TODO: refactor to meaningful test cases
-	@Test
-	def void scopingTempTest() { 
-		val SUT = '''
-			a = {}
-			--a["member"] = {}
-			--a["member"].b = "b"
-			--a[1+1] = "temps" --TODO
-			--b = a["member"]
-			--c = a.member
-			str = "member" 
-			a[str] = 1 --TODO
-			f = a.member
-			--d = a[str]
-		
-			--b = {}
-			--b.temp = 1 
-			--a = {}
-			--a.b = b
-			--c = a.b.temp
-			
-			
-			--func = function () return 0 end
-			--a = {}
-		   -- a[0] = 2
-		   -- b = a[func()]
-		   -- a[func()] = 1
-		   -- str = "member"
-		   -- a[str] = 1
-		   -- c = a.member
-		'''
-		parseHelper.parseAndPerformBaseScopingTest(SUT)
-	}
-	
 	
 	// never allow a rhs to reference its own lhs
 	@Test
@@ -559,10 +539,6 @@ class LuaLocalScopingTest {
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
-	// TODO: we need to include the previously searched scopes when collecting the 
-	// referenceables, since this will not work otherwise ("b" is not visible in the 
-	// inner block, but a is not visible in the outer block , so the reference cannot be
-	// resolved)
 	@Test
 	def void resolveParentBlockReferencedVarTest() { 
 		val SUT = '''
@@ -574,64 +550,22 @@ class LuaLocalScopingTest {
 		'''
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
-
+	
 	@Test
-	def void tempTest() { 
+	def void resolveFeatureInTableAccessTest() { 
 		val SUT = '''
-		
-		local _M = {version = 0.2}
-		local GRAPHQL_DEFAULT_MAX_SIZE       = 1048576               -- 1MiB
-		local GRAPHQL_REQ_DATA_KEY           = "query"
-		local GRAPHQL_REQ_METHOD_HTTP_GET    = "GET"
-		local GRAPHQL_REQ_METHOD_HTTP_POST   = "POST"
-		local GRAPHQL_REQ_MIME_JSON          = "application/json"
-		
-		
-		local fetch_graphql_data = {
-		    [GRAPHQL_REQ_METHOD_HTTP_GET] = function(ctx, max_size)
-		        local body = request.get_uri_args(ctx)[GRAPHQL_REQ_DATA_KEY]
-		        if not body then
-		            return nil, "failed to read graphql data, args[" ..
-		                        GRAPHQL_REQ_DATA_KEY .. "] is nil"
-		        end
-		
-		        if type(body) == "table" then
-		            body = body[1]
-		        end
-		
-		        return body
-		    end,
-		
-		    [GRAPHQL_REQ_METHOD_HTTP_POST] = function(ctx, max_size)
-		        local body, err = request.get_body(max_size, ctx)
-		        if not body then
-		            return nil, "failed to read graphql data, " .. (err or "request body has zero size")
-		        end
-		
-		        if request.header(ctx, "Content-Type") == GRAPHQL_REQ_MIME_JSON then
-		            local res
-		            res, err = json.decode(body)
-		            if not res then
-		                return nil, "failed to read graphql data, " .. err
-		            end
-		
-		            if not res[GRAPHQL_REQ_DATA_KEY] then
-		                return nil, "failed to read graphql data, json body[" ..
-		                            GRAPHQL_REQ_DATA_KEY .. "] is nil"
-		            end
-		
-		            body = res[GRAPHQL_REQ_DATA_KEY]
-		        end
-		
-		        return body
-		    end
-		}
+		a = "a"
+		T = {first = a}
+		t = {T.first}
+		result = t[1]
+		b = result
 		'''
-		parseHelper.parseAndPerformBaseTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 
+
 	@Test
-	def void temp2Test() { 
+	def void resolveTableFieldReferencingVarAccess() { 
 		val SUT = '''
 		local a = "a"
 		table = {
@@ -641,18 +575,5 @@ class LuaLocalScopingTest {
 		'''
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
-	
-	@Test
-	def void temp3Test() { 
-		val SUT = '''
-		a = {}
-		a.f = function () end
-		function func()
-		end
-		func()
-		a.f()
-		'''
-		parseHelper.parseAndPerformBaseScopingTest(SUT)
-	}	
 	
 }

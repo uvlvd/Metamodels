@@ -6,10 +6,10 @@ is expected to be executed using the LuaParser class from Java code.
 
  - `DefaultTestingParserHelper.java` is used to parse the tested code snippets (SUTs) and perform default ("basic") tests performed for many of the tests, e.g. that all references/proxies are resolved in case of scoping tests.
  - `TestUtil.java` contains utility function for testing.
- - `LuaParsingTest.xtend` contains unit tests for the correctness of the syntactical parsing.
+ - `LuaParsingTest.xtend` contains unit tests for the correctness of the syntactical parsing without reference rsolution.
  - `LuaLocalScopingTest.xtend` contains unit tests for resolution of local linking and scoping (i.e. reference resolution).
  - `LuaGlobalScopingTest.xtend` contains unit tests for resolution of global linking and scoping (i.e. reference resolution).
- - `LuaParserTest.java` contains integration tests on complete Lua projects. These test will output evaluation data like percentage of resolved (non-mocked) references.
+ - `LuaParserTest.java` contains tests on complete Lua projects. These test will output evaluation data like percentage of resolved (non-mocked) references. The evaluated projects can be configuret in `TestConfig.EVAL_PROJECT_CONFIGS`
 
 # Requirements for projects to be parsed
  - `UTF-8` encoding
@@ -27,8 +27,7 @@ There also seems to be a bug where an empty comment breaks the parser. As a resu
 --
 local function report (n) print("\n***** FILE '"..n.."'*****") end
 ```
-The `local function report [...]` is not parsed (appearently treated as part of the comment) without a line-break separating the 
-comment and the line after the comment. This issue only arises in `LuaParserTest.java`, not for the same code in `LuaParsingTest.xtend`.
+The `local function report [...]` is not parsed (appearently treated as part of the comment) without a line-break separating the comment and the line after the comment. This issue only arises in `LuaParserTest.java`, not for the same code in `LuaParsingTest.xtend`.
 
 # Configuration file
  - `TestUtil.java` may be modified to configure the tests, e.g. to enable/disable the output of a String representation of the Models resulting from parsing the Lua code snippets in the test cases.
@@ -38,3 +37,4 @@ comment and the line after the comment. This issue only arises in `LuaParserTest
 
 # TODOS and known problems:
  - `LuaParsingTest.invalidNumberTest` is currently not executed, because the grammar currently allows for invalid numbers (non-conformant to Lua syntax); since this is not problematic for the CIPM use-case, this issue was not yet resolved.
+ - Currently, there are test cases in `LuaLocalScopingTest.xtend` that fail because the tested functionality was not yet implemented. These cases are marked with a TODO comment.

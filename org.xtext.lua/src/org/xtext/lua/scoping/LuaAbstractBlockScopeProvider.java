@@ -48,7 +48,7 @@ public abstract class LuaAbstractBlockScopeProvider implements IScopeProvider {
      * @param reference the reference.
      * @param currentBlock the given block.
      * @param previousBlock the previously traversed block.
-     * @return the scope of the block, null if no candidates for the context where found in the block.
+     * @return the scope of the block, null if no candidates for the context where found in the block and the next block should be searched.
      */
     protected abstract IScope getScopeFromBlock(final EObject context, final EReference reference, final Block currentBlock, final Block previousBlock);
 

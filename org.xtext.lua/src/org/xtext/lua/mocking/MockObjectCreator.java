@@ -1,4 +1,4 @@
-package org.xtext.lua.linking;
+package org.xtext.lua.mocking;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,7 +16,6 @@ import org.xtext.lua.lua.Var;
 
 public class MockObjectCreator implements IMockObjectCreator {
 	private static final URI VAR_MOCK_URI = URI.createURI("dummy:/syntheticVars.lua");
-	
 	
 	private Map<Integer, Var> varMap = new HashMap<>();
 	private Block mockBlock = null;
@@ -45,7 +44,6 @@ public class MockObjectCreator implements IMockObjectCreator {
 		
 		return null;
 	}
-	
 	
 	private SyntheticVar createSyntheticVarAndAddToVarMap(String name, Block containingBlock) {
 		var syntheticVar = new SyntheticVar();

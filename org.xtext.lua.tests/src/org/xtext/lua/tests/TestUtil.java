@@ -10,8 +10,8 @@ import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.junit.jupiter.api.Assertions;
-import org.xtext.lua.linking.SyntheticVar;
 import org.xtext.lua.lua.Chunk;
+import org.xtext.lua.mocking.SyntheticVar;
 
 /**
  * Util class for test cases.

@@ -22,7 +22,7 @@ import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.xtext.lua.LuaParser;
-import org.xtext.lua.linking.SyntheticVar;
+import org.xtext.lua.mocking.SyntheticVar;
 
 
 public class LuaParserTest {

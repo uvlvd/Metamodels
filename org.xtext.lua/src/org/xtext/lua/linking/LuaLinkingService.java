@@ -16,6 +16,7 @@ import org.xtext.lua.lua.ExpFunctionDeclaration;
 import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.IndexExpField;
 import org.xtext.lua.lua.LuaPackage.Literals;
+import org.xtext.lua.mocking.IMockObjectCreator;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.utils.AssignmentUtil;
 import org.xtext.lua.utils.ExpUtil;

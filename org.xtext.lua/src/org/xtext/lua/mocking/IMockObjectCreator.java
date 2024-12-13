@@ -1,4 +1,4 @@
-package org.xtext.lua.linking;
+package org.xtext.lua.mocking;
 
 import org.eclipse.emf.ecore.EObject;
 

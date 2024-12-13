@@ -9,9 +9,9 @@ import org.eclipse.xtext.resource.EObjectDescription;
 import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.IScopeProvider;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
-import org.xtext.lua.linking.SyntheticExpNil;
 import org.xtext.lua.lua.Assignment;
 import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.mocking.SyntheticExpNil;
 import org.xtext.lua.utils.AssignmentUtil;
 
 import com.google.inject.Inject;

@@ -348,7 +348,7 @@ ArgList:
 Feature:
 	PrefixExp
 	| SuffixExp
-	| NamedFeature
+	| NamedFeature // NamedFeature extends Feature
 ;
 
 NamedFeature: 
@@ -502,6 +502,7 @@ terminal WS:
 	(' ' | '\t' | '\r' | '\n')+
 ; 
 
+//TODO: Special first-line comment should start with '#', not '#!' (see TODOs at the top of this file)
 terminal SPECIAL_COMMENT:
 	('#!' -> ('\n' | '\r'))
 ;

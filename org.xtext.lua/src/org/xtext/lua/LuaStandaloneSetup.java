@@ -3,7 +3,6 @@
  */
 package org.xtext.lua;
 
-
 /**
  * Initialization support for running Xtext languages without Equinox extension registry.
  */

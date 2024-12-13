@@ -6,7 +6,6 @@ package org.xtext.lua;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.eclipse.xtext.conversion.IValueConverterService;
-import org.eclipse.xtext.linking.ILinkingDiagnosticMessageProvider;
 import org.eclipse.xtext.linking.ILinkingService;
 import org.eclipse.xtext.linking.impl.ImportedNamesAdapter;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
@@ -21,12 +20,9 @@ import org.eclipse.xtext.scoping.IGlobalScopeProvider;
 import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.xtext.lua.converters.LuaValueConverterService;
 import org.xtext.lua.linking.IMockObjectCreator;
-import org.xtext.lua.linking.LuaLinkingDiagnosticMessageProvider;
 import org.xtext.lua.linking.LuaLinkingService;
 import org.xtext.lua.linking.MockObjectCreator;
 import org.xtext.lua.postprocessing.LuaDerivedStateComputer;
-import org.xtext.lua.scoping.DescriptionCreator;
-import org.xtext.lua.scoping.FeaturePathCandidateBuilder;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.scoping.LuaImportUriResolver;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
@@ -40,15 +36,16 @@ import com.google.inject.Binder;
  * Equinox extension registry.
  */
 public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
-	
+
 	@Override
 	public void configure(Binder binder) {
-		// set the logging level of the ImportedNamesAdapter to warn to avoid info logs, see {@link LuaScopeProvider.getReferenceablesFromRequireCall}
+		// set the logging level of the ImportedNamesAdapter to warn to avoid info logs,
+		// see {@link LuaScopeProvider.getReferenceablesFromRequireCall}
 		Logger.getLogger(ImportedNamesAdapter.class).setLevel(Level.WARN);
-		
+
 		super.configure(binder);
 	}
-	
+
 	/**
 	 * Bind custom value converter to handle the conversion of parsed Lua values,
 	 * e.g. (hex) numbers.
@@ -58,62 +55,29 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 		return LuaValueConverterService.class;
 	}
 
-	/**
-	 * Bind custom linking message provider to disable error messages for unresolved
-	 * references in the context of assignments (left-hand side cross-references
-	 * need to be ignored, since they denote declarations).
-	 */
-	public Class<? extends ILinkingDiagnosticMessageProvider> bindILinkingDiagnosticMessageProvider() {
-		return LuaLinkingDiagnosticMessageProvider.class;
-	}
-
 	@Override
 	public Class<? extends IQualifiedNameProvider> bindIQualifiedNameProvider() {
 		return LuaQualifiedNameProvider.class;
 	}
-	
-	//public Class<? extends IQualifiedNameConverter> bindIQualifiedNameConverter() {
-	//	return LuaQualifiedNameConverter.class;
-	//}
-	
-	//public LuaFactory bindLuaFactoryToInstance() {
-	//	return LuaFactory.eINSTANCE;
-	//}
-	
+
 	/**
-	 * LuaTransientValueService marks derived "name" attributes as transient s.t. they are ignored by the serialization.
+	 * LuaTransientValueService marks derived state as transient s.t. they are
+	 * ignored by the serialization.
 	 */
-	// TODO: check what this does now, probably set "ref" cross-references and some "name" attributes to null
 	@Override
 	public Class<? extends ITransientValueService> bindITransientValueService() {
 		return LuaTransientValueService.class;
 	}
-	
+
 	@Override
 	public Class<? extends ILinkingService> bindILinkingService() {
 		return LuaLinkingService.class;
 	}
-	
-	//@Override
-	//public Class<? extends ILinker> bindILinker() {
-	//	return LuaLinker.class;
-	//}
-	
-	//TODO: maybe not used
-	/*
-	public Class<? extends ICrossReferenceSerializer> bindICrossReferenceSerializer()  {
-		return LuaCrossReferenceSerializer.class;
-	}
-	*/
 
-	// public Class<? extends IXtext2EcorePostProcessor>
-	// configureIXtext2EcorePostProcessor() {
-	// return LuaXtext2EcorePostProcessor.class;
-	// }
-	
 	/**
-	 * DerivedStateComputer, -Resource and -ResourceDescriptionManager are used to set "name" attributes where
-	 * "name" attribute is null (i.e. for Referencing objects that are also Referenceable).
+	 * DerivedStateComputer, -Resource and -ResourceDescriptionManager are used to
+	 * set "name" attributes where "name" attribute is null (i.e. for Referencing
+	 * objects that are also Referenceable).
 	 * 
 	 */
 	public Class<? extends IDerivedStateComputer> bindIDerivedStateComputer() {
@@ -130,62 +94,27 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	public Class<? extends IResourceDescription.Manager> bindIResourceDescriptionManager() {
 		return DerivedStateAwareResourceDescriptionManager.class;
 	}
-	
+
 	/**
-	 * Bind a custom ResourceDescriptionStrategy for Lua,
-	 * sed to create descriptions for elements that should be visible from without a resource (i.e. for global scoping).
-	 * @return
+	 * Bind a custom ResourceDescriptionStrategy for Lua. Used to create
+	 * descriptions for elements that should be visible from without a resource
+	 * (i.e. for global scoping).
 	 */
 	public Class<? extends IDefaultResourceDescriptionStrategy> bindIDefaultResourceDescriptionStrategy() {
-        return LuaResourceDescriptionStrategy.class;
-    }
-	
-    @Override
-    public Class<? extends IGlobalScopeProvider> bindIGlobalScopeProvider() {
-        return LuaGlobalScopeProvider.class;
-    }
-    
-    public Class<? extends ImportUriResolver> bindImportUriResolver() {
-        return LuaImportUriResolver.class;
-    }
+		return LuaResourceDescriptionStrategy.class;
+	}
 
-    public Class<? extends IMockObjectCreator> bindMockObjectCreator() {
-        return MockObjectCreator.class;
-    }
-//    
-//    public Class<LuaAssignmentScopeProvider> bindAssignmentScopeProvider() {
-//        return LuaAssignmentScopeProvider.class;
-//    }
-//    
-//    public Class<LuaFieldScopeProvider> bindFieldScopeProvider() {
-//        return LuaFieldScopeProvider.class;
-//    }
-//    
-//    public Class<LuaGotoScopeProvider> bindLuaGotoScopeProvider() {
-//        return LuaGotoScopeProvider.class;
-//    }
-//    
-//    public Class<LuaFeatureScopeProvider> bindLuaFeatureScopeProvider() {
-//        return LuaFeatureScopeProvider.class;
-//    }
+	@Override
+	public Class<? extends IGlobalScopeProvider> bindIGlobalScopeProvider() {
+		return LuaGlobalScopeProvider.class;
+	}
 
-    
-//    public Class<LuaBlockScopeProvider> bindBlockScopeProvider() {
-//        return LuaBlockScopeProvider.class;
-//    }
-    
-//    public Class<FeatureScopeHelper> bindFeatureScopeHelper() {
-//        return FeatureScopeHelper.class;
-//    }
+	public Class<? extends ImportUriResolver> bindImportUriResolver() {
+		return LuaImportUriResolver.class;
+	}
 
-    
-    public Class<DescriptionCreator> bindCandidateDescriptionCreator() {
-        return DescriptionCreator.class;
-    }
-    
-    public Class<FeaturePathCandidateBuilder> bindFeaturePathCandidateBuilder() {
-        return FeaturePathCandidateBuilder.class;
-    }
-
+	public Class<? extends IMockObjectCreator> bindMockObjectCreator() {
+		return MockObjectCreator.class;
+	}
 
 }

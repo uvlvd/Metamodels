@@ -32,17 +32,17 @@ b) `f` references `func` on the rhs, `func` being of type `Var` (also a `Referen
 ```
 
 ### Project Structure
+The project structure in terms of the packages is largely aligned with default Xtext projects. A utility package `org.xtext.lua.utils` is present containing
+utility functions and constants for the parser.
 
 **Grammar**
 
 **DerivedStateComputer**
 
 **ScopeProviders**
-The linking process calls the `LuaScopeProvider` to find candidates for reference resolution, which delegates to the other `ScopeProviders`:
- - `LuaAssignmentScopeProvider` for reference resolution of assignable-to-value references (in `Assignments` and table `Fields`)
- - `LuaBlockScopeProvider` for reference resolution considering block scopes, this delegates to:
-    - `LuaFeatureScopeHelper` for reference resolution of `Feature`s
- - `LuaGlobalScopeProvider` if no candidates were found by the other steps.
+ - The linking process calls the `LuaScopeProvider` to find candidates for reference resolution, which delegates to the other `ScopeProviders`.
+ - Implementations of `LuaAbstractBlockScopeProvider` traverse blocks for scoping.
+ - `LuaGlobalScopeProvider` is delegated to if no candidates were found by the other scope providers.
 
 ### Terminology
  - `FeaturePath`: a path consisting of `PrefixExp`s (e.g. `Var`) and `SuffixExp`s (e.g. `MemberAccess`, `TableAccess` or `FunctionCall`)

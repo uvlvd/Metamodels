@@ -84,11 +84,7 @@ public class LuaLinkingService extends DefaultLinkingService {
 					linkingSupport.createAndSetProxy(ta, Literals.REFERENCING__REF, name);
 					ta.setRef(ta.getRef());
 				} else {
-					// TODO: set dummy name+reference (e.g. using trivial recovery)
-					//var nilValue = new SyntheticExpNil();
-					//ta.setRef(nilValue);
-					
-					// TODO: the dummy also needs to be inserted for memberAccesses on functioncalls, e.g. func().member
+					// reference is resolved later or mocked via mockObjectCreator
 				}
 			}
 		}
@@ -106,11 +102,7 @@ public class LuaLinkingService extends DefaultLinkingService {
 					linkingSupport.createAndSetProxy(indexExpField, Literals.REFERENCING__REF, name);
 					indexExpField.setRef(indexExpField.getRef());
 				} else {
-					// TODO: set dummy name+reference (e.g. using trivial recovery)
-					//var nilValue = new SyntheticExpNil();
-					//ta.setRef(nilValue);
-					
-					// TODO: the dummy also needs to be inserted for memberAccesses on functioncalls, e.g. func().member
+					// reference is resolved later or mocked via mockObjectCreator
 				}
 			}
 		}

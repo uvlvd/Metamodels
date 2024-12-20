@@ -77,7 +77,7 @@ public class LuaLinkingService extends DefaultLinkingService {
 		var scopeRoot = EcoreUtil2.getRootContainer(context);
 		var tas = EcoreUtil2.getAllContentsOfType(scopeRoot, TableAccess.class);
 		for (var ta : tas) {
-			if (ExpUtil.isTableAccessWithDummyName(ta)) {
+			if (ExpUtil.isTableAccessWithDerivedDummyName(ta)) {
 				ta.setName(LuaConstants.LINKING_DUMMY_NAME);
 				var name = ExpUtil.tryResolveExpressionToString(ta.getIndexExp(), LuaConstants.LINKING_DUMMY_NAME);
 				if (name != null) {

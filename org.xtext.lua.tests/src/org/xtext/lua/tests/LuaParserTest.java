@@ -19,15 +19,27 @@ import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.xtext.EcoreUtil2;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.xtext.lua.LuaParser;
+import org.xtext.lua.lua.Referencing;
+import org.xtext.lua.lua.TableAccess;
+import org.xtext.lua.mocking.MockInfo;
+import org.xtext.lua.mocking.MockInfoCollector;
 import org.xtext.lua.mocking.SyntheticVar;
+import org.xtext.lua.utils.ExpUtil;
+import org.xtext.lua.utils.StatUtil;
+
+import com.google.inject.Inject;
 
 
 public class LuaParserTest {
 	private static final Logger LOGGER = Logger.getLogger(LuaParserTest.class);
 	private static final String EVAL_FOLDER_PATH = "evaluation_results\\";
+	
+	
+	private MockInfoCollector mockInfoCollector = new MockInfoCollector();
 	
 	/**
 	 * Test used for the evaluation of the Lua code model. 
@@ -42,6 +54,7 @@ public class LuaParserTest {
 		var evaluationResults = new ArrayList<String>();
 		
 		for (final var config : TestConfig.EVAL_PROJECT_CONFIGS) {
+			mockInfoCollector.clear();
 			final var path = config.getPath();
 			evaluationResults.add("Results for project with path '" + path + "'...");
 			
@@ -49,7 +62,8 @@ public class LuaParserTest {
 			
 			var start = Instant.now();
 			
-			var resourceSet = new LuaParser().parse(Paths.get(path));
+			var luaParser = new LuaParser();
+			var resourceSet = luaParser.parse(Paths.get(path));
 			
 			assertParsedAndSerializedEqualsOriginal(resourceSet);
 			printNumberOfModelElements(evaluationResults, resourceSet);
@@ -57,9 +71,102 @@ public class LuaParserTest {
 			
 			var end = Instant.now();
 			evaluationResults.add(" - Duration: " + Duration.between(start, end));
+			
+			
+			var indexExpsWithDummyName  = new ArrayList<TableAccess>();
+			//TODO: extract
+			var mockedObjectCount = 0;
+			var referencesCount = 0;
+
+			for (final var res : resourceSet.getResources()) {
+				var root = res.getContents().get(0);
+				mockedObjectCount += EcoreUtil2.getAllContentsOfType(root, SyntheticVar.class).size();
+				
+				var allReferencings = EcoreUtil2.getAllContentsOfType(root, Referencing.class);
+				referencesCount += allReferencings.size();
+				
+				allReferencings
+					.stream()
+					.forEach( refing -> {
+						if (refing.getRef() instanceof SyntheticVar) {
+							mockInfoCollector.collect(refing);
+						}
+						if (refing instanceof TableAccess ta && ExpUtil.isTableAccessWithLinkingDummyName(ta)) {
+							indexExpsWithDummyName.add(ta);
+						}
+					});
+			}
+			
+			
+			var infoByCause = mockInfoCollector.getInfoByCause();
+			var i = 0;
+			System.out.println("================ UNKNOWN ===============");
+			for (var unknown : infoByCause.get(MockInfo.Cause.UNKNOWN)) {
+				mockInfoCollector.print(unknown, luaParser.getSerializer());
+				System.out.println();
+				i++;
+				if (i == 10) {
+					break;
+				}
+			}
+			
+			i = 0;
+			System.out.println("================ VAR_NOT_FOUND ===============");
+			for (var unknown : infoByCause.get(MockInfo.Cause.VAR_NOT_FOUND)) {
+				mockInfoCollector.print(unknown, luaParser.getSerializer());
+				System.out.println();
+				i++;
+				if (i == 10) {
+					break;
+				}
+			}
+			
+			i = 0;
+			System.out.println("================ TABLE_ACCESS ===============");
+			for (var unknown : infoByCause.get(MockInfo.Cause.TABLE_INDEX_EXP)) {
+				mockInfoCollector.print(unknown, luaParser.getSerializer());
+				System.out.println();
+				i++;
+				if (i == 10) {
+					break;
+				}
+			}
+			
+//			System.out.println("================ dummy name tas ===============");
+//			for (var ta : indexExpsWithDummyName) {
+//				MockInfoCollector.print(ta, luaParser.getSerializer());
+//				System.out.println();
+//			}
+			
+			var mockedCount = mockInfoCollector.getCount();
+			var mockedPercentage = 100d - getPercentage(mockedCount, referencesCount);
+			evaluationResults.add(" - Mocked references percentage: " + mockedPercentage + "%");
+			evaluationResults.add(" - Mocked object (objects referencing a mocked object) categorization (total " + mockedCount +  "):");
+			infoByCause.keySet().stream().forEach(cause -> {
+				
+				final var count = infoByCause.get(cause).size();
+				final var countCausedByPrevious = infoByCause.get(cause)
+					.stream()
+					.filter(MockInfo::isCausedByPreviousFeature)
+					.toList()
+					.size();
+				var percentage = 100d - getPercentage(count, mockedCount);
+				percentage = Math.round(percentage * 100.0)/100.0;
+				var str = cause + ": " + count + " (" + countCausedByPrevious + ")" + ", " + percentage + "%";
+				evaluationResults.add("    - " + str);
+				
+				System.out.println(str);
+					
+			});
+			
+			System.out.println("dummy name ta count: " + indexExpsWithDummyName.size());
+			System.out.println("mocked object count: " + mockedObjectCount);
+			
 		}
 		
 		writeEvaluationResults(evaluationResults);
+		
+		
 	}
 	
 	private void writeEvaluationResults(List<String> evaluationResults) throws IOException {
@@ -127,7 +234,7 @@ public class LuaParserTest {
 		
 		evaluationResults.add(" - Total cross references count: " + allCrossReferencesCount + ",\n    - unresolved: " + unresolvedCrossReferencesCount + ",\n    - mocked: " + mockedCrossReferencesCount);
 		evaluationResults.add(" - Resolved references: " + resolvedPercent + "% (needs to be 100% for CIPM)");
-		evaluationResults.add(" - Mocked references: " + mockedPercent + "%");
+		evaluationResults.add(" - Mocked reference objects: " + mockedPercent + "%");
 		
 		Assertions.assertTrue(unresolvedCrossReferences.isEmpty());
 	}

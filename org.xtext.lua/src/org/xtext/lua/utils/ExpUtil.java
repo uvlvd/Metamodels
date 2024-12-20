@@ -94,9 +94,14 @@ public class ExpUtil {
 	}
 	
 	
-	public static boolean isTableAccessWithDummyName(EObject o) {
+	public static boolean isTableAccessWithDerivedDummyName(EObject o) {
 		return o instanceof TableAccess ta && ta.getName().equals(LuaConstants.DERIVED_DUMMY_NAME);
 	}
+	
+	public static boolean isTableAccessWithLinkingDummyName(EObject o) {
+		return o instanceof TableAccess ta && ta.getName().equals(LuaConstants.LINKING_DUMMY_NAME);
+	}
+	
 	
 	public static boolean isIndexExpFieldWithDummyName(EObject o) {
 		return o instanceof IndexExpField ief && ief.getName().equals(LuaConstants.DERIVED_DUMMY_NAME);

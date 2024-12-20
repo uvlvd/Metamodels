@@ -14,8 +14,13 @@ import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.Var;
 
+import com.google.inject.Inject;
+
 public class MockObjectCreator implements IMockObjectCreator {
 	private static final URI VAR_MOCK_URI = URI.createURI("dummy:/syntheticVars.lua");
+	
+	@Inject
+	MockInfoCollector mockInfoCollector;
 	
 	private Map<Integer, Var> varMap = new HashMap<>();
 	private Block mockBlock = null;

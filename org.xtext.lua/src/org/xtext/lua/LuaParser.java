@@ -10,17 +10,26 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.resource.XtextResourceSet;
+import org.eclipse.xtext.serializer.ISerializer;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Injector;
 
 public class LuaParser {
+	
+	private Injector injector;
+	
+	public LuaParser() {
+		injector = new LuaStandaloneSetup().createInjectorAndDoEMFRegistration();
+	}
+	
 	public ResourceSet parse(Path directory) throws IOException {
 		if (!Files.isDirectory(directory)) {
 			throw new IllegalStateException("The path '" + directory.toString() + "' is not a directory.");
 		}
 		
-		var resourceSet = new LuaStandaloneSetup().createInjectorAndDoEMFRegistration().getInstance(XtextResourceSet.class);
+		var resourceSet = injector.getInstance(XtextResourceSet.class);
 		
 		// parse lua packages and libraries
 		registerAndParseImplicitImports(resourceSet);
@@ -42,6 +51,10 @@ public class LuaParser {
 		}
 		
         return resourceSet;
+	}
+	
+	public ISerializer getSerializer() {
+		return injector.getInstance(ISerializer.class);
 	}
 	
 	private static void registerAndParseImplicitImports(XtextResourceSet resourceSet) {

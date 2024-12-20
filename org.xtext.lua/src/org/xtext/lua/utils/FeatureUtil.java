@@ -47,23 +47,15 @@ public class FeatureUtil {
 		return Optional.empty();
 	}
 	
+	/**
+	 * Returns the last {@link Feature} of the given Features feature path.
+	 */
 	public static Feature getFeaturePathLeaf(final Feature feature) {
 		final var suffix = feature.getSuffixExp();
 		if (suffix == null) {
 			return feature;
 		}
 		return getFeaturePathLeaf(suffix);
-	}
-	
-	/**
-	 * Returns the previous Feature of the given Feature's feature path, or null if the given Feature is the root Feature.
-	 */
-	public static Feature getPreviousFeature(final Feature feature) {
-		final var parent = feature.eContainer();
-		if (parent instanceof Feature previousFeature) {
-			return previousFeature;
-		}
-		return null;
 	}
 	
 	/**
@@ -82,12 +74,12 @@ public class FeatureUtil {
 	 * 
 	 * @return the root, a Var or GroupedExp.
 	 */
-	private static Feature findFeaturePathRoot(final Feature feature) {
+	public static PrefixExp findFeaturePathRoot(final Feature feature) {
 		final var previous = getPreviousFeature(feature);
 		if (previous != null) {
 			return findFeaturePathRoot(previous);
 		}
-		return feature;
+		return (PrefixExp) feature;
 	}
 	
 	/**
@@ -109,13 +101,23 @@ public class FeatureUtil {
 	 * 
 	 * @return the root, a Var or GroupedExp.
 	 */
-	private static Feature findFeaturePathPrefix(final Feature feature) {
+	public static PrefixExp findFeaturePathPrefix(final Feature feature) {
 		if (feature instanceof PrefixExp prefixExp) {
 			return prefixExp;
 		}
 		return findFeaturePathPrefix(getPreviousFeature(feature));
 	}
 	
+	/**
+	 * Returns the previous Feature of the given Feature's feature path, or null if the given Feature is the root Feature.
+	 */
+	public static Feature getPreviousFeature(final Feature feature) {
+		final var parent = feature.eContainer();
+		if (parent instanceof Feature previousFeature) {
+			return previousFeature;
+		}
+		return null;
+	}
 	
 	public static boolean hasNextFeature(Feature feature) {
 		return feature.getSuffixExp() != null;

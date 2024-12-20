@@ -134,29 +134,23 @@ public class ReferenceableUtil {
 		return Collections.emptyList();
 	}
 	
-	public static boolean referencesImplicitSelfParam(EObject context) {
-		if (!(context instanceof Feature)) {
-			return false;
+	// TODO: should check that the containing function's name contains ":", else self is not available
+	//       (but not that important in our use case since we assume correct code to be parsed)
+	public static boolean referencesImplicitSelfParam(final EObject context) {
+		if (context instanceof NamedFeature namedFeature) {
+			if (!namedFeature.getName().equals(LuaConstants.SELF_PARAM_NAME)) {
+				return false;
+			}
+			
+			final var containingFuncBody = EcoreUtil2.getContainerOfType(namedFeature, FuncBody.class);
+			if (containingFuncBody == null) {
+				return false;
+			}
+			
+			final var args = FunctionUtil.getArgsFromFuncBody(containingFuncBody);
+			return !args.stream().anyMatch(arg -> arg.getName().equals(LuaConstants.SELF_PARAM_NAME));
 		}
-		var feature = (Feature) context;
-		
-		if (!(feature instanceof NamedFeature namedFeature) 
-			 || !namedFeature.getName().equals(LuaConstants.SELF_PARAM_NAME)) {
-			return false;
-		}
-		// check if feature is contained in a function
-		var containingFuncBody = EcoreUtil2.getContainerOfType(feature, FuncBody.class);
-		if (containingFuncBody == null || containingFuncBody.getParList() == null) {
-			return false;
-		}
-		// check if function args already contain a "self" parameter
-		var argList = containingFuncBody.getParList().getArgsList();
-		if (argList == null) {
-			// ExpVarArgs in parlist
-			return false;
-		}
-		return !argList.getArgs().stream()
-					  .anyMatch(arg -> arg.getName().equals(LuaConstants.SELF_PARAM_NAME));
+		return false;
 	}
 	
 	public static Stream<? extends Referenceable> streamExternallyVisibleReferenceablesFromBlock(Block block) {

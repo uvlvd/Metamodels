@@ -1,8 +1,11 @@
 package org.xtext.lua.utils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.emf.ecore.EObject;
+import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.ExpFunctionDeclaration;
 import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.FunctionDeclaration;
@@ -32,6 +35,19 @@ public class FunctionUtil {
 	
 	public static boolean isFunctionDeclaration(Referenceable referenceable) {
 		return findFuncBodyFromFuncObject(referenceable).isPresent();
+	}
+	
+	public static List<Arg> getArgsFromFuncBody(final FuncBody body) {
+		var result = new ArrayList<Arg>();
+		final var parList = body.getParList();
+		if (parList == null) {
+			return result;
+		}
+		final var argList = parList.getArgsList();
+		if (argList == null) {
+			return result;
+		}
+		return argList.getArgs();
 	}
 
 }

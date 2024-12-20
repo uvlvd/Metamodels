@@ -25,7 +25,8 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 	
 	// see https://www.davidpace.de/library-bundles-for-your-xtext-dsl/
 	// and LuaParser.java for implicit library imports
-	public static final URI LIBRARY_URI_BASE = URI.createURI("platform:/plugin/org.xtext.lua.libraries/src/lua_libraries/");
+	private static final String LIBRARY_PATH = "src/lua_libraries/";
+	public static final URI LIBRARY_URI_BASE = URI.createURI("platform:/plugin/org.xtext.lua.libraries/" + LIBRARY_PATH);
 
 	// TODO: could get file names dynamically from folder
 	public static final List<URI> LIBRARY_URIS = Collections.unmodifiableList(
@@ -47,6 +48,13 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 			createLibraryUriForFileStr("utf8.lua")
 		)
 	);
+	
+	public static final boolean isImplicitResource(final Resource resource) {
+		if (resource == null) return false;
+		
+		final var uri = resource.getURI(); 
+		return uri.toString().contains(LIBRARY_PATH);
+	}
 	
 	private static final URI createLibraryUriForFileStr(String fileStr) {
 		return URI.createURI(LIBRARY_URI_BASE + fileStr);
@@ -70,13 +78,6 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 		for (URI uri : urisAsList) {
 			scope = createLazyResourceScope(scope, uri, descriptions, type, filter, ignoreCase);
 		}
-		//System.out.println("resource: " + resource);
-		//System.out.println("type: " + type);
-		//System.out.println("filter: " + filter);
-		//System.out.println("uniqueImportURIs" + uniqueImportURIs);
-		//System.out.println("descriptions" + descriptions);
-		//System.out.println("urisAsList" + urisAsList);
-		//System.out.println("scope " + scope);
 		return scope;
 
 	}

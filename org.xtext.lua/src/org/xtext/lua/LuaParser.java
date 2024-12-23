@@ -1,10 +1,8 @@
 package org.xtext.lua;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
 
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -13,7 +11,6 @@ import org.eclipse.xtext.resource.XtextResourceSet;
 import org.eclipse.xtext.serializer.ISerializer;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 
-import com.google.common.base.Preconditions;
 import com.google.inject.Injector;
 
 public class LuaParser {
@@ -70,25 +67,9 @@ public class LuaParser {
 	private static void registerURIMappingsForImplicitImports(XtextResourceSet resourceSet) {
 		final var uriConverter = resourceSet.getURIConverter();
 		final var uriMap = uriConverter.getURIMap();
-		for (var uri : LuaGlobalScopeProvider.LIBRARY_URIS) {
-			registerPlatformToFileURIMapping(uri, uriMap);
+		for (var uri : LuaGlobalScopeProvider.getImplicitLibraryUris()) {
+			uriMap.put(uri, uri);
 		}
-		
-	}
-
-	private static void registerPlatformToFileURIMapping(URI uri, Map<URI, URI> uriMap) {
-		final URI fileURI = createFileURIForHeaderFile(uri);
-		final File file = new File(fileURI.toFileString());
-		Preconditions.checkArgument(file.exists());
-		uriMap.put(uri, fileURI);
-	}
-
-	private static URI createFileURIForHeaderFile(URI uri) {
-		return URI.createFileURI(deriveFilePathFromURI(uri));
-	}
-
-	private static String deriveFilePathFromURI(URI uri) {
-		return "../" + uri.path().substring(7);
 	}
 	
 	private void printErrorsAndWarnings(final Path path, final Resource r) {

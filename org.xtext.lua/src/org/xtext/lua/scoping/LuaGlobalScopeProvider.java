@@ -1,6 +1,5 @@
 package org.xtext.lua.scoping;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -18,52 +17,33 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 
+import lua_libraries.LuaLibraryFiles;
+
 public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 	
 	@Inject
 	ImportUriResolver uriResolver;
 	
-	// see https://www.davidpace.de/library-bundles-for-your-xtext-dsl/
-	// and LuaParser.java for implicit library imports
-	private static final String LIBRARY_PATH = "src/lua_libraries/";
-	public static final URI LIBRARY_URI_BASE = URI.createURI("platform:/plugin/org.xtext.lua.libraries/" + LIBRARY_PATH);
-
-	// TODO: could get file names dynamically from folder
-	public static final List<URI> LIBRARY_URIS = Collections.unmodifiableList(
-		Arrays.asList(
-			createLibraryUriForFileStr("basic.lua"),
-			createLibraryUriForFileStr("bit.lua"),
-			createLibraryUriForFileStr("bit32.lua"),
-			createLibraryUriForFileStr("builtin.lua"),
-			createLibraryUriForFileStr("coroutine.lua"),
-			createLibraryUriForFileStr("debug.lua"),
-			createLibraryUriForFileStr("ffi.lua"),
-			createLibraryUriForFileStr("io.lua"),
-			createLibraryUriForFileStr("jit.lua"),
-			createLibraryUriForFileStr("math.lua"),
-			createLibraryUriForFileStr("os.lua"),
-			createLibraryUriForFileStr("package.lua"),
-			createLibraryUriForFileStr("string.lua"),
-			createLibraryUriForFileStr("table.lua"),
-			createLibraryUriForFileStr("utf8.lua")
-		)
-	);
-	
 	public static final boolean isImplicitResource(final Resource resource) {
 		if (resource == null) return false;
 		
-		final var uri = resource.getURI(); 
-		return uri.toString().contains(LIBRARY_PATH);
+		final var resourceUri = resource.getURI(); 
+		return getImplicitLibraryUris().stream()
+				.map(uri -> uri.toFileString())
+				.anyMatch(fileStr -> fileStr.equals(resourceUri.toFileString()));
+
 	}
 	
-	private static final URI createLibraryUriForFileStr(String fileStr) {
-		return URI.createURI(LIBRARY_URI_BASE + fileStr);
+	public static List<URI> getImplicitLibraryUris() {
+		return LuaLibraryFiles.getAbsolutePaths().stream()
+				.map(pathStr ->  URI.createURI(pathStr))
+				.toList();
 	}
 	
 	@Override
 	protected LinkedHashSet<URI> getImportedUris(Resource resource) {
 		LinkedHashSet<URI> importedURIs = super.getImportedUris(resource);
-		importedURIs.addAll(LIBRARY_URIS);
+		importedURIs.addAll(getImplicitLibraryUris());
 		return importedURIs;
 	}
 	
@@ -91,10 +71,5 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 	public static Predicate<IEObjectDescription> returnedExpAtIndexFilter(int index, String uriString) {
 		return LuaResourceDescriptionStrategy.isReturnedExpAtIndex(index, uriString);
 	}
-
-
-
-	
-	
 
 }

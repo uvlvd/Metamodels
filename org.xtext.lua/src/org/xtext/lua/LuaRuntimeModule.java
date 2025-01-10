@@ -17,7 +17,6 @@ import org.eclipse.xtext.resource.IDefaultResourceDescriptionStrategy;
 import org.eclipse.xtext.resource.IDerivedStateComputer;
 import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.resource.XtextResource;
-import org.eclipse.xtext.resource.XtextResourceSet;
 import org.eclipse.xtext.scoping.IGlobalScopeProvider;
 import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.xtext.lua.converters.LuaValueConverterService;
@@ -49,6 +48,10 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 		super.configure(binder);
 	}
 	
+	/**
+	 * Bind LuaCodeModel ResourceSet extension providing an extra method to get only resources
+	 * that are serializable (resources that are not created synthetically during CM generation)
+	 */
 	public Class<? extends ResourceSet> bindResourceSet() {
 		return LuaCodeModel.class;
 	}

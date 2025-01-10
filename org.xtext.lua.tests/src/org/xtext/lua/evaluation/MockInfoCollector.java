@@ -8,14 +8,11 @@ import java.util.stream.Stream;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.serializer.ISerializer;
-import org.xtext.lua.evaluation.MockInfo.Cause;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.utils.FeatureUtil;
 import org.xtext.lua.utils.MockUtil;
 import org.xtext.lua.utils.StatUtil;
-
-import com.google.inject.Inject;
 
 /**
  * Used to collect information about mocked references for evaluation. A mocked reference

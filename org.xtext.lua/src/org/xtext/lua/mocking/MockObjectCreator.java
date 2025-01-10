@@ -17,8 +17,6 @@ import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.Var;
 import org.xtext.lua.utils.LuaConstants;
 
-import com.google.inject.Inject;
-
 public class MockObjectCreator implements IMockObjectCreator {
 	public static final URI MOCKED_RESOURCE_URI = URI.createURI("mock:/mocked_objects.lua");
 

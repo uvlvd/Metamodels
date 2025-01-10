@@ -1,6 +1,5 @@
 package org.xtext.lua.evaluation;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -16,7 +15,6 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.LuaCodeModel;
 import org.xtext.lua.LuaParser;
 import org.xtext.lua.lua.Referencing;
-import org.xtext.lua.mocking.MockObjectCreator;
 import org.xtext.lua.mocking.SyntheticVar;
 import org.xtext.lua.tests.TestUtil;
 

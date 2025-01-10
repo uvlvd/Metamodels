@@ -21,11 +21,7 @@ public class TestConfig {
 					false
 				),
 				
-//				,
-//				new EvalProjectConfig(
-//						"D:\\MA\\repos\\temp",
-//						false
-//				)
+
 				new EvalProjectConfig(
 						"D:\\MA\\repos\\nvim_plugins\\nvim-dbee",
 						false
@@ -39,19 +35,33 @@ public class TestConfig {
 				new EvalProjectConfig(
 						"D:\\MA\\repos\\nvim_plugins\\telescope.nvim",
 						false
+				),
+//
+//				
+//				
+//				,
+//				new EvalProjectConfig(
+//						"D:\\MA\\apisix\\apisix",
+//						false
+//				)
+				
+//				,
+//				new EvalProjectConfig(
+//						"D:\\MA\\repos\\temp",
+//						false
+//				)
+				new EvalProjectConfig(
+						"D:\\MA\\own\\CIPM\\commit-based-cipm\\bundles\\si\\cipm.consistency.vsum.test\\ciTestRepos\\apisix",
+						false
 				)
+				
+				
+				
 //				,
 //				new EvalProjectConfig(
 //						"D:\\MA\\repos\\nvim_plugins\\trouble.nvim",
 //						false
 //				)
-				
-				
-				,
-				new EvalProjectConfig(
-						"D:\\MA\\apisix\\apisix",
-						false
-				)
 				
 			);
 }

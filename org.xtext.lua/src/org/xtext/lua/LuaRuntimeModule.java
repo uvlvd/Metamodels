@@ -5,6 +5,7 @@ package org.xtext.lua;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.conversion.IValueConverterService;
 import org.eclipse.xtext.linking.ILinkingService;
 import org.eclipse.xtext.linking.impl.ImportedNamesAdapter;
@@ -16,6 +17,7 @@ import org.eclipse.xtext.resource.IDefaultResourceDescriptionStrategy;
 import org.eclipse.xtext.resource.IDerivedStateComputer;
 import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.resource.XtextResource;
+import org.eclipse.xtext.resource.XtextResourceSet;
 import org.eclipse.xtext.scoping.IGlobalScopeProvider;
 import org.eclipse.xtext.scoping.impl.ImportUriResolver;
 import org.xtext.lua.converters.LuaValueConverterService;
@@ -23,6 +25,7 @@ import org.xtext.lua.linking.LuaLinkingService;
 import org.xtext.lua.mocking.IMockObjectCreator;
 import org.xtext.lua.mocking.MockObjectCreator;
 import org.xtext.lua.postprocessing.LuaDerivedStateComputer;
+import org.xtext.lua.postprocessing.LuaResourcePostProcessor;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.scoping.LuaImportUriResolver;
 import org.xtext.lua.scoping.LuaQualifiedNameProvider;
@@ -44,6 +47,10 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 		Logger.getLogger(ImportedNamesAdapter.class).setLevel(Level.WARN);
 
 		super.configure(binder);
+	}
+	
+	public Class<? extends ResourceSet> bindResourceSet() {
+		return LuaCodeModel.class;
 	}
 
 	/**
@@ -67,6 +74,10 @@ public class LuaRuntimeModule extends AbstractLuaRuntimeModule {
 	@Override
 	public Class<? extends ITransientValueService> bindITransientValueService() {
 		return LuaTransientValueService.class;
+	}
+	
+	public Class<? extends LuaResourcePostProcessor> bindLuaResourcePostProcessor() {
+		return LuaResourcePostProcessor.class;
 	}
 
 	@Override

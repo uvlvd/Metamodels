@@ -32,7 +32,7 @@ public class FeaturePath {
 	 */
 	private List<Feature> contextFeatures;
 	
-	protected FeaturePath(final Feature origin) {
+	public FeaturePath(final Feature origin) {
 		this.context = origin;
 	}
 	
@@ -70,7 +70,7 @@ public class FeaturePath {
 		return leaf;
 	}
 	/**
-	 * Returns the features of this FeaturePath from its PrefixExp to context Feature, in order.
+	 * Returns the features of this FeaturePath from its PrefixExp to context Feature (the {@link Feature} this path was build from), in order.
 	 */
 	public List<Feature> getContextFeatures() {
 		if (contextFeatures == null) {

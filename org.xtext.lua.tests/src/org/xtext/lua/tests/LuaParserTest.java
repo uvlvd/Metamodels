@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
+import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.util.EcoreUtil;
@@ -23,12 +24,17 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.xtext.lua.LuaParser;
+import org.xtext.lua.evaluation.CodeModelEvaluator;
+import org.xtext.lua.evaluation.CodeModelGenerationEvalData;
+import org.xtext.lua.evaluation.EvalDataWriter;
+import org.xtext.lua.evaluation.MockInfo;
+import org.xtext.lua.evaluation.MockInfoCollector;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
-import org.xtext.lua.mocking.MockInfo;
-import org.xtext.lua.mocking.MockInfoCollector;
+import org.xtext.lua.mocking.MockObjectCreator;
 import org.xtext.lua.mocking.SyntheticVar;
 import org.xtext.lua.utils.ExpUtil;
+import org.xtext.lua.utils.FunctionUtil;
 import org.xtext.lua.utils.StatUtil;
 
 import com.google.inject.Inject;
@@ -42,28 +48,63 @@ public class LuaParserTest {
 	private MockInfoCollector mockInfoCollector = new MockInfoCollector();
 	
 	/**
-	 * Test used for the evaluation of the Lua code model. 
+	 * Test used for the evaluation of the Lua code model converter. 
 	 * All projects configured in {@link TestConfig#EVAL_PROJECT_CONFIGS} are parsed and tested.
 	 * Results of the evaluation are written to a newly create evaluation file inside evaluation_results.
 	 * @throws IOException
 	 */
 	@Test
 	public void evaluationTest() throws IOException {
+		
+		final var evaluator = new CodeModelEvaluator();
+		
+		for (final var config : TestConfig.EVAL_PROJECT_CONFIGS) {
+			final var projectPath = config.getPath();
+			evaluator.setupEvaluationFor(projectPath);
+			evaluator.setProjectPathFor(projectPath, projectPath);
+			var luaParser = new LuaParser();
+			
+
+			evaluator.startTimingParsingProcessFor(projectPath);
+			var codeModel = luaParser.parse(Paths.get(projectPath));
+			evaluator.stopTimingParsingProcessFor(projectPath);
+			
+			evaluator.startTimingReferenceResolutionProcessFor(projectPath);
+			luaParser.resolveAll(codeModel);
+			evaluator.stopTimingReferenceResolutionProcessFor(projectPath);
+			
+			evaluator.evaluate(projectPath, codeModel);
+		}
+		
+		EvalDataWriter.writeAll(evaluator.getEvalDatas());
+	}
+	
+	/**
+	 * Test used for the evaluation of the Lua code model. 
+	 * All projects configured in {@link TestConfig#EVAL_PROJECT_CONFIGS} are parsed and tested.
+	 * Results of the evaluation are written to a newly create evaluation file inside evaluation_results.
+	 * @throws IOException
+	 */
+	
+	@Test
+	public void evaluationTest_old() throws IOException {
 		// this list is filled with evaluation results for each project and printed
 		// to an evaluation file at the end of the test.
 		var evaluationResults = new ArrayList<String>();
+		
+		var evaluator = new CodeModelEvaluator();
 		
 		for (final var config : TestConfig.EVAL_PROJECT_CONFIGS) {
 			mockInfoCollector.clear();
 			final var path = config.getPath();
 			evaluationResults.add("Results for project with path '" + path + "'...");
-			
 			final var verbose = config.isVerbose();
 			
 			var start = Instant.now();
 			
 			var luaParser = new LuaParser();
 			var resourceSet = luaParser.parse(Paths.get(path));
+			//var resourceSet = luaParser.parseAndResolveAll(Paths.get(path));
 			
 			assertParsedAndSerializedEqualsOriginal(resourceSet);
 			printNumberOfModelElements(evaluationResults, resourceSet);
@@ -85,6 +126,11 @@ public class LuaParserTest {
 				var allReferencings = EcoreUtil2.getAllContentsOfType(root, Referencing.class);
 				referencesCount += allReferencings.size();
 				
+				System.out.println("getting all function declarations contained in " + root);
+				FunctionUtil.getAllFunctionDeclarationsContainedIn(root);
+				System.out.println("getting all function CALLS contained in " + root);
+				FunctionUtil.getFunctionCallsContainedIn(root);
+				System.out.println("abc");
 				allReferencings
 					.stream()
 					.forEach( refing -> {
@@ -162,12 +208,20 @@ public class LuaParserTest {
 			System.out.println("dummy name ta count: " + indexExpsWithDummyName.size());
 			System.out.println("mocked object count: " + mockedObjectCount);
 			
+			// test save to xmi
+			var outputURI = EVAL_FOLDER_PATH + "/temp/" + "/MyFile.xmi";
+			var xmiResource = resourceSet.createResource(URI.createURI(outputURI));
+		    xmiResource.getContents().add(resourceSet.getResources().get(0).getContents().get(0));
+		    xmiResource.save(null);
 		}
 		
 		writeEvaluationResults(evaluationResults);
 		
 		
+		
 	}
+	
+	
 	
 	private void writeEvaluationResults(List<String> evaluationResults) throws IOException {
 		final var now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("ddMMuuuu_HHmmss"));
@@ -179,13 +233,16 @@ public class LuaParserTest {
 	}
 	
 	private void assertParsedAndSerializedEqualsOriginal(final ResourceSet resourceSet) throws IOException {
-		for (var r : resourceSet.getResources()) {
+		for (final var r : resourceSet.getResources()) {
 			var outputStream = new ByteArrayOutputStream();
 			var options = new HashMap<>();
 			r.save(outputStream, options);
 			var parsedAndSerialized = outputStream.toString();
 			
 			var originalPath = r.getURI().toFileString();
+			if (originalPath == null || r.getURI().equals(MockObjectCreator.MOCKED_RESOURCE_URI)) { // mocked/synthetic resource
+				continue;
+			}
 			String original = Files.readString(Paths.get(originalPath));
 			var strsEqual = TestUtil.compareNormalizedStrings(original, parsedAndSerialized);
 			if (!strsEqual) {
@@ -212,6 +269,7 @@ public class LuaParserTest {
 	 * @param resourceSet the resourceSet
 	 * @param verbose [Attention: currently not working!] whether to print additional information about which reference is being resolved.
 	 */
+	
 	private void evaluateResolvedProxies(List<String> evaluationResults, final ResourceSet resourceSet, final boolean verbose) {
 		// TODO: using verbose here does currently not work, leads to a ConcurrentModificationException
 		if (verbose) {
@@ -246,6 +304,7 @@ public class LuaParserTest {
 	 * EObject during resolution, s.t. the user can identify which parts of the model cause the problem.
 	 * @param resourceSet
 	 */
+	
 	private static void resolveCrossReferencesVerbose(final ResourceSet resourceSet) {
 		final var resources = resourceSet.getResources();
 		for (final var resource : resources) {			

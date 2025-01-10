@@ -23,7 +23,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 	private SyntheticLinkingSupport linkingSupport;
 	
 	@Override
-	public void installDerivedState(DerivedStateAwareResource resource, boolean preLinkingPhase) {		
+	public void installDerivedState(DerivedStateAwareResource resource, boolean preLinkingPhase) {
 		resource.getAllContents().forEachRemaining(obj -> {
 			// handle table access
 			if (obj instanceof TableAccess tableAccess) {
@@ -38,6 +38,7 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 				setNameAsRef(refble);
 			}
 		});
+
 	}
 	
 	/**

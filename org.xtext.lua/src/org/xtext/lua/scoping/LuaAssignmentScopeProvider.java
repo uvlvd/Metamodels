@@ -10,7 +10,9 @@ import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.IScopeProvider;
 import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.lua.lua.Assignment;
+import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.mocking.MockObjectCreator;
 import org.xtext.lua.mocking.SyntheticExpNil;
 import org.xtext.lua.utils.AssignmentUtil;
 
@@ -25,6 +27,9 @@ public class LuaAssignmentScopeProvider implements IScopeProvider {
 	
 	@Inject
     private IQualifiedNameConverter nameConverter;
+	
+	@Inject
+    private MockObjectCreator mockObjectCreator;
 
 	@Override
 	public IScope getScope(final EObject context, final EReference reference) {
@@ -62,9 +67,11 @@ public class LuaAssignmentScopeProvider implements IScopeProvider {
 		
     	final var fqn = nameConverter.toQualifiedName(name);
     	final var value = AssignmentUtil.findAssignedExp(assignable);
-		if (value == null) {
-			// create synthetic nil value if ExpList does not contains value for assignable
-			var nilValue = new SyntheticExpNil();
+		
+    	if (value == null) {
+			// create synthetic nil value if ExpList does not contain value for assignable
+			var nilValue = mockObjectCreator.getSyntheticExpNilForAssignable(assignable);
+			//var nilValue = new SyntheticExpNil();
 			var nilValueDescription = EObjectDescription.create(fqn, nilValue);
 			return new SimpleScope(Collections.singletonList(nilValueDescription));
 		} else {

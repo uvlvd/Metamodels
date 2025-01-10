@@ -1,4 +1,4 @@
-package org.xtext.lua.linking;
+package org.xtext.lua.mocking;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,10 +8,10 @@ import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.utils.LuaConstants;
 
-public class ImplicitSelfArgs {
+public class ImplicitSelfArgs {/*
 	private Map<FuncBody, Arg> funcBodyToSelfArg = new HashMap<>();
 	
-	public Arg getSelfArgFor(FuncBody funcBody) {
+	protected Arg getSelfArgFor(FuncBody funcBody) {
 		if (funcBodyToSelfArg.containsKey(funcBody)) {
 			return funcBodyToSelfArg.get(funcBody);
 		}
@@ -19,5 +19,5 @@ public class ImplicitSelfArgs {
 		selfArg.setName(LuaConstants.SELF_PARAM_NAME);
 		funcBodyToSelfArg.put(funcBody, selfArg);
 		return selfArg;
-	}
+	}*/
 }

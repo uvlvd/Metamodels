@@ -129,4 +129,16 @@ public class FeatureUtil {
 	public static Feature getNextFeature(Feature feature) {
 		return feature.getSuffixExp();
 	}
+	
+	/**
+	 * Returns the first {@link NamedFeature} found by traversing the given {@link Feature}'s {@link FeaturePath}
+	 * upwards (in direction of the {@link FeaturePath}'s root).
+	 * @return the first {@linked NamedFeature} found along the path in direction of the root, the given {@Feature} itself if it is a {@link NamedFeature}.
+	 */
+	public static NamedFeature getFirstNamedPrefix(final Feature feature) {
+		if (feature instanceof NamedFeature named) {
+			return named;
+		}
+		return getFirstNamedPrefix(getPreviousFeature(feature));
+	}
 }

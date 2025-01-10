@@ -5,14 +5,15 @@
   <eClassifiers xsi:type="ecore:EClass" name="Component">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="chunks" lowerBound="1"
-        upperBound="-1" eType="#//NamedChunk"/>
+        upperBound="-1" eType="#//NamedChunk" containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Application">
     <eStructuralFeatures xsi:type="ecore:EReference" name="components" lowerBound="1"
-        upperBound="-1" eType="#//Component"/>
+        upperBound="-1" eType="#//Component" containment="true"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="NamedChunk">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="chunk" lowerBound="1" eType="ecore:EClass ../../org.xtext.lua/model/generated/Lua.ecore#//Chunk"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="chunk" lowerBound="1" eType="ecore:EClass ../../org.xtext.lua/model/generated/Lua.ecore#//Chunk"
+        containment="true"/>
   </eClassifiers>
 </ecore:EPackage>

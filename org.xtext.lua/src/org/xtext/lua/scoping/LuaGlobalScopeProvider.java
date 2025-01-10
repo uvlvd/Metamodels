@@ -3,6 +3,7 @@ package org.xtext.lua.scoping;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
@@ -21,6 +22,8 @@ import lua_libraries.LuaLibraryFiles;
 
 public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 	
+	private static final int COMPARE_LIBRARY_URI_SEGMENTS_COUNT = 2;
+	
 	@Inject
 	ImportUriResolver uriResolver;
 	
@@ -28,10 +31,26 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 		if (resource == null) return false;
 		
 		final var resourceUri = resource.getURI(); 
-		return getImplicitLibraryUris().stream()
-				.map(uri -> uri.toFileString())
-				.anyMatch(fileStr -> fileStr.equals(resourceUri.toFileString()));
+		final var resourceUriSegments = resourceUri.segmentsList();
+		if (resourceUriSegments.size() < 2) {
+			return false;
+		}
 
+		// we cannot check the whole path because it may differ in the CIPM pipeline, i.e. when we are running the second instance
+		// for CIPM the resource path will not be a file path
+		return getImplicitLibraryUris().stream()
+				.map(uri -> uri.segmentsList())
+				.anyMatch(librarySegments -> {
+					
+					if (librarySegments.size() < COMPARE_LIBRARY_URI_SEGMENTS_COUNT) {
+						return false;
+					}
+					// check if last COMPARE_LIBRARY_URI_SEGMENTS_COUNT segments match 
+					final var librarySegmentsTail = librarySegments.subList(librarySegments.size() - COMPARE_LIBRARY_URI_SEGMENTS_COUNT, librarySegments.size());
+					final var resourceUriSegmentssTail = resourceUriSegments.subList(resourceUriSegments.size() - COMPARE_LIBRARY_URI_SEGMENTS_COUNT, resourceUriSegments.size());
+					return librarySegmentsTail.equals(resourceUriSegmentssTail);
+
+				});
 	}
 	
 	public static List<URI> getImplicitLibraryUris() {

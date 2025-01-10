@@ -19,6 +19,8 @@ import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
+import org.xtext.lua.mocking.FeaturePath;
+import org.xtext.lua.mocking.SyntheticExpNil;
 
 public class AssignmentUtil {
 	private static final Logger LOGGER = Logger.getLogger(AssignmentUtil.class);
@@ -204,6 +206,22 @@ public class AssignmentUtil {
 		return null;
 	}
 	
+	// TODO: vars in assignments should point to leaf in feature path or to function return value if feature path ends with function/method call
+	private static Referenceable getExpToPointTo(Exp exp) {
+//		if (exp instanceof Feature feature) {
+//			final var featurePath = new FeaturePath(feature);
+//			final var leaf = featurePath.getLeaf();
+//			if (leaf instanceof FunctionCall || leaf instanceof MethodCall) {
+//				// TODO
+//			}
+//			if (leaf instanceof NamedFeature namedLeaf) {
+//				return namedLeaf;
+//			} 
+//			if (featurePath.getLeaf())
+//		}
+		throw new RuntimeException("Not yet implemented");
+	}
+	
 	public static Optional<? extends Referenceable> findAssignableForExp(final Exp exp) {
 		// handle expressions assigned to fields
 		final var expContainer = exp.eContainer();
@@ -247,6 +265,43 @@ public class AssignmentUtil {
 			})
 			.filter(referenceable -> isAssignable(referenceable))
 			.toList();
+	}
+	
+	// TODO: this is confusing and conf
+	/**
+	 * If the given assignable's parent Assignment does not contain the same number of variables as expressions,
+	 * fills the Assignment's ExpList with SyntheticNilExps.
+	 */
+	public static void addSyntheticNilExpsToAssignment(EObject assignable) {
+		
+		if (assignable instanceof Feature feature) {
+			var assignmentOpt = findParentAssignmentForAssignable(feature);
+			if (assignmentOpt.isPresent()) {
+				var assignment = assignmentOpt.get();
+				final var vars = assignment.getVars();
+				final var expList = assignment.getExpList();
+				if (expList != null) {
+					final var exps = expList.getExps();
+					while (vars.size() > exps.size()) {
+						var nilValue = new SyntheticExpNil();
+						exps.add(nilValue);
+					}
+				}
+			}
+		}
+		
+		if (assignable instanceof LocalVar localVar) {
+			LocalAssignment assignment = EcoreUtil2.getContainerOfType(localVar, LocalAssignment.class);
+			var vars = assignment.getVars().getNames();
+			// TODO: need to add SyntheticExpList here in case the ExpList is null
+			var exps = assignment.getExpList().getExps();
+			while (vars.size() > exps.size()) {
+				var nilValue = new SyntheticExpNil();
+				exps.add(nilValue);
+			}
+		}
+		
+
 	}
 	
 }

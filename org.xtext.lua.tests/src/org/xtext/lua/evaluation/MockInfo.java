@@ -1,4 +1,4 @@
-package org.xtext.lua.mocking;
+package org.xtext.lua.evaluation;
 
 import java.util.Optional;
 
@@ -14,6 +14,7 @@ import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.Stat;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
+import org.xtext.lua.mocking.FeaturePath;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.utils.AssignmentUtil;
 import org.xtext.lua.utils.ExpUtil;

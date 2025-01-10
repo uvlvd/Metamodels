@@ -30,7 +30,6 @@ import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.Var;
-import org.xtext.lua.mocking.MockInfoCollector;
 import org.xtext.lua.utils.FeatureUtil;
 import org.xtext.lua.utils.FunctionUtil;
 import org.xtext.lua.utils.LuaRequireUtil;
@@ -61,8 +60,6 @@ public class LuaFeatureScopeProvider extends LuaAbstractBlockScopeProvider {
 	@Inject
 	private ImportUriResolver uriResolver;
 	
-	@Inject
-	private MockInfoCollector mockInfoCollector;
 	
 	@Override
 	protected IScope getScopeFromBlock(final EObject context, final EReference reference, final Block currentBlock, final Block previousBlock) {

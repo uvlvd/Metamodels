@@ -22,6 +22,9 @@ public class StatUtil {
 		// since all PrefixExps extend Stat, we need to return the Stat from the Block, not
 		// the direct parent of the object
 		var parentBlock = EcoreUtil2.getContainerOfType(obj, Block.class);
+		if (parentBlock == null) {
+			return Optional.empty();
+		}
 		return EcoreUtil2.getAllContentsOfType(parentBlock, Stat.class).stream()
 				.filter(stat -> EcoreUtil2.isAncestor(stat, obj))
 				.findAny();

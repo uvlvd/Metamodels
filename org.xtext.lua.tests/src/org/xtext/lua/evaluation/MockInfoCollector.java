@@ -1,4 +1,4 @@
-package org.xtext.lua.mocking;
+package org.xtext.lua.evaluation;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.serializer.ISerializer;
+import org.xtext.lua.evaluation.MockInfo.Cause;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.utils.FeatureUtil;
@@ -17,7 +18,9 @@ import org.xtext.lua.utils.StatUtil;
 import com.google.inject.Inject;
 
 /**
- * Used to collect information about mocked objects for evaluation.
+ * Used to collect information about mocked references for evaluation. A mocked reference
+ * is an object referencing an object with {@link MockUtil#isMocked(EObject)} = true through its reference chain. The reference chain is given
+ * by calling {@link Referencing#getRef()} repeatedly, until it returns null.
  * @author jsaenz
  *
  */
@@ -47,7 +50,12 @@ public class MockInfoCollector {
 	public long getCount() {
 		return infoByCause.values().stream().flatMap(List::stream).count();
 	}
+	
+	public void clear() {
+		infoByCause.values().stream().forEach(List::clear);
+	}
 
+	// TODO: the print methods are used for debugging and can be removed
 	public void print(MockInfo info, ISerializer serializer) {
 		System.out.println("Mocked object stat info: ");
 		System.out.println("	serialized:   \"" + serializer.serialize(info.getParentStat()).trim() + "\"");
@@ -68,10 +76,7 @@ public class MockInfoCollector {
 		System.out.println("    context:      " + ta);
 		System.out.println("    resource uri: " + ta.eResource().getURI());
 	}
-	
-	public void clear() {
-		infoByCause.values().stream().forEach(List::clear);
-	}
+
 	
 	//TODO: class unfinished, needs implementation
 //	public void printContextInfo(final EObject context) {

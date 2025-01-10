@@ -1,0 +1,164 @@
+package org.xtext.lua.wrappers;
+
+import org.apache.log4j.Logger;
+import org.eclipse.xtext.EcoreUtil2;
+
+import org.xtext.lua.lua.ExpFunctionDeclaration;
+import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.FunctionCall;
+import org.xtext.lua.lua.FunctionCallStat;
+import org.xtext.lua.lua.FunctionDeclaration;
+import org.xtext.lua.lua.LocalFunctionDeclaration;
+import org.xtext.lua.lua.MethodCall;
+import org.xtext.lua.lua.NamedFeature;
+import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Referencing;
+import org.xtext.lua.mocking.FeaturePath;
+import org.xtext.lua.utils.FeatureUtil;
+import org.xtext.lua.utils.FunctionUtil;
+
+public class LuaFunctionCall {
+	private static final Logger LOGGER = Logger.getLogger(LuaFunctionCall.class);
+
+	/**
+	 * The name of the called function;
+	 */
+	private String name;
+	/**
+	 * The called function.
+	 */
+	private LuaFunctionDeclaration calledFunction;
+	/**
+	 * The feature calling the function;
+	 */
+	private Feature callingFeature;
+	
+	// set on init, contract: calledFunction = null <=> isMocked = true
+	private boolean isMocked = false; 
+	
+	
+	private LuaFunctionCall() { }
+	
+	
+	/**
+	 * Returns the name of the <i>called</i> function.
+	 */
+	public String getName() {
+		return name;
+	}
+
+	/**
+	 * Returns the called function, or null if the reference to the called function {@link #isMocked()}.
+	 */
+	public LuaFunctionDeclaration getCalledFunction() {
+		return calledFunction;
+	}
+	
+	public Feature getCallingFeature() {
+		return callingFeature;
+	}
+
+	/**
+	 * Returns true if the reference to the called function is mocked, i.e. {@link #getCalledFunction()} returns null.
+	 */
+	public boolean isMocked() {
+		return isMocked;
+	}
+	
+	
+
+	public static LuaFunctionCall of(final FunctionCallStat functionCallStat) {
+		var result = new LuaFunctionCall();
+		
+		final var featureRoot = (Feature) functionCallStat.getPrefix();
+		final var featurePathLeaf = FeatureUtil.getFeaturePathLeaf(featureRoot);
+		final var featurePathNamedLeafOpt = FeatureUtil.findFeaturePathNamedLeaf(featureRoot);
+		if (featurePathNamedLeafOpt.isPresent()) {
+			result.initFromNamedFeature(featurePathLeaf, featurePathNamedLeafOpt.get());
+		}
+		
+		if (!result.validateConstruction()) {
+			return null;
+		}
+		
+		return result;
+	}
+	
+	public static LuaFunctionCall of(final FunctionCall functionCall) {
+		var result = new LuaFunctionCall();
+		
+		var previousFeature = FeatureUtil.getPreviousFeature(functionCall);
+		if (previousFeature instanceof NamedFeature named) {
+			result.initFromNamedFeature(functionCall, named);
+		}
+		// TODO: a function call of type func()() is currently not initialised by this function
+		//       we would need to check if the previous feature is also a functionCall, and, if so, resolve
+		//       that function call to the returned function
+		
+		if (!result.validateConstruction()) {
+			return null;
+		}
+		
+		return result;
+	}
+	
+	public static LuaFunctionCall of(final MethodCall methodCall) {
+		var result = new LuaFunctionCall();
+		
+		result.initFromNamedFeature(methodCall, methodCall);
+		if (!result.validateConstruction()) {
+			return null;
+		}
+		
+		return result;
+	}
+	
+	
+	/**
+	 * The Lua CM parser contains different kinds of features that form feature paths, e.g. the feature path </br>
+	 *  {@code var.func()} </br>
+	 * contains the Features {@code var}, {@code func} and {@code ()} (a function call). Thus, the {@link callingFeature} is not always the Feature
+	 * referencing the called function, e.g. for a {@link FunctionCall} in a path like {@code func()} the Feature actually containing the reference to the called function
+	 * is {@code func}, not {@code ()}. </br>
+	 * This initializes the {@link LuaFunctionCall} based on the given named feature, which is</br>
+	 * 	- the last named feature of the feature path for {@link FunctionCallStat}s</br>
+	 * 	- the first named feature prefix for {@link FunctionCall} Features</br>
+	 *  - the {@link MethodCall} for {@link MethodCall}s</br>
+	 * 
+	 * @param named the NamedFeature this functionCall calls (i.e. the feature referencing the called function).</br>
+	 */
+	private void initFromNamedFeature(Feature callingFeature, NamedFeature named) {
+		this.callingFeature = callingFeature;
+		this.name = named.getName();
+		this.calledFunction = getCalledFunction(named);
+		if (calledFunction == null) {
+			// TODO: this is confusing because it is different then MockUtil.isMocked(),
+			// here, a LuaFunctionCall is mocked if we cannot trace the reference chain back to the original
+			// function declaration, wheres MockUtil.isMocked() returns true when the referenced object is a mock object..
+			this.isMocked = true;
+		}
+	}
+	
+	private boolean validateConstruction() {
+		// cannot create LuaFunctionCall from null.
+		if (getCallingFeature() == null) {
+			return false;
+		}
+		
+		if (name == null) {
+			var featurePath = new FeaturePath(getCallingFeature());
+			var features = featurePath.getContextFeatures();
+			LOGGER.error("Expected FunctionCall built from " + getCallingFeature() + " to contain a named feature leaf. FeaturePath context features: " + features);
+			return false;
+		}
+		
+		return true;
+	}
+	
+	private LuaFunctionDeclaration getCalledFunction(NamedFeature named) {
+		var ref = named.getRef();
+		return FunctionUtil.getReferencedFunction(ref, 0, 1000);
+	}
+	
+
+}

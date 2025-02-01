@@ -1,5 +1,6 @@
 package org.xtext.lua.scoping;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -73,6 +74,7 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
         		for (final var referenceable : referenceablesFromReturnExps.get(i)) {
         			var userData = new HashMap<String, String>();
         			var uriString = eObject.eResource().getURI().toString(); // TODO: add resource uri to userdata map for easy return value of require calc?
+        			
         			userData.put(GLOBAL_RETURN_USERDATA_KEY, expIdentifier);
         			userData.put(GLOBAL_RETURN_URI_USERDATA_KEY, uriString);
         			createEObjectDescription(acceptor, referenceable, userData);
@@ -86,44 +88,6 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
         }
     	return false;
     	
-    	
-    	
-    	/*
-    	// we only want (global) FunctionDeclarations and leafs of PrefixExp feature paths 
-    	// (i.e. assignables in (global) Assignments) to be accessible from outside a resource. 
-    	// => we need to traverse to all (global) FunctionDeclarations and return those as well as
-    	//    to all (global) Assignments and return their assignables.
-		
-    	
-    	// TODO: this does currently not traverse Block which are not direct children of Chunks, i.e.
-    	//       global definitions in sub-blocks (which should be exported) are not exported as of now.
-    	//       For this, we would need to be able to decide which assignables in a block are globally accessible,
-    	//       which depends on if a local assignable with the same name exists in previous statements, which is
-    	//       not yet implemented (see LinkingAndScopingUtils.getReferenceablesFromStat).
-    	// Alternatively we could always traverse EXCEPT for when we hit a FunctionDeclaration or a (global) Assignment
-    	// which would lead to all FunctionDeclarations and Assignments being exported regardless of their parent block
-    	
-    	if (eObject instanceof Chunk) {
-            // always traverse Chunk's children
-            return true;
-        } else if (eObject instanceof Block && eObject.eContainer() instanceof Chunk) {
-            // always traverse root block in a chunk
-            return true;
-        } else if (eObject instanceof FunctionDeclaration funcDecl) {
-            // add global function and stop traversal
-        	createEObjectDescription(acceptor, funcDecl);
-            return false;
-        } else if (eObject instanceof Assignment assignment) {
-        	// add all assignables from (global) Assignments and stop traversal
-        	EcoreUtil2.getAllContentsOfType(assignment, Referenceable.class)
-        			.stream()
-        			.filter(ref -> LinkingAndScopingUtils.isAssignable(ref))
-        			.forEach(assignable -> createEObjectDescription(acceptor, assignable));
-            return false;
-        }
-    	// fall-through: TODO: check if anything non-expected falls through
-        return false;
-        */
     }
     
     public static Predicate<IEObjectDescription> isReturnedExpAtIndex(int index) {
@@ -142,10 +106,31 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
 			var userDataReturnURI = description.getUserData(GLOBAL_RETURN_URI_USERDATA_KEY);
 			if (userDataReturnIndex != null && userDataReturnURI != null) {
 				return userDataReturnIndex.equals(Integer.toString(index)) 
-						&& userDataReturnURI.equals(uriString);
+						&& importUriEqualsFileUri(uriString, userDataReturnURI);
+						//&& userDataReturnURI.equals(uriString);
 			}
 			return false;
 		};
+    }
+    
+    // This comparison depends on the importUri computed in LuaImportUriResolver,
+    // do not change one without the other
+    private static boolean importUriEqualsFileUri(final String importUri, final String fileUri) {
+    	if (fileUri == null) {
+    		return importUri == null;
+    	}
+    	
+    	if (fileUri.equals(importUri)) {
+    		return true;
+    	}
+    	
+    	// replace all "." chars with the system separator char to
+    	// compare importUri's "qualified-name"-form with fileUri
+    	final var seperator = File.separatorChar;
+    	var rImportUri = importUri.replace('.', seperator);
+    	var rFileUri = fileUri.replace('.', seperator);
+    	return rFileUri.endsWith(rImportUri);
+    	
     }
     
 

@@ -490,9 +490,11 @@ public class LuaFeatureScopeProvider extends LuaAbstractBlockScopeProvider {
     		
     		return Collections.emptyList();
     	}
+		
     	final var uri = URI.createURI(uriString);
     	var requireCallReturnedScope = globalScopeProvider.getScope(context.eResource(), 
     											reference, 
+    											//null
     											LuaGlobalScopeProvider.returnedExpAtIndexFilter(returnExpIndex, uri.toString())
     											);
     	

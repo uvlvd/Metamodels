@@ -3,7 +3,6 @@ package org.xtext.lua.scoping;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EClass;
@@ -72,7 +71,11 @@ public class LuaGlobalScopeProvider extends ImportUriGlobalScopeProvider {
 		final LinkedHashSet<URI> uniqueImportURIs = getImportedUris(resource);
 		IResourceDescriptions descriptions = getResourceDescriptions(resource, uniqueImportURIs);
 		List<URI> urisAsList = Lists.newArrayList(uniqueImportURIs);
+		
+		// Just to sort non-implicit first for debug
 		Collections.reverse(urisAsList);
+		
+		
 		IScope scope = IScope.NULLSCOPE;
 		for (URI uri : urisAsList) {
 			scope = createLazyResourceScope(scope, uri, descriptions, type, filter, ignoreCase);

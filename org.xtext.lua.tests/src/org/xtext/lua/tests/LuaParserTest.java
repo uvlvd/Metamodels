@@ -37,6 +37,30 @@ public class LuaParserTest {
 			evaluator.stopTimingReferenceResolutionProcessFor(projectPath);
 			
 			evaluator.evaluate(projectPath, codeModel);
+			
+			// write mock infos to json for debugging
+			//final var statementMockInfos = evaluator.getMockInfoCollector().getStatementMockInfosByCause(luaParser.getSerializer());
+			//EvalDataWriter.writeAll(statementMockInfos);
+		}
+		
+		EvalDataWriter.writeAll(evaluator.getEvalDatas());
+	}
+	
+	// does not provide timing information
+	@Test
+	public void evaluateGenerationTest() throws IOException {
+		
+		final var evaluator = new CodeModelEvaluator();
+		
+		for (final var config : TestConfig.EVAL_PROJECT_CONFIGS) {
+			final var projectPath = config.getPath();
+			evaluator.setupEvaluationFor(projectPath);
+			evaluator.setProjectPathFor(projectPath, projectPath);
+			var luaParser = new LuaParser();
+			
+			var codeModel = luaParser.generate(Paths.get(projectPath));
+			
+			evaluator.evaluate(projectPath, codeModel);
 		}
 		
 		EvalDataWriter.writeAll(evaluator.getEvalDatas());

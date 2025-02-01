@@ -51,6 +51,26 @@ public class MockInfoCollector {
 	public void clear() {
 		infoByCause.values().stream().forEach(List::clear);
 	}
+	
+	public Map<MockInfo.Cause, List<SerializableMockInfo>> getStatementMockInfosByCause(ISerializer serializer) {
+		Map<MockInfo.Cause, List<SerializableMockInfo>> result = new EnumMap<>(MockInfo.Cause.class);
+		Stream.of(MockInfo.Cause.values()).forEach(cause -> result.put(cause, new ArrayList<>()));
+		getInfoByCause().forEach((cause, infoList) -> {
+			infoList.forEach(info -> {
+				var statementMockInfo = new SerializableMockInfo(createStatementCodeString(info, serializer), info);
+				result.get(cause).add(statementMockInfo);
+			});
+		});
+		return result;
+	}
+	
+	private String createStatementCodeString(MockInfo info, ISerializer serializer) {
+		var stat = info.getParentStat();
+		if (stat != null) {
+			return serializer.serialize(stat).trim();
+		}
+		return null;
+	}
 
 	// TODO: the print methods are used for debugging and can be removed
 	public void print(MockInfo info, ISerializer serializer) {

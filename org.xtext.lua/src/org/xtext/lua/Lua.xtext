@@ -345,7 +345,7 @@ ArgList:
  * We use the synthetic rule Feature for rules that may define some kind of access on a variable/table as part of a feature path. 
  * They may have a prefix and/or a suffix, e.g. a.member["tableAccess"].
  */
-Feature:
+Feature returns Feature:
 	PrefixExp
 	| SuffixExp
 	| NamedFeature // NamedFeature extends Feature
@@ -439,6 +439,8 @@ terminal LUA_STRING_LONG_CONTENT:
 	| '[' (.)* ']'
 ;
 */
+
+
 
 /**
  *  From https://www.lua.org/manual/5.1/manual.html#2.1:

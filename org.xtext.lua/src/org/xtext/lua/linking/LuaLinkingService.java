@@ -36,7 +36,7 @@ public class LuaLinkingService extends DefaultLinkingService {
 			isTableAccessNamesResolved = true;
 			resourcePostProcessor.process(context);
 		}
-
+		
 		var linkedObjects = super.getLinkedObjects(context, ref, node);
 		
 		if (linkedObjects.isEmpty()) {

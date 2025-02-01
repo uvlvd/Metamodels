@@ -18,6 +18,8 @@ import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 
 import com.google.inject.Injector;
 
+// TODO: doc, mention the difference between generate and parse, resolveReferences;
+// mention serialize
 public class LuaParser {
 	private static final Logger LOGGER = Logger.getLogger(LuaParser.class);
 	

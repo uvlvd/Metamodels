@@ -1,6 +1,8 @@
 package org.xtext.lua.evaluation;
 
 import java.util.Collection;
+import java.util.Map;
+import org.xtext.lua.evaluation.SyntheticReferenceInfo.Type;
 
 /**
  * POJO containing evaluation data for the code model generation.
@@ -35,6 +37,9 @@ public class CodeModelGenerationEvalData {
 	private double mockedReferencesPercentage = -1;
 
 	private Collection<MockedReferenceCategoryEvalData> mockedReferenceCategoryDatas = null;
+	
+	private Map<Type, SyntheticReferenceEvalData> syntheticReferenceEvalDatas = null;
+
 	
 	/**
 	 * Use {@link CodeModelEvaluator} to create objects of this class.
@@ -176,6 +181,14 @@ public class CodeModelGenerationEvalData {
 
 	public void setMockedReferenceCategoryDatas(Collection<MockedReferenceCategoryEvalData> mockedReferenceCategoryDatas) {
 		this.mockedReferenceCategoryDatas = mockedReferenceCategoryDatas;
+	}
+
+	public Map<Type, SyntheticReferenceEvalData> getSyntheticReferenceEvalDatas() {
+		return syntheticReferenceEvalDatas;
+	}
+
+	public void setSyntheticReferenceEvalDatas(Map<Type, SyntheticReferenceEvalData> syntheticReferenceEvalDatas) {
+		this.syntheticReferenceEvalDatas = syntheticReferenceEvalDatas;
 	}
 
 }

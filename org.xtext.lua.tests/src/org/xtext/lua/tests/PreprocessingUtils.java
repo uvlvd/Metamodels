@@ -7,8 +7,12 @@ public class PreprocessingUtils {
 	 * It may be possible to use negative lookahead to avoid matching multi-line comments,
 	 * but that would lead to a complex regex.
 	 */
-	private static final String LUA_SINGLE_LINE_COMMENT_REGEX = "--.*\\R?"; 
-	private static final String LUA_MULTI_LINE_COMMENT_REGEX = "--\\[(=*)\\[(?s).*?\\]\\1\\]"; // use backreference to match multi-line comments with arbitrary number of "="
+	// TODO: these regexes do not correctly match all possible comment patterns appearing in strings, for example comment patterns
+	// surrounded by strings like "-- this is a comment"
+	private static final String NEGATIVE_LOOKAHEAD_NO_QUOTES = "(?<!['\"])"; //"^(?!(['\\\"])).*";
+	private static final String LUA_SINGLE_LINE_COMMENT_REGEX = NEGATIVE_LOOKAHEAD_NO_QUOTES + "--.*\\R?"; 
+	private static final String LUA_MULTI_LINE_COMMENT_REGEX = NEGATIVE_LOOKAHEAD_NO_QUOTES + "--\\[(=*)\\[(?s).*?\\]\\1\\]"; // use backreference to match multi-line comments with arbitrary number of "="
+	
 	
 	public static final String removeCommentsAndWhiteSpacesAndNewLines(String str) {
 		return removeAllWhiteSpacesAndNewLines(removeComments(str));

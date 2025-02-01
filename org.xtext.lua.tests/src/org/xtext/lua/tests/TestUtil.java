@@ -1,5 +1,6 @@
 package org.xtext.lua.tests;
 
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collections;
@@ -78,7 +79,7 @@ public class TestUtil {
 		try (var outputStream = new ByteArrayOutputStream()){
 			chunk.eResource().save(outputStream, new HashMap<>());
 			final var parsedAndSerialized = outputStream.toString();
-			compareNormalizedStrings(original, parsedAndSerialized);
+			Assertions.assertTrue(compareNormalizedStrings(original, parsedAndSerialized));
 		} catch (IOException e) {
 			Assertions.fail("Unexpected IOException thrown during tests:\n  " + e.getLocalizedMessage());
 		}

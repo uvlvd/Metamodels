@@ -46,6 +46,10 @@ public class FeaturePath {
 	/**
 	 * Returns the first {@link PrefixExp} relative to the context of this FeaturePath, i.e. the first on the left of the context Feature (might not be root, e.g. for context inside {@link TableAccess#getIndexExp}.
 	 */
+	// TODO: this is highly confusing: there should be no FeaturePaths containing stuff outside of the feature's FeaturePath,
+	// i.e. a FeaturePaths root is ALWAYS the first prefixExp preceding the context feature, and FeaturePaths never contain
+	//  features outside their context, e.g. a[b.c.d]: a[...] is one FeaturePath and b.c.d is another, the two paths
+	//  have no overlapping Features!
 	public PrefixExp getPrefix() {
 		if (prefix == null) {
 			prefix = FeatureUtil.findFeaturePathPrefix(context);

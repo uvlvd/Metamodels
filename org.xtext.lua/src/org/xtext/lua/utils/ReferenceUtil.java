@@ -1,0 +1,94 @@
+package org.xtext.lua.utils;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.Referenceable;
+import org.xtext.lua.lua.Referencing;
+
+public class ReferenceUtil {
+	private static final int MAX_RECURSION_DEPTH = 1000;
+	
+	/**
+	 * Returns the last element in the given Referencings reference chain by recursively
+	 * calling {@link Referencing#getRef()}.
+	 * @param referencing
+	 * @return
+	 */
+	public static Referenceable getReferencedElement(final Referencing referencing) {
+		final var referenceChain = getReferenceChain(referencing);
+		if (referenceChain.size() > 0) {
+			return referenceChain.get(referenceChain.size() - 1);
+		}
+		return null;
+	}
+	
+	/**
+	 * Returns the given Referencings reference chain built by recursively
+	 * calling {@link Referencing#getRef()}.
+	 * @param referencing
+	 * @return
+	 */
+	public static List<Referenceable> getReferenceChain(final Referencing referencing) {
+		return collectReferenceChain(referencing, new ArrayList<>(), 0, MAX_RECURSION_DEPTH);
+	}
+	
+	private static List<Referenceable> collectReferenceChain(final Referencing referencing, List<Referenceable> referenceChain, int currDepth, final int maxDepth) {
+		if (currDepth > maxDepth) {
+			throw new RuntimeException("Reached max depth while attempting to traverse reference chain for " + referencing);
+		}
+		
+		var referenced = referencing.getRef();
+		referenceChain.add(referenced);
+		
+		// referenced element is itself Referencing, traverse further
+		if (referenced instanceof Referencing referencingsReferencing) {
+			
+			// Currently, vars on the lhs on an assignment assigned to a FeaturePath on the rhs
+			// erroneously reference (point to) the FeaturePath root insted of the FeaturePath leaf.
+			// This check can be removed whenever this problem has been refactored.
+			if (referencingsReferencing instanceof Feature feature) {
+				final var namedLeafOpt = FeatureUtil.findFeaturePathNamedLeaf(feature);
+				if (namedLeafOpt.isPresent()) {
+					referencingsReferencing = namedLeafOpt.get();
+				}
+			}
+			return collectReferenceChain(referencingsReferencing, referenceChain, ++currDepth, maxDepth);
+		}
+		
+		// end of reference chain reached
+		return referenceChain;
+	}
+	
+//	public static Referenceable traverseReferenceChain(final Referencing referencing) {
+//		return traverseReferenceChain(referencing, 0, MAX_RECURSION_DEPTH);
+//	}
+	
+//	private static Referenceable traverseReferenceChain(final Referencing referencing, int currDepth, final int maxDepth) {
+//		if (currDepth > maxDepth) {
+//			throw new RuntimeException("Reached max depth while attempting to traverse reference chain for " + referencing);
+//		}
+//		
+//		var referenced = referencing.getRef();
+//		
+//		// referenced element is itself Referencing, traverse further
+//		if (referenced instanceof Referencing referencingsReferencing) {
+//			
+//			// Currently, vars on the lhs on an assignment assigned to a FeaturePath on the rhs
+//			// erroneously reference (point to) the FeaturePath root insted of the FeaturePath leaf.
+//			// This check can be removed whenever this problem has been refactored.
+//			if (referencingsReferencing instanceof Feature feature) {
+//				final var namedLeafOpt = FeatureUtil.findFeaturePathNamedLeaf(feature);
+//				if (namedLeafOpt.isPresent()) {
+//					referencingsReferencing = namedLeafOpt.get();
+//				}
+//			}
+//			return traverseReferenceChain(referencingsReferencing, ++currDepth, maxDepth);
+//		}
+//		
+//		// end of reference chain reached
+//		return referenced;
+//	}
+	
+}

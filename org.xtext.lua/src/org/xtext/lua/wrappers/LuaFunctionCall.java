@@ -1,6 +1,7 @@
 package org.xtext.lua.wrappers;
 
 import org.apache.log4j.Logger;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 
 import org.xtext.lua.lua.ExpFunctionDeclaration;
@@ -65,7 +66,26 @@ public class LuaFunctionCall {
 		return isMocked;
 	}
 	
-	
+	/**
+	 * Returns a {LuaFunctionCall} built from the given {@link EObject},
+	 * if the <code> eObj </code> is a function call type (e.g., {@link FunctionCallStat},
+	 * {@link FunctionCall}, or {@link MethodCall}.
+	 * <p> Returns null if the building failed. </p>
+	 * @param eObj the eObj.
+	 * @return the {@link LuaFunctionDeclaration} built from the <code> eObj </code>, or null.
+	 */
+	public static LuaFunctionCall of(EObject eObj) {
+		if (eObj instanceof FunctionCallStat call) {
+			return of(call);
+		}
+		if (eObj instanceof FunctionCall call) {
+			return of(call);
+		}
+		if (eObj instanceof MethodCall call) {
+			return of(call);
+		}
+		return null;
+	}
 
 	public static LuaFunctionCall of(final FunctionCallStat functionCallStat) {
 		var result = new LuaFunctionCall();

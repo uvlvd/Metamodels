@@ -8,6 +8,7 @@ import org.junit.jupiter.api.^extension.ExtendWith
 
 /**
  * Class containing tests for the parsing of the Lua syntax by the xText grammar.
+ * <p>This class contains the test cases refered to as Ti_G in the thesis.</p>
  * @author jsaenz
  */
  @ExtendWith(InjectionExtension)
@@ -16,6 +17,159 @@ class LuaParsingTest {
 	
 	@Inject
 	DefaultTestingParserHelper parserHelper
+	
+	@Test
+	def void T1_G_require_brackets() {
+		val SUT = '''
+			require("path.to")
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T2_G_require_direct() {
+		val SUT = '''
+			require"path.to"
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T3_G_require_access() {
+		val SUT = '''
+			f = require("path.to").func
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T4_G_memberAccessDeclarationtTest_varname() {
+		val SUT = '''
+			t.x = 1;
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T5_G_memberAccessDeclarationtTest_str() {
+		val SUT = '''
+			t["x"] = 1;
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T6_G_memberAccessDeclarationtTest_number() {
+		val SUT = '''
+			t[0] = 1;
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T7_G_memberAccessDeclarationtTest_number() {
+		val SUT = '''
+			t[func()] = 1;
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T8_G_memberAccessAssignmentTest_varname() {
+		val SUT = '''
+			x = t.x;
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T9_G_memberAccessAssignmentTest_str() {
+		val SUT = '''
+			x = t["x"];
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T10_G_memberAccessAssignmentTest_number() {
+		val SUT = '''
+			x = t[0];
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T11_G_memberAccessAssignmentTest_number() {
+		val SUT = '''
+			x = t[func()];
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T12_G_funcionCallReturnAccess_varname() {
+		val SUT = '''
+			func().x;
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T13_G_funcionCallReturnAccess_str() {
+		val SUT = '''
+			func()["x"];
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T14_G_funcionCallReturnAccess_number() {
+		val SUT = '''
+			func()[0];
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	@Test
+	def void T15_G_funcionCallReturnAccess_func() {
+		val SUT = '''
+			func()();
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+
+		
+	@Test
+	def void functionCallTest() {
+		val SUT = '''
+			-- tests function call without assignment
+			
+			f(a, b, c)
+			-- test with assignment
+			result = f(a, b, c)
+			
+			
+			a = b or c and d
+			otherResult = a.t:x(2,3)
+
+			a = f(x).y
+			
+			f(x).y["test"]:func() = "hello" -- should fail
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	
+	
+	/**
+	 * 
+	 * Tests not specifically named in the thesis
+	 * 
+	 * 
+	 * 
+	 */
+	
 	
 	@Test
 	def void ifThenElseTest() {
@@ -52,23 +206,7 @@ class LuaParsingTest {
 		parserHelper.parseAndPerformBaseTest(SUT)
 	}
 	
-	@Test
-	def void memberAccessAssignmentTest() {
-		val SUT = '''
-			a.x = 1; 
-			a.y = 0
-		'''
-		parserHelper.parseAndPerformBaseTest(SUT)
-	}
-	
-	@Test
-	def void tableAccessAssignmentTest() {
-		val SUT = '''
-			a[x] = 1; 
-			a["y"] = 0
-		'''
-		parserHelper.parseAndPerformBaseTest(SUT)
-	}
+
 
 	@Test
 	def void tableConstructorTest() {
@@ -111,27 +249,7 @@ class LuaParsingTest {
 		'''
 		parserHelper.parseAndPerformBaseTest(SUT)
 	}
-	
-	@Test
-	def void functionCallTest() {
-		val SUT = '''
-			-- tests function call without assignment
-			
-			f(a, b, c)
-			-- test with assignment
-			result = f(a, b, c)
-			
-			a["hello"]()()
-			
-			a = b or c and d
-			otherResult = a.t:x(2,3)
 
-			a = f(x).y
-			
-			f(x).y["test"]:func() = "hello" -- should fail
-		'''
-		parserHelper.parseAndPerformBaseTest(SUT)
-	}
 	
 	@Test
 	def void doBlockEndTest() {
@@ -232,7 +350,7 @@ class LuaParsingTest {
 	}
 	
 	@Test
-	def void localNaemListDeclarationTest() {
+	def void localNameListDeclarationTest() {
 		val SUT = '''
 			local a, b, c = 1, 2, "string" or num
 
@@ -319,15 +437,7 @@ class LuaParsingTest {
 		parserHelper.parseAndPerformBaseTest(SUT, true)
 	}
 	
-	@Test
-	def void requireTest() { 
-		val SUT = '''
-			require("hello.world")
-			require"hello.world"
-			require("hello.world").subFunction
-		'''
-		parserHelper.parseAndPerformBaseTest(SUT)
-	}
+
 	
 	
 	// Tests for Lua5.2 syntax
@@ -431,6 +541,27 @@ class LuaParsingTest {
 			  --
 			  local function report (n) print("\n***** FILE '"..n.."'*****") end
 			  local olddofile = dofile
+		'''
+		parserHelper.parseAndPerformBaseTest(SUT)
+	}
+	
+	/**
+	 * This code leads to an error in LuaParserTest.java (code is part of all.lua from the Lua 5.2 test suite), but not here.
+	 * // TODO
+	 */
+	@Test
+	def void commentInStringIssueTest() {
+		val SUT = '''
+			  vim.list_extend(args, {
+			        '--fail', -- Fail on 4xx/5xx
+			        '--location', -- Follow redirects
+			        '--silent', -- Don't show progress
+			        '--show-error', -- Show errors, even though we're using --silent
+			        '--create-dirs',
+			        '--output',
+			        files.lib_folder .. '/' .. filename,
+			        url,
+			      })
 		'''
 		parserHelper.parseAndPerformBaseTest(SUT)
 	}

@@ -46,6 +46,52 @@ class LuaLocalScopingTest {
 		Assertions.assertEquals(secondA.getRef, a)
 	}
 	
+	// Example from Feature Path discussion in thesis
+	@Test
+	def void TX_featurePathTest() {
+		val SUT = '''
+			local get_A = function()
+			    local t = {x = 10}
+			    return t
+			end
+			
+			local a = get_A()
+			local b = a
+			local x = b.x
+		'''
+		val result = parseHelper.parseAndPerformBaseScopingTest(SUT)
+	}
+	
+	// expected to fail
+	@Test
+	def void TY_unresolvableReferenceTest() {
+		val SUT = '''
+			get_A = function()
+				if math.random() > 0.5 then -- random float in [0,1)
+					return {x = 0} -- new table containing field ’x’
+				else
+					return {y = 0} -- new table containing field ’y’
+				end
+			end
+			y = get_A().y
+		'''
+		val result = parseHelper.parseAndPerformBaseScopingTest(SUT) // expected to fail
+	}
+	
+	@Test
+	def void TZ_expressionEvaluation() {
+		val SUT = '''
+			v = "hello"
+			v2 = 1
+			
+			a = {hello = "hello", [1] = 1}
+
+			b = a[v]
+			b = a[v2]
+		'''
+		val result = parseHelper.parseAndPerformBaseScopingTest(SUT) 
+	}
+	
 	@Test
 	def void multipleAssignmentTest() {
 		val SUT = '''

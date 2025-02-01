@@ -15,6 +15,7 @@ import org.junit.jupiter.api.^extension.ExtendWith
 import org.xtext.lua.lua.Assignment
 import org.xtext.lua.lua.MemberAccess
 import org.xtext.lua.lua.Var
+import org.xtext.lua.utils.FunctionUtil
 
 /**
  * Tests for global scoping, i.e. resolution of functions and variables declared in another file and imported
@@ -154,6 +155,43 @@ class LuaGlobalScopingTest {
 			import.func1()
 			import.func2()
 			import.func3()
+		'''
+		parseHelper.parseAndPerformBaseScopingTest(REQUIRING_SUT, rs)
+	}
+	
+	@Test
+	def void tempTest() { 
+
+		val PROVIDING_SUT = '''
+			local _M = {}
+			
+			local function external_service_D()
+			    print("external_service_D")
+			end
+			
+			_M.external_service_D = external_service_D
+			
+			return _M
+		'''
+		val result = parseHelper.parseAndPerformBaseScopingTest(PROVIDING_SUT)
+		val resultUri = result.eResource.getURI	
+		val rs = result.eResource.getResourceSet
+		
+		val REQUIRING_SUT = 
+		'local external_service = require(\"' + resultUri + '\") ' + '.external_service_D' +
+		'''
+			
+			
+			
+			local use_external_service = function()
+			    local i = 1
+			    while i < 10 do
+			        external_service()
+			        i = i + 1
+			    end
+			end
+			
+			use_external_service()
 		'''
 		parseHelper.parseAndPerformBaseScopingTest(REQUIRING_SUT, rs)
 	}

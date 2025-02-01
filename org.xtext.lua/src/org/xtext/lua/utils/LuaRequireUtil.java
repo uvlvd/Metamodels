@@ -1,12 +1,18 @@
 package org.xtext.lua.utils;
 
+import java.util.Optional;
+
 import org.eclipse.emf.ecore.EObject;
+import org.xtext.lua.lua.ExpStringLiteral;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.FunctionCall;
+import org.xtext.lua.lua.LiteralStringArg;
+import org.xtext.lua.lua.ParamArgs;
 import org.xtext.lua.lua.Var;
 import org.xtext.lua.scoping.LuaImportUriResolver;
 
 public class LuaRequireUtil {
+	public static final String REQUIRE_FUNC_NAME = "require";
 	
 	private LuaRequireUtil() { }
 	
@@ -35,7 +41,7 @@ public class LuaRequireUtil {
 	 * @return
 	 */
 	public static boolean isRequireFunctionCall(Var var) {
-		if (var.getName().equals(LuaImportUriResolver.REQUIRE_FUNC_NAME)) {
+		if (var.getName().equals(REQUIRE_FUNC_NAME)) {
     		if (FeatureUtil.hasNextFeature(var)) {
     			var next = FeatureUtil.getNextFeature(var);
     			if (next instanceof FunctionCall funcCall) {
@@ -45,5 +51,34 @@ public class LuaRequireUtil {
     	}
 		return false;
 	}
+	
+	public static Optional<String> getImportUri(EObject obj) {
+    	if (obj instanceof Var var && REQUIRE_FUNC_NAME.equals(var.getName())) {
+    		// check if var is a function call
+    		if (var.getSuffixExp() instanceof FunctionCall funcCall) {
+    			
+    			// return literal String argument
+    			if (funcCall.getArgs() instanceof LiteralStringArg literalStringArg) {
+    				var importUri = ExpUtil.removeQuotesFromString(literalStringArg.getStr());
+    				return Optional.of(importUri);
+    			}
+    			// check if has paramargs
+    			else if (funcCall.getArgs() instanceof ParamArgs paramArgs) {
+    				// return optional containing String argument if first argument is a String literal
+    				return paramArgs.getParams().getExps().stream()
+		    					.findFirst()
+		    					.map(arg -> {
+		    						if (arg instanceof ExpStringLiteral stringLiteral) {
+		    							return ExpUtil.removeQuotesFromString(stringLiteral.getValue());
+		    						}
+		    						return null;
+		    					});
+    			}
+    			
+    		}
+    	}
+    	// not an import object
+    	return Optional.empty();
+    }
 
 }

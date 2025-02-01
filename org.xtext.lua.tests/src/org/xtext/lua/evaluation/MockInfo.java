@@ -15,6 +15,7 @@ import org.xtext.lua.lua.Stat;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
 import org.xtext.lua.mocking.FeaturePath;
+import org.xtext.lua.mocking.SyntheticVar;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.utils.AssignmentUtil;
 import org.xtext.lua.utils.ExpUtil;
@@ -43,13 +44,21 @@ public class MockInfo {
 	//private final Cause cause;
 	private Cause cause;
 	/**
-	 * Wheter the mocking of this {@link MockInfo} is a consequence from a previous {@link Feature} of it's 
+	 * Whether the mocking of this {@link MockInfo} is a consequence from a previous {@link Feature} of it's 
 	 * {@link FeaturePath} being mocked.
 	 */
 	private boolean isCausedByPreviousFeature = false;
 	
+	/**
+	 * Creates a mock info for a given referencing element with getRef() returning a synthetic element (i.e. a mocked element)
+	 * @param context the referencing element with getRef() returning a synthetic model element.
+	 */
 	// TODO: should probabl get a Referencing as param, whith MockUtil.isMocked(Referencing.getRef()) == true
 	public MockInfo(final EObject context) {
+//		if (!(context instanceof Referencing refing && refing.getRef() instanceof SyntheticVar)) {
+//			// TODO: log error instead
+//			assert false;
+//		}
 		this.context = context;
 		final var parentStatOpt = StatUtil.getParentStatement(context);
 		if (parentStatOpt.isPresent()) {
@@ -61,6 +70,7 @@ public class MockInfo {
 
 		inferCauseType(context);
 	}
+	
 	
 	private void inferCauseType(EObject context) {
 		if (context instanceof NamedFeature namedFeature) {

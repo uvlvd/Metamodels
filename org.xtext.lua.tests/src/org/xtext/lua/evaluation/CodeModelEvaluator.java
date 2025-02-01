@@ -24,6 +24,7 @@ public class CodeModelEvaluator {
 	private HashMap<String, CodeModelGenerationEvalData> evalDatas = new HashMap<>();
 	private HashMap<String, CodeModelGenerationDurationEvalData> durationDatas = new HashMap<>();
 	private MockInfoCollector mockInfoCollector = new MockInfoCollector();
+	private SyntheticReferenceInfoCollector syntheticReferenceInfoCollector = new SyntheticReferenceInfoCollector();
 	
 	/**
 	 * Evaluates the given {@link LuaCodeModel}, computing the {@link CodeModelGenerationEvalData} for the given
@@ -45,6 +46,10 @@ public class CodeModelEvaluator {
 			computeAndSetReferenceResolutionDataFor(codeModel, evalData);
 			computeAndSetMockedElementsData(codeModel, evalData);
 		}
+	}
+
+	public MockInfoCollector getMockInfoCollector() {
+		return mockInfoCollector;
 	}
 
 	public void setupAndStartTimingEvaluationFor(final String projectId) {
@@ -159,8 +164,8 @@ public class CodeModelEvaluator {
 		final var allCrossReferencesCount = allCrossReferences.size();
 		final var unresolvedCrossReferencesCount = unresolvedCrossReferences.size();
 		final var mockedCrossReferencesCount = mockedCrossReferences.size();
-		final var resolvedPercent = roundPercentage(computePercentage(unresolvedCrossReferencesCount, allCrossReferencesCount));
-		final var mockedPercent = roundPercentage(100d - computePercentage(mockedCrossReferencesCount, allCrossReferencesCount));
+		final var resolvedPercent = NumberUtil.roundPercentage(NumberUtil.computePercentage(unresolvedCrossReferencesCount, allCrossReferencesCount));
+		final var mockedPercent = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(mockedCrossReferencesCount, allCrossReferencesCount));
 		
 		evalData.setNumberCrossReferences(allCrossReferencesCount);
 		evalData.setNumberUnresolvedCrossReferences(unresolvedCrossReferencesCount);
@@ -190,7 +195,7 @@ public class CodeModelEvaluator {
 		}
 		
 		final var numberMockedReferences = mockInfoCollector.getCount();
-		final var mockedPercentage = roundPercentage(100d - computePercentage(numberMockedReferences, numberReferencingElements));
+		final var mockedPercentage = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(numberMockedReferences, numberReferencingElements));
 		
 		evalData.setNumberMockedElements(mockedObjectCount);
 		evalData.setNumberReferencingObjects(numberReferencingElements);
@@ -200,6 +205,11 @@ public class CodeModelEvaluator {
 		evalData.setMockedReferenceCategoryDatas(
 				createMockedCategoriesdata(mockInfoCollector, numberMockedReferences, numberReferencingElements, evalData)
 		);
+		
+		
+		// new
+		final var syntheticReferenceData = syntheticReferenceInfoCollector.getSyntheticReferenceTypeEvalData(codeModel, numberReferencingElements);
+		evalData.setSyntheticReferenceEvalDatas(syntheticReferenceData);
 	}
 	
 	private Collection<MockedReferenceCategoryEvalData> createMockedCategoriesdata(
@@ -218,9 +228,9 @@ public class CodeModelEvaluator {
 				.toList()
 				.size();
 			var categoryData = new MockedReferenceCategoryEvalData();
-			final var percentageOfMockedReferences = roundPercentage(100d - computePercentage(count, numberMockedReferences));
+			final var percentageOfMockedReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(count, numberMockedReferences));
 			
-			final var percentageOfAllReferences = roundPercentage(100d - computePercentage(count, numberReferencingElements));
+			final var percentageOfAllReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(count, numberReferencingElements));
 			
 			categoryData.setCategory(cause);
 			categoryData.setNumberCausedByOther(numberCausedByPrevious);
@@ -270,13 +280,6 @@ public class CodeModelEvaluator {
 		return isSetup;
 	}
 	
-	private double roundPercentage(final double percentage) {
-		return Math.round(percentage * 100.0)/100.0;
-	}
-	
-	private double computePercentage(final double of, final double from) {
-		final var rel = (from - of)/from;
-		return Math.round(rel*10000.0)/100.0;
-	}
+
 	
 }

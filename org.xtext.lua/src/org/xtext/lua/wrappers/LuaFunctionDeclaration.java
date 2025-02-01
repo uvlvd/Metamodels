@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.naming.IQualifiedNameProvider;
 import org.xtext.lua.lua.Arg;
@@ -116,6 +117,27 @@ public class LuaFunctionDeclaration {
 			referenceables.stream().forEach(result::addAll);
 		}
 		return result;
+	}
+	
+	/**
+	 * Returns a {@LuaFunctionDeclartion} built from the given {@link EObject},
+	 * if the <code> eObj </code> is a function declaration type (e.g., {@link FunctionDeclaration},
+	 * {@link LocalFunctionDeclaration}, or {@link ExpFunctionDeclaration}.
+	 * <p> Returns null if the building failed. </p>
+	 * @param eObj the eObj.
+	 * @return the {@link LuaFunctionDeclaration} built from the <code> eObj </code>, or null.
+	 */
+	public static LuaFunctionDeclaration of(EObject eObj) {
+		if (eObj instanceof FunctionDeclaration decl) {
+			return of(decl);
+		}
+		if (eObj instanceof LocalFunctionDeclaration decl) {
+			return of(decl);
+		}
+		if (eObj instanceof ExpFunctionDeclaration decl) {
+			return of(decl);
+		}
+		return null;
 	}
 
 	public static LuaFunctionDeclaration of(FunctionDeclaration decl) {

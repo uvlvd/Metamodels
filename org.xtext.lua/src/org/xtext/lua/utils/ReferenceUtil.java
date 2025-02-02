@@ -14,12 +14,12 @@ public class ReferenceUtil {
 	 * Returns the last element in the given Referencings reference chain by recursively
 	 * calling {@link Referencing#getRef()}.
 	 * @param referencing
-	 * @return
+	 * @return the referenceable referenced from the last element in the reference chain, may be null.
 	 */
 	public static Referenceable getReferencedElement(final Referencing referencing) {
 		final var referenceChain = getReferenceChain(referencing);
 		if (referenceChain.size() > 0) {
-			return referenceChain.get(referenceChain.size() - 1);
+			return referenceChain.get(referenceChain.size() - 1).getRef();
 		}
 		return null;
 	}
@@ -30,17 +30,16 @@ public class ReferenceUtil {
 	 * @param referencing
 	 * @return
 	 */
-	public static List<Referenceable> getReferenceChain(final Referencing referencing) {
+	public static List<Referencing> getReferenceChain(final Referencing referencing) {
 		return collectReferenceChain(referencing, new ArrayList<>(), 0, MAX_RECURSION_DEPTH);
 	}
 	
-	private static List<Referenceable> collectReferenceChain(final Referencing referencing, List<Referenceable> referenceChain, int currDepth, final int maxDepth) {
+	private static List<Referencing> collectReferenceChain(final Referencing referencing, List<Referencing> referenceChain, int currDepth, final int maxDepth) {
 		if (currDepth > maxDepth) {
 			throw new RuntimeException("Reached max depth while attempting to traverse reference chain for " + referencing);
 		}
 		
 		var referenced = referencing.getRef();
-		referenceChain.add(referenced);
 		
 		// referenced element is itself Referencing, traverse further
 		if (referenced instanceof Referencing referencingsReferencing) {
@@ -54,6 +53,8 @@ public class ReferenceUtil {
 					referencingsReferencing = namedLeafOpt.get();
 				}
 			}
+			
+			referenceChain.add(referencingsReferencing);
 			return collectReferenceChain(referencingsReferencing, referenceChain, ++currDepth, maxDepth);
 		}
 		

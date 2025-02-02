@@ -28,7 +28,9 @@ public class SyntheticReferenceEvalData {
 	}
 
 	private Type type;
-	private int numberTotal = -1;
+	private int numberReferencesOfType = -1;
+	private double percentOfReferencesOfType = -1;
+	private int numberTotalSyntheticOfType = -1;
 	private double percentOfTotalSyntheticReferences = -1;
 	private double percentOfAllReferences = -1;
 	private Map<Cause, SyntheticReferenceCauseEvalData> causes = new EnumMap<>(Cause.class);
@@ -39,11 +41,23 @@ public class SyntheticReferenceEvalData {
 	public void setType(Type type) {
 		this.type = type;
 	}
-	public int getNumberTotal() {
-		return numberTotal;
+	public int getNumberReferencesOfType() {
+		return numberReferencesOfType;
 	}
-	public void setNumberTotal(int numberTotal) {
-		this.numberTotal = numberTotal;
+	public void setNumberReferencesOfType(int numberReferencesOfType) {
+		this.numberReferencesOfType = numberReferencesOfType;
+	}
+	public double getPercentOfReferencesOfType() {
+		return percentOfReferencesOfType;
+	}
+	public void setPercentOfReferencesOfType(double percentOfReferencesOfType) {
+		this.percentOfReferencesOfType = percentOfReferencesOfType;
+	}
+	public int getNumberTotalSyntheticOfType() {
+		return numberTotalSyntheticOfType;
+	}
+	public void setNumberTotalSyntheticOfType(int numberTotal) {
+		this.numberTotalSyntheticOfType = numberTotal;
 	}
 	public double getPercentOfTotalSyntheticReferences() {
 		return percentOfTotalSyntheticReferences;

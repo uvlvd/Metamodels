@@ -208,8 +208,19 @@ public class CodeModelEvaluator {
 		
 		
 		// new
-		final var syntheticReferenceData = syntheticReferenceInfoCollector.getSyntheticReferenceTypeEvalData(codeModel, numberReferencingElements);
+		final var numberReferencesTotal = numberReferencingElements;
+		final var syntheticReferenceData = syntheticReferenceInfoCollector.getSyntheticReferenceTypeEvalData(codeModel, numberReferencesTotal);
 		evalData.setSyntheticReferenceEvalDatas(syntheticReferenceData);
+		final var numberSyntheticReferencesTotal = syntheticReferenceData.values()
+				.stream()
+				.mapToInt(SyntheticReferenceEvalData::getNumberTotalSyntheticOfType)
+				.sum();
+		final var numberNonSyntheticReferencesTotal = numberReferencesTotal - numberSyntheticReferencesTotal;
+		final var percentageSyntheticReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(numberSyntheticReferencesTotal, numberReferencesTotal));;
+		evalData.setNumberReferencesTotal(numberReferencesTotal);
+		evalData.setNumberNonSyntheticReferencesTotal(numberNonSyntheticReferencesTotal);
+		evalData.setNumberSyntheticReferencesTotal(numberSyntheticReferencesTotal);
+		evalData.setPercentageSyntheticReferences(percentageSyntheticReferences);
 	}
 	
 	private Collection<MockedReferenceCategoryEvalData> createMockedCategoriesdata(

@@ -31,13 +31,19 @@ public class CodeModelGenerationEvalData {
 	
 	// mock info: mocked objects and references to mocked objects 
 	private long numberMockedElements = -1;
+	
+	// TODO: these can be removed in favour of the new synthetic stuff
 	private long numberReferencingObjects = -1;
 	private long numberNonMockedReferences = -1;
 	private long numberMockedReferences = -1;
 	private double mockedReferencesPercentage = -1;
-
 	private Collection<MockedReferenceCategoryEvalData> mockedReferenceCategoryDatas = null;
 	
+	
+	private long numberReferencesTotal = -1;
+	private long numberNonSyntheticReferencesTotal = -1;
+	private long numberSyntheticReferencesTotal = -1;
+	private double percentageSyntheticReferences = -1;
 	private Map<Type, SyntheticReferenceEvalData> syntheticReferenceEvalDatas = null;
 
 	
@@ -190,5 +196,39 @@ public class CodeModelGenerationEvalData {
 	public void setSyntheticReferenceEvalDatas(Map<Type, SyntheticReferenceEvalData> syntheticReferenceEvalDatas) {
 		this.syntheticReferenceEvalDatas = syntheticReferenceEvalDatas;
 	}
+
+	public long getNumberNonSyntheticReferencesTotal() {
+		return numberNonSyntheticReferencesTotal;
+	}
+
+	public void setNumberNonSyntheticReferencesTotal(long numberNonSyntheticReferencesTotal) {
+		this.numberNonSyntheticReferencesTotal = numberNonSyntheticReferencesTotal;
+	}
+
+	public long getNumberReferencesTotal() {
+		return numberReferencesTotal;
+	}
+
+	public void setNumberReferencesTotal(long numberReferencesTotal) {
+		this.numberReferencesTotal = numberReferencesTotal;
+	}
+
+	public long getNumberSyntheticReferencesTotal() {
+		return numberSyntheticReferencesTotal;
+	}
+
+	public void setNumberSyntheticReferencesTotal(long numberSyntheticReferencesTotal) {
+		this.numberSyntheticReferencesTotal = numberSyntheticReferencesTotal;
+	}
+
+	public double getPercentageSyntheticReferences() {
+		return percentageSyntheticReferences;
+	}
+
+	public void setPercentageSyntheticReferences(double percentageSyntheticReferences) {
+		this.percentageSyntheticReferences = percentageSyntheticReferences;
+	}
+	
+	
 
 }

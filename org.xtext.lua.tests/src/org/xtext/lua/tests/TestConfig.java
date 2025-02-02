@@ -55,16 +55,16 @@ public class TestConfig {
 //			"D:\\MA\\own\\CIPM\\commit-based-cipm\\bundles\\si\\cipm.consistency.vsum.test\\ciTestRepos\\test_eval_case",
 //			false
 //			)
-			
-//				new EvalProjectConfig(
-//					"D:\\MA\\own\\CIPM\\commit-based-cipm\\bundles\\si\\cipm.consistency.vsum.test\\ciTestRepos\\apisix",
-//						false
-//				),
-			
+//			
 				new EvalProjectConfig(
-						"D:\\MA\\repos\\blink.cmp",
+					"D:\\MA\\own\\CIPM\\commit-based-cipm\\bundles\\si\\cipm.consistency.vsum.test\\ciTestRepos\\apisix",
 						false
 				)//,
+			
+//				new EvalProjectConfig(
+//						"D:\\MA\\repos\\blink.cmp",
+//						false
+//				)//,
 //				new EvalProjectConfig(
 //						"D:\\MA\\repos\\xmake",
 //						false

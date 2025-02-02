@@ -119,6 +119,9 @@ public class ExpUtil {
 		if (str != null && str.startsWith("\"") && str.endsWith("\"")) {
 			return str.substring(1, str.length() - 1);
 		}
+		if (str != null && str.startsWith("'") && str.endsWith("'")) {
+			return str.substring(1, str.length() - 1);
+		}
 		return str;
 	}
 }

@@ -195,16 +195,17 @@ public class CodeModelEvaluator {
 		}
 		
 		final var numberMockedReferences = mockInfoCollector.getCount();
-		final var mockedPercentage = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(numberMockedReferences, numberReferencingElements));
+//		final var mockedPercentage = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(numberMockedReferences, numberReferencingElements));
 		
 		evalData.setNumberMockedElements(mockedObjectCount);
-		evalData.setNumberReferencingObjects(numberReferencingElements);
-		evalData.setNumberNonMockedReferences(numberReferencingElements - numberMockedReferences);
-		evalData.setNumberMockedReferences(numberMockedReferences);
-		evalData.setMockedReferencesPercentage(mockedPercentage);
-		evalData.setMockedReferenceCategoryDatas(
-				createMockedCategoriesdata(mockInfoCollector, numberMockedReferences, numberReferencingElements, evalData)
-		);
+		
+//		evalData.setNumberReferencingObjects(numberReferencingElements);
+//		evalData.setNumberNonMockedReferences(numberReferencingElements - numberMockedReferences);
+//		evalData.setNumberMockedReferences(numberMockedReferences);
+//		evalData.setMockedReferencesPercentage(mockedPercentage);
+//		evalData.setMockedReferenceCategoryDatas(
+//				createMockedCategoriesdata(mockInfoCollector, numberMockedReferences, numberReferencingElements, evalData)
+//		);
 		
 		
 		// new
@@ -215,12 +216,23 @@ public class CodeModelEvaluator {
 				.stream()
 				.mapToInt(SyntheticReferenceEvalData::getNumberTotalSyntheticOfType)
 				.sum();
+		
 		final var numberNonSyntheticReferencesTotal = numberReferencesTotal - numberSyntheticReferencesTotal;
-		final var percentageSyntheticReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(numberSyntheticReferencesTotal, numberReferencesTotal));;
+		final var percentageSyntheticReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(numberSyntheticReferencesTotal, numberReferencesTotal));
 		evalData.setNumberReferencesTotal(numberReferencesTotal);
 		evalData.setNumberNonSyntheticReferencesTotal(numberNonSyntheticReferencesTotal);
 		evalData.setNumberSyntheticReferencesTotal(numberSyntheticReferencesTotal);
 		evalData.setPercentageSyntheticReferences(percentageSyntheticReferences);
+		
+		
+		final var numberSyntheticReferencesFiltered = syntheticReferenceData.values()
+				.stream()
+				.mapToInt(SyntheticReferenceEvalData::getNumberFilteredSyntheticOfType)
+				.sum();
+		final var percentageSyntheticReferencesFiltered = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(numberSyntheticReferencesFiltered, numberReferencesTotal));
+		
+		evalData.setNumberSyntheticReferencesFiltered(numberSyntheticReferencesFiltered);
+		evalData.setPercentageSyntheticReferencesFiltered(percentageSyntheticReferencesFiltered);
 	}
 	
 	private Collection<MockedReferenceCategoryEvalData> createMockedCategoriesdata(

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?><testrun name="LuaGlobalScopingTest" project="org.xtext.lua.tests" tests="6" started="6" failures="0" errors="0" ignored="0">
+  <testsuite name="org.xtext.lua.tests.LuaGlobalScopingTest" time="1.32" displayname="LuaGlobalScopingTest" uniqueid="[engine:junit-jupiter]/[class:org.xtext.lua.tests.LuaGlobalScopingTest]">
+    <testcase name="varDeclRequireTest" classname="org.xtext.lua.tests.LuaGlobalScopingTest" time="0.743" displayname="varDeclRequireTest()" uniqueid="[engine:junit-jupiter]/[class:org.xtext.lua.tests.LuaGlobalScopingTest]/[method:varDeclRequireTest()]"/>
+    <testcase name="tempTest" classname="org.xtext.lua.tests.LuaGlobalScopingTest" time="0.178" displayname="tempTest()" uniqueid="[engine:junit-jupiter]/[class:org.xtext.lua.tests.LuaGlobalScopingTest]/[method:tempTest()]"/>
+    <testcase name="memberAccessRequireTest" classname="org.xtext.lua.tests.LuaGlobalScopingTest" time="0.127" displayname="memberAccessRequireTest()" uniqueid="[engine:junit-jupiter]/[class:org.xtext.lua.tests.LuaGlobalScopingTest]/[method:memberAccessRequireTest()]"/>
+    <testcase name="requireTest" classname="org.xtext.lua.tests.LuaGlobalScopingTest" time="0.11" displayname="requireTest()" uniqueid="[engine:junit-jupiter]/[class:org.xtext.lua.tests.LuaGlobalScopingTest]/[method:requireTest()]"/>
+    <testcase name="globalScopingRequireFunctionsTest" classname="org.xtext.lua.tests.LuaGlobalScopingTest" time="0.139" displayname="globalScopingRequireFunctionsTest()" uniqueid="[engine:junit-jupiter]/[class:org.xtext.lua.tests.LuaGlobalScopingTest]/[method:globalScopingRequireFunctionsTest()]"/>
+    <testcase name="globalExportTest" classname="org.xtext.lua.tests.LuaGlobalScopingTest" time="0.016" displayname="globalExportTest()" uniqueid="[engine:junit-jupiter]/[class:org.xtext.lua.tests.LuaGlobalScopingTest]/[method:globalExportTest()]"/>
+  </testsuite>
+</testrun>

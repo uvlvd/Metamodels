@@ -2,6 +2,7 @@ package org.xtext.lua.evaluation;
 
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -26,6 +27,8 @@ import org.xtext.lua.lua.Var;
 import org.xtext.lua.mocking.FeaturePath;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.scoping.LuaResourceDescriptionStrategy;
+import org.xtext.lua.utils.AssignmentUtil;
+import org.xtext.lua.utils.ExpUtil;
 import org.xtext.lua.utils.FeatureUtil;
 import org.xtext.lua.utils.LuaRequireUtil;
 import org.xtext.lua.utils.MockUtil;
@@ -33,6 +36,11 @@ import org.xtext.lua.utils.ReferenceUtil;
 
 public class SyntheticReferenceInfoCollector {
 	private static final Logger LOGGER = Logger.getLogger(SyntheticReferenceInfoCollector.class);
+	private static final List<Cause> FILTER_CAUSES = List.of(
+			Cause.ARG_ACCESS, 
+			Cause.GROUPED_EXP,
+			Cause.IMPLICIT_IMPORT,
+			Cause.VAR_NOT_FOUND);
 	
 	private Map<EObject, SyntheticReferenceInfo> infos = new HashMap<>();
 	
@@ -59,28 +67,43 @@ public class SyntheticReferenceInfoCollector {
 			final var causes = entry.getValue();
 			final var totalReferencesOfType = typeToTotalReferences.get(type);
 			
-			final var totalForType = causes.values().stream().mapToInt(Integer::intValue).sum();
-			final var percentageOfSyntheticReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(totalForType, totalSyntheticReferences));
-			final var percentageOfAllReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(totalForType, totalReferences));
-			final var percentageOfReferencesOfType = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(totalForType, totalReferencesOfType));
+			final var totalSyntheticForType = causes.values().stream().mapToInt(Integer::intValue).sum();
+			final var percentageOfSyntheticReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(totalSyntheticForType, totalSyntheticReferences));
+			final var percentageOfAllReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(totalSyntheticForType, totalReferences));
+			final var percentageOfReferencesOfType = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(totalSyntheticForType, totalReferencesOfType));
 			
 			var syntheticReferenceEvalData = result.get(type);
 			syntheticReferenceEvalData.setType(type);
-			syntheticReferenceEvalData.setNumberTotalSyntheticOfType(totalForType);
+			syntheticReferenceEvalData.setNumberTotalSyntheticOfType(totalSyntheticForType);
 			syntheticReferenceEvalData.setPercentOfTotalSyntheticReferences(percentageOfSyntheticReferences);
 			syntheticReferenceEvalData.setPercentOfAllReferences(percentageOfAllReferences);
 			syntheticReferenceEvalData.setNumberReferencesOfType(totalReferencesOfType);
 			syntheticReferenceEvalData.setPercentOfReferencesOfType(percentageOfReferencesOfType);
 			
+			final var totalForTypeFitlered = getFilteredNumberOfSyntheticReferences(causes);
+			final var numberFilteredSyntheticOfType = totalForTypeFitlered;
+			final var percentFilteredOfReferencesOfType = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(totalForTypeFitlered, totalReferencesOfType));
+			final var percentFilteredOfSyntheticReferencesOfType = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(totalForTypeFitlered, totalSyntheticForType));
+			final var percentFilteredOfTotalSyntheticReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(totalForTypeFitlered, totalSyntheticReferences));
+			final var percentFilteredOfAllReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(totalForTypeFitlered, totalReferences));
+			
+			syntheticReferenceEvalData.setNumberFilteredSyntheticOfType(numberFilteredSyntheticOfType);
+			syntheticReferenceEvalData.setPercentFilteredOfReferencesOfType(percentFilteredOfReferencesOfType);
+			syntheticReferenceEvalData.setPercentFilteredOfSyntheticReferencesOfType(percentFilteredOfSyntheticReferencesOfType);
+			syntheticReferenceEvalData.setPercentFilteredOfTotalSyntheticReferences(percentFilteredOfTotalSyntheticReferences);
+			syntheticReferenceEvalData.setPercentFilteredOfAllReferences(percentFilteredOfAllReferences);
+			
 			var causesEvalData = new EnumMap<Cause, SyntheticReferenceCauseEvalData>(Cause.class);
 			causes.entrySet().forEach(causeEntry -> {
 				final var cause = causeEntry.getKey();
 				final var count = causeEntry.getValue();
-				final var percentageForType = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(count, totalForType));
+				final var percentageForType = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(count, totalReferencesOfType));
+				final var percentageSyntheticForType = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(count, totalSyntheticForType));
 				
 				var causeEvalData = syntheticReferenceEvalData.new SyntheticReferenceCauseEvalData();
 				causeEvalData.setNumberTotal(count);
 				causeEvalData.setPercentOfType(percentageForType);
+				causeEvalData.setPercentSyntheticOfType(percentageSyntheticForType);
 				
 				causesEvalData.put(cause, causeEvalData);
 			});
@@ -110,21 +133,7 @@ public class SyntheticReferenceInfoCollector {
 		
 		return result;
 	}
-	
-	private void collect(ResourceSet codeModel) {
-		for (final var res : codeModel.getResources()) {
-			var root = res.getContents().get(0);
-			final var syntheticReferences = EcoreUtil2.getAllContentsOfType(root, Referencing.class)
-					.stream()
-					.filter(MockUtil::referencesMocked)
-					.toList();
-			
-			for (final var referencing: syntheticReferences) {
-				getInfoFor(referencing);
-			}
-		}
-	}
-	
+
 	public Map<Type, Map<Cause, Integer>> getSyntheticReferenceTypeCountByCause() {
 		var result = new EnumMap<Type, Map<Cause, Integer>>(Type.class);
 		Stream.of(Type.values()).forEach(type -> result.put(type, getEmptyCauseMap()));
@@ -139,6 +148,24 @@ public class SyntheticReferenceInfoCollector {
 		return result;
 	}
 	
+	/**
+	 * Computes the total number of filtered synthetic references, filtering by cause.
+	 * The filtered Causes are defined in {@link FILTER_CAUSE}.
+	 * @param causeToCount map containing the cause-to-count information for a specific {@link Type}.
+	 * @return the filtered count.
+	 */
+	private int getFilteredNumberOfSyntheticReferences(final Map<Cause, Integer> causeToCount) {
+		var result = 0;
+		for (final var entry : causeToCount.entrySet()) {
+			final var cause = entry.getKey();
+			final var count = entry.getValue();
+			if (!FILTER_CAUSES.contains(cause)) {
+				result += count;
+			}
+		}
+		return result;
+	}
+	
 	private Map<Cause, Integer> getEmptyCauseMap() {
 		var result = new EnumMap<Cause, Integer>(Cause.class);
 		Stream.of(Cause.values()).forEach(cause -> result.put(cause, 0));
@@ -147,6 +174,24 @@ public class SyntheticReferenceInfoCollector {
 	
 	public void clear() {
 		infos.clear();
+	}
+	
+	/**
+	 * Collect all infos for the given codeModel.
+	 * @param codeModel
+	 */
+	private void collect(ResourceSet codeModel) {
+		for (final var res : codeModel.getResources()) {
+			var root = res.getContents().get(0);
+			final var syntheticReferences = EcoreUtil2.getAllContentsOfType(root, Referencing.class)
+					.stream()
+					.filter(MockUtil::referencesMocked)
+					.toList();
+			
+			for (final var referencing: syntheticReferences) {
+				getInfoFor(referencing);
+			}
+		}
 	}
 	
 	/**
@@ -239,12 +284,31 @@ public class SyntheticReferenceInfoCollector {
 			return Cause.VAR_NOT_FOUND;
 		}
 		
+		if (ExpUtil.isTableAccessWithLinkingDummyName(unresolvableFeature)) {
+			// probably defined in external library or not found by global scope provider
+			return Cause.TABLE_INDEX_EXP;
+		}
+		
+		
+		
 		// check for causes in the previous feature
 		final var previous = FeatureUtil.getPreviousFeature(unresolvableFeature);
 		// previous feature should be available here
 		if (previous == null) {
 			LOGGER.error("Could not determine previous Feature for unresolvable feature: " + unresolvableFeature);
 			return Cause.UNIDENTIFIED;
+		}
+		
+		if (previous instanceof FunctionCall functionCall) {
+			// TODO: check if require call, else Function Resolution
+			return getCauseForFunctionCallFeature(functionCall);
+		}
+		
+		// since we know the previous methodCall itself does not reference a synthetic element
+		// if this function was called, we assume it could not be resolved
+		if (previous instanceof MethodCall methodCall) {
+			// TODO: check if require call, else Function Resolution
+			return getCauseForMethodCallFeature(methodCall);
 		}
 		
 		// if previous is namedFeature (MemberAccess, TableAccess, or MethodCall
@@ -261,13 +325,10 @@ public class SyntheticReferenceInfoCollector {
 				//return getCauseByFeatureType(namedPrevious);
 			}
 			// else we search the cause along the previous feature's reference chain
-			return inferCauseAlongReferenceChain(namedPrevious);
+			return tryInferCauseAlongReferenceChain(namedPrevious, unresolvableFeature);
 		}
 		
-		if (previous instanceof FunctionCall functionCall) {
-			// TODO: check if require call, else Function Resolution
-			return getCauseForFunctionCallFeature(functionCall);
-		}
+
 		
 		LOGGER.error("Unexpectedly found non-named feature: " + unresolvableFeature);
 		return Cause.UNEXPECTED;
@@ -275,15 +336,38 @@ public class SyntheticReferenceInfoCollector {
 	
 	// TODO: should getInfo for first named feature prefix to the functionCall
 	private Cause getCauseForFunctionCallFeature(FunctionCall functionCall) {
+		final var calledFunctionName = FeatureUtil.getFirstNamedPrefix(functionCall);
+		
+		if (calledFunctionName != null) {
+			final var referenced = ReferenceUtil.getReferencedElement(calledFunctionName);
+			if (referenced instanceof Arg) {
+				return Cause.ARG_ACCESS;
+			}
+			if (isInImplicitResource(referenced)) {
+				return Cause.IMPLICIT_IMPORT;
+			}
+		}
+		
 		var featurePath = new FeaturePath(functionCall);
-		//TODO: this should never happen, implicit imports are implicit and do not need to be imported
-//		final var isImplicit = featurePath.getContextFeatures().stream()
-//				.filter(feat -> feat instanceof NamedFeature)
-//				.map(feat -> (NamedFeature) feat)
-//				.anyMatch(this::isInImplicitResource);
-//		if (isImplicit) {
-//			return Cause.IMPLICIT_IMPORT;
-//		}
+		if (importFailed(featurePath)) {
+			return Cause.OTHER_IMPORT;
+		}
+		
+		return Cause.FUNCTION_RESOLUTION;
+	}
+	
+	private Cause getCauseForMethodCallFeature(MethodCall methodCall) {		
+
+		final var referenced = ReferenceUtil.getReferencedElement(methodCall);
+		if (referenced instanceof Arg) {
+			return Cause.ARG_ACCESS;
+		}
+		if (isInImplicitResource(referenced)) {
+			return Cause.IMPLICIT_IMPORT;
+		}
+		
+		
+		var featurePath = new FeaturePath(methodCall);
 		if (importFailed(featurePath)) {
 			return Cause.OTHER_IMPORT;
 		}
@@ -306,6 +390,9 @@ public class SyntheticReferenceInfoCollector {
 	}
 	
 	private boolean isInImplicitResource(EObject obj) {
+		if (obj == null) {
+			return false;
+		}
 		final var resource = obj.eResource();
 		return LuaGlobalScopeProvider.isImplicitResource(resource);
 	}
@@ -320,19 +407,12 @@ public class SyntheticReferenceInfoCollector {
 	 * is called with "table" and searches for a cause along the reference chain from 
 	 * the feature "table".
 	 * </p>
-	 * @param feature the previous feature to an unresolvable feature.
+	 * @param previousFeature the previous feature to an unresolvable feature.
 	 * @return
 	 */
-	private Cause inferCauseAlongReferenceChain(NamedFeature feature) {
-		final var referenceChain = ReferenceUtil.getReferenceChain(feature);
-		final var referenced = ReferenceUtil.getReferencedElement(feature);
-		if (referenced instanceof Arg) {
-			return Cause.ARG_ACCESS;
-		}
+	private Cause tryInferCauseAlongReferenceChain(NamedFeature previousFeature, NamedFeature unresolvable) {
+		final var referenceChain = ReferenceUtil.getReferenceChain(previousFeature);
 		
-		if (isInImplicitResource(referenced)) {
-			return Cause.IMPLICIT_IMPORT;
-		}
 		//...
 		// - TODO: need to think about how this should be resolved,
 		//    -> 
@@ -342,8 +422,18 @@ public class SyntheticReferenceInfoCollector {
 		// 		-> check if any feature is mocked -> return cause
 		// - for last element in reference chain: -> check if followed by FunctionCall -> return Cause.Function_Resolution
 		
-		Referencing previous = feature;
+		Referencing previous = previousFeature;
 		for (final var referencing : referenceChain) {
+			// if any along the reference chain directly reference a synthetic element, compute and return
+			// the corresponding cause
+			if (referencing instanceof NamedFeature named && MockUtil.referencesMocked(named)) {
+				return getInfoFor(named).getCause();
+			}
+			
+			//if (AssignmentUtil.isAssignable(referencing))
+		
+			
+			
 			if (referencing instanceof Feature referencedFeature) {
 				final var featurePath = new FeaturePath(referencedFeature);
 				
@@ -356,15 +446,30 @@ public class SyntheticReferenceInfoCollector {
 			previous = referencing;
 		}
 		
+		final var referenced = ReferenceUtil.getReferencedElement(previousFeature);
+		if (referenced instanceof Arg) {
+			return Cause.ARG_ACCESS;
+		}
+		
+		if (isInImplicitResource(referenced)) {
+			return Cause.IMPLICIT_IMPORT;
+		}
+		
+		if (ExpUtil.isTableAccessWithLinkingDummyName(referenced)) {
+			return Cause.TABLE_INDEX_EXP;
+		}
+		
 		// check if last named feature (last element of reference chain)
 		// is followed by a function call. If so, we assume that it could not be resolved.
-		if (previous instanceof Feature feat) {
-			final var next = FeatureUtil.getNextFeature(feat);
+		if (referenced instanceof NamedFeature named) {
+			final var next = FeatureUtil.getNextFeature(named);
 			if (next instanceof FunctionCall functionCall) {
 				return getCauseForFunctionCallFeature(functionCall);
 			}
 		}
-		// Fallback: could not identify cause
+		
+		// Fallback: could not identify cause, e.g. unresolved table access on previous
+		//  feature in Assignment ("b" in a.b is not resolved for a[func()] = 1 with func() returning "b")
 		return Cause.UNIDENTIFIED;
 	}
 	

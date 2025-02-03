@@ -57,16 +57,21 @@ public class TestUtil {
 	 * are present after the reference resolution.
 	 * @param chunk
 	 */
-	public static void assertAllReferencesResolved(final Chunk chunk) {
+	public static void assertAllReferencesResolved(final Chunk chunk, boolean expectedToFail) {
 		EcoreUtil.resolveAll(chunk);
 		final var allCrossReferences = EcoreUtil.CrossReferencer.find(Collections.singleton(chunk));
 		final var unresolvedCrossReferences = EcoreUtil.UnresolvedProxyCrossReferencer.find(chunk);
 		final var mockedCrossReferences = allCrossReferences.keySet().stream()
 				.filter(cr -> cr instanceof SyntheticVar)
 				.toList();
-		Assertions.assertTrue(unresolvedCrossReferences.isEmpty(), 
-							  "Unexpected unresolved cross-references found:\n   " + unresolvedCrossReferences);
-		Assertions.assertTrue(mockedCrossReferences.isEmpty(), "Unexpected mock-references found:\n  " + mockedCrossReferences);
+		if (expectedToFail) {
+			Assertions.assertFalse(mockedCrossReferences.isEmpty());
+		} else {
+			Assertions.assertTrue(unresolvedCrossReferences.isEmpty(), 
+					  "Unexpected unresolved cross-references found:\n   " + unresolvedCrossReferences);
+			Assertions.assertTrue(mockedCrossReferences.isEmpty(), "Unexpected mock-references found:\n  " + mockedCrossReferences);
+		}
+		
 	}
 	
 	/**

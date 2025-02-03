@@ -1,5 +1,0 @@
-Evaluating project with path 'D:\MA\apisix\apisix'...
-    Total number of resource elements: 181512
-	   Total cross references count: 44535, unresolved: 0, mocked: 11847
-	   Resolved references: 100.0% (needs to be 100% for CIPM)
-	   Mocked references: 26.599999999999994%

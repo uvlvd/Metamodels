@@ -139,6 +139,10 @@ public class FeatureUtil {
 		if (feature instanceof NamedFeature named) {
 			return named;
 		}
-		return getFirstNamedPrefix(getPreviousFeature(feature));
+		final var previous = getPreviousFeature(feature);
+//		if (previous == null) {
+//			return null;
+//		}
+		return getFirstNamedPrefix(previous);
 	}
 }

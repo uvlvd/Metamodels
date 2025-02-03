@@ -33,17 +33,19 @@ public class CodeModelGenerationEvalData {
 	private long numberMockedElements = -1;
 	
 	// TODO: these can be removed in favour of the new synthetic stuff
-	private long numberReferencingObjects = -1;
-	private long numberNonMockedReferences = -1;
-	private long numberMockedReferences = -1;
-	private double mockedReferencesPercentage = -1;
-	private Collection<MockedReferenceCategoryEvalData> mockedReferenceCategoryDatas = null;
+//	private long numberReferencingObjects = -1;
+//	private long numberNonMockedReferences = -1;
+//	private long numberMockedReferences = -1;
+//	private double mockedReferencesPercentage = -1;
+//	private Collection<MockedReferenceCategoryEvalData> mockedReferenceCategoryDatas = null;
 	
 	
 	private long numberReferencesTotal = -1;
 	private long numberNonSyntheticReferencesTotal = -1;
 	private long numberSyntheticReferencesTotal = -1;
 	private double percentageSyntheticReferences = -1;
+	private long numberSyntheticReferencesFiltered = -1;
+	private double percentageSyntheticReferencesFiltered = -1;
 	private Map<Type, SyntheticReferenceEvalData> syntheticReferenceEvalDatas = null;
 
 	
@@ -141,37 +143,46 @@ public class CodeModelGenerationEvalData {
 		this.percentDirectReferencesToMockedElements = percentDirectReferencesToMockedElements;
 	}
 
-	public long getNumberReferencingObjects() {
-		return numberReferencingObjects;
-	}
-
-	public void setNumberReferencingObjects(long numberReferencingObjects) {
-		this.numberReferencingObjects = numberReferencingObjects;
-	}
-
-	public long getNumberNonMockedReferences() {
-		return numberNonMockedReferences;
-	}
-
-	public void setNumberNonMockedReferences(long numberNonMockedReferences) {
-		this.numberNonMockedReferences = numberNonMockedReferences;
-	}
-
-	public long getNumberMockedReferences() {
-		return numberMockedReferences;
-	}
-
-	public void setNumberMockedReferences(long numberMockedReferences) {
-		this.numberMockedReferences = numberMockedReferences;
-	}
-
-	public double getMockedReferencesPercentage() {
-		return mockedReferencesPercentage;
-	}
-
-	public void setMockedReferencesPercentage(double mockedReferencesPercentage) {
-		this.mockedReferencesPercentage = mockedReferencesPercentage;
-	}
+//	public long getNumberReferencingObjects() {
+//		return numberReferencingObjects;
+//	}
+//
+//	public void setNumberReferencingObjects(long numberReferencingObjects) {
+//		this.numberReferencingObjects = numberReferencingObjects;
+//	}
+//
+//	public long getNumberNonMockedReferences() {
+//		return numberNonMockedReferences;
+//	}
+//
+//	public void setNumberNonMockedReferences(long numberNonMockedReferences) {
+//		this.numberNonMockedReferences = numberNonMockedReferences;
+//	}
+//
+//	public long getNumberMockedReferences() {
+//		return numberMockedReferences;
+//	}
+//
+//	public void setNumberMockedReferences(long numberMockedReferences) {
+//		this.numberMockedReferences = numberMockedReferences;
+//	}
+//
+//	public double getMockedReferencesPercentage() {
+//		return mockedReferencesPercentage;
+//	}
+//
+//	public void setMockedReferencesPercentage(double mockedReferencesPercentage) {
+//		this.mockedReferencesPercentage = mockedReferencesPercentage;
+//	}
+//	
+//
+//	public Collection<MockedReferenceCategoryEvalData> getMockedReferenceCategoryDatas() {
+//		return mockedReferenceCategoryDatas;
+//	}
+//
+//	public void setMockedReferenceCategoryDatas(Collection<MockedReferenceCategoryEvalData> mockedReferenceCategoryDatas) {
+//		this.mockedReferenceCategoryDatas = mockedReferenceCategoryDatas;
+//	}
 
 	public long getNumberMockedElements() {
 		return numberMockedElements;
@@ -181,13 +192,6 @@ public class CodeModelGenerationEvalData {
 		this.numberMockedElements = numberMockedElements;
 	}
 
-	public Collection<MockedReferenceCategoryEvalData> getMockedReferenceCategoryDatas() {
-		return mockedReferenceCategoryDatas;
-	}
-
-	public void setMockedReferenceCategoryDatas(Collection<MockedReferenceCategoryEvalData> mockedReferenceCategoryDatas) {
-		this.mockedReferenceCategoryDatas = mockedReferenceCategoryDatas;
-	}
 
 	public Map<Type, SyntheticReferenceEvalData> getSyntheticReferenceEvalDatas() {
 		return syntheticReferenceEvalDatas;
@@ -227,6 +231,22 @@ public class CodeModelGenerationEvalData {
 
 	public void setPercentageSyntheticReferences(double percentageSyntheticReferences) {
 		this.percentageSyntheticReferences = percentageSyntheticReferences;
+	}
+
+	public long getNumberSyntheticReferencesFiltered() {
+		return numberSyntheticReferencesFiltered;
+	}
+
+	public void setNumberSyntheticReferencesFiltered(long numberSyntheticReferencesFiltered) {
+		this.numberSyntheticReferencesFiltered = numberSyntheticReferencesFiltered;
+	}
+
+	public double getPercentageSyntheticReferencesFiltered() {
+		return percentageSyntheticReferencesFiltered;
+	}
+
+	public void setPercentageSyntheticReferencesFiltered(double percentageSyntheticReferencesFiltered) {
+		this.percentageSyntheticReferencesFiltered = percentageSyntheticReferencesFiltered;
 	}
 	
 	

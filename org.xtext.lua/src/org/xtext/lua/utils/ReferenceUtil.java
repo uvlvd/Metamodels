@@ -28,7 +28,7 @@ public class ReferenceUtil {
 	 * Returns the given Referencings reference chain built by recursively
 	 * calling {@link Referencing#getRef()}.
 	 * @param referencing
-	 * @return
+	 * @return the reference chain, not containing the given referencing. The last element references the element referenced through the reference chain.
 	 */
 	public static List<Referencing> getReferenceChain(final Referencing referencing) {
 		return collectReferenceChain(referencing, new ArrayList<>(), 0, MAX_RECURSION_DEPTH);

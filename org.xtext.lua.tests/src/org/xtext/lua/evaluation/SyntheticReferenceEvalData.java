@@ -11,6 +11,7 @@ public class SyntheticReferenceEvalData {
 	protected class SyntheticReferenceCauseEvalData {
 		private int numberTotal = -1;
 		private double percentOfType = -1;
+		private double percentSyntheticOfType = -1;
 		
 		public int getNumberTotal() {
 			return numberTotal;
@@ -24,7 +25,12 @@ public class SyntheticReferenceEvalData {
 		public void setPercentOfType(double percentOfType) {
 			this.percentOfType = percentOfType;
 		}
-
+		public double getPercentSyntheticOfType() {
+			return percentSyntheticOfType;
+		}
+		public void setPercentSyntheticOfType(double percentSyntheticOfType) {
+			this.percentSyntheticOfType = percentSyntheticOfType;
+		}
 	}
 
 	private Type type;
@@ -33,6 +39,18 @@ public class SyntheticReferenceEvalData {
 	private int numberTotalSyntheticOfType = -1;
 	private double percentOfTotalSyntheticReferences = -1;
 	private double percentOfAllReferences = -1;
+	
+	/**
+	 * The "filtered" values represent synthetic references of the given type that do have
+	 * an underlying cause of implicit import or var_not_found
+	 */
+	private int numberFilteredSyntheticOfType = -1;
+	private double percentFilteredOfReferencesOfType = -1;
+	private double percentFilteredOfSyntheticReferencesOfType = -1;
+	private double percentFilteredOfTotalSyntheticReferences = -1;
+	private double percentFilteredOfAllReferences = -1;
+	
+	
 	private Map<Cause, SyntheticReferenceCauseEvalData> causes = new EnumMap<>(Cause.class);
 	
 	public Type getType() {
@@ -77,6 +95,38 @@ public class SyntheticReferenceEvalData {
 	public void setCauses(Map<Cause, SyntheticReferenceCauseEvalData> causes) {
 		this.causes = causes;
 	}
+	public int getNumberFilteredSyntheticOfType() {
+		return numberFilteredSyntheticOfType;
+	}
+	public void setNumberFilteredSyntheticOfType(int numberFilteredSyntheticOfType) {
+		this.numberFilteredSyntheticOfType = numberFilteredSyntheticOfType;
+	}
+	public double getPercentFilteredOfReferencesOfType() {
+		return percentFilteredOfReferencesOfType;
+	}
+	public void setPercentFilteredOfReferencesOfType(double percentFilteredOfReferencesOfType) {
+		this.percentFilteredOfReferencesOfType = percentFilteredOfReferencesOfType;
+	}
+	public double getPercentFilteredOfTotalSyntheticReferences() {
+		return percentFilteredOfTotalSyntheticReferences;
+	}
+	public void setPercentFilteredOfTotalSyntheticReferences(double percentFilteredOfTotalSyntheticReferences) {
+		this.percentFilteredOfTotalSyntheticReferences = percentFilteredOfTotalSyntheticReferences;
+	}
+	public double getPercentFilteredOfAllReferences() {
+		return percentFilteredOfAllReferences;
+	}
+	public void setPercentFilteredOfAllReferences(double percentFilteredOfAllReferences) {
+		this.percentFilteredOfAllReferences = percentFilteredOfAllReferences;
+	}
+	public double getPercentFilteredOfSyntheticReferencesOfType() {
+		return percentFilteredOfSyntheticReferencesOfType;
+	}
+	public void setPercentFilteredOfSyntheticReferencesOfType(double percentFilteredOfSyntheticReferencesOfType) {
+		this.percentFilteredOfSyntheticReferencesOfType = percentFilteredOfSyntheticReferencesOfType;
+	}
+	
+	
 	
 	
 }

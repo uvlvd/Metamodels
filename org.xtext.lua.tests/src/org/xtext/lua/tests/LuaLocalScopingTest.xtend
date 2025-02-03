@@ -12,9 +12,12 @@ import org.xtext.lua.lua.Var
 import org.xtext.lua.lua.ExpNumberLiteral
 import org.xtext.lua.lua.MemberAccess
 import org.xtext.lua.lua.ExpNil
+import org.xtext.lua.lua.ExpFunctionDeclaration
+import org.xtext.lua.lua.LocalAssignment
 
 /**
- * Class containing tests for the local scoping (i.e. reference resolution).
+ * Class containing tests for the local scoping (i.e. reference resolution). These tests together
+ * with the tests contained in LuaGlobalScopingTest.xted form the test suite T_RR referenced in the thesis.
  * @author jsaenz
  */
  // TODO: Most of the tests in this class do not contain testing functionalities other than 
@@ -51,7 +54,8 @@ class LuaLocalScopingTest {
 	def void TX_featurePathTest() {
 		val SUT = '''
 			local get_A = function()
-			    local t = {x = 10}
+			    local t = {}
+			    t.x = 10
 			    return t
 			end
 			
@@ -60,6 +64,16 @@ class LuaLocalScopingTest {
 			local x = b.x
 		'''
 		val result = parseHelper.parseAndPerformBaseScopingTest(SUT)
+		val firstAssignment = result.block.stats.get(0) as LocalAssignment
+		val decl = firstAssignment.getExpList.getExps.get(0) as ExpFunctionDeclaration
+		val txAssignment = decl.getBody().getBlock().getStats().get(1) as Assignment
+		val referencedXPrefix = txAssignment.getVars.get(0) as Var
+		val referencedX = referencedXPrefix.getSuffixExp() as MemberAccess
+		
+		val lastAssignment = result.block.stats.get(3) as LocalAssignment
+		val b = lastAssignment.getExpList().getExps().get(0) as Var
+		val referencingX = b.getSuffixExp() as MemberAccess
+		Assertions.assertEquals(referencingX.getRef, referencedX)
 	}
 	
 	// expected to fail
@@ -75,7 +89,7 @@ class LuaLocalScopingTest {
 			end
 			y = get_A().y
 		'''
-		val result = parseHelper.parseAndPerformBaseScopingTest(SUT) // expected to fail
+		parseHelper.parseAndPerformBaseScopingTest(SUT, true) // expected to fail
 	}
 	
 	@Test
@@ -256,7 +270,7 @@ class LuaLocalScopingTest {
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 	
-	// TODO: need to implement references to function return values where feasible to fix test
+	// TODO: need to implement references to function return values 
 	@Test
 	def void functionDeclarationTest() { 
 		val SUT = '''
@@ -274,7 +288,7 @@ class LuaLocalScopingTest {
 			a.x.memberFunc()["member"]
 			
 		'''
-		parseHelper.parseAndPerformBaseScopingTest(SUT)
+		parseHelper.parseAndPerformBaseScopingTest(SUT, true)
 	}
 	
 	
@@ -528,12 +542,6 @@ class LuaLocalScopingTest {
 		print(x)              --> 10  (the global one)
 		'''
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
-		// TODO: fix the problem described by the failed assertion below see also LinkingAndScopingUtils.getReferenceablesFromStat)
-		//    update: should already be fixed, need to extend test to test that the correct vars are referenced
-		Assertions.assertTrue(
-			false, 
-			"The print(x) in the last line should reference the global x, but references a local one (the one in the first block x=x+1)."
-		);
 	}
 	
 	// never allow a rhs to reference its own lhs

@@ -20,7 +20,15 @@ class DefaultTestingParserHelper {
 	 * i.e. testing for the absence of unresolved or mocked references.
 	 */
 	def Chunk parseAndPerformBaseScopingTest(String SUT) {
-		return parseAndPerformBaseScopingTest(SUT, null)
+		return parseAndPerformBaseScopingTest(SUT, null, false)
+	}
+	
+	def Chunk parseAndPerformBaseScopingTest(String SUT, boolean expectedToFail) {
+		return parseAndPerformBaseScopingTest(SUT, null, expectedToFail)
+	}
+	
+	def Chunk parseAndPerformBaseScopingTest(String SUT, ResourceSet rs) {
+		return parseAndPerformBaseScopingTest(SUT, rs, false)
 	}
 	
 	/**
@@ -28,9 +36,9 @@ class DefaultTestingParserHelper {
 	 * i.e. testing for the absence of unresolved or mocked references. If a resourceSet is given,
 	 * it is used to resolve external references.
 	 */
-	def Chunk parseAndPerformBaseScopingTest(String SUT, ResourceSet rs) {
+	def Chunk parseAndPerformBaseScopingTest(String SUT, ResourceSet rs, boolean expectedToFail) {
 		val result = parseAndPerformBaseTest(SUT, false, rs)
-		TestUtil.assertAllReferencesResolved(result)
+		TestUtil.assertAllReferencesResolved(result, expectedToFail)
 		return result
 	}
 	

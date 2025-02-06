@@ -8,16 +8,13 @@ import java.util.stream.Stream;
 
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.serializer.ISerializer;
-import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.utils.FeatureUtil;
 import org.xtext.lua.utils.MockUtil;
 import org.xtext.lua.utils.StatUtil;
 
 /**
- * Used to collect information about mocked references for evaluation. A mocked reference
- * is an object referencing an object with {@link MockUtil#isMocked(EObject)} = true through its reference chain. The reference chain is given
- * by calling {@link Referencing#getRef()} repeatedly, until it returns null.
+ * Can be used for debugging, prints information about statements for mocked/synthetic elements.
  * @author jsaenz
  *
  */
@@ -26,7 +23,6 @@ public class MockInfoCollector {
 	private Map<MockInfo.Cause, List<MockInfo>> infoByCause = new EnumMap<>(MockInfo.Cause.class);
 	
 	public MockInfoCollector() {
-		// init infoByCause map
 		Stream.of(MockInfo.Cause.values()).forEach(cause -> infoByCause.put(cause, new ArrayList<>()));
 	}
 	
@@ -93,25 +89,6 @@ public class MockInfoCollector {
 		System.out.println("    context:      " + ta);
 		System.out.println("    resource uri: " + ta.eResource().getURI());
 	}
-
-	
-	//TODO: class unfinished, needs implementation
-//	public void printContextInfo(final EObject context) {
-//		final var statOpt = StatUtil.getParentStatement(context);
-//		if (statOpt.isPresent()) {
-//			final var stat = statOpt.get();
-//			System.out.println("Mocked object stat info: ");
-//			System.out.println("	serialized:   \"" + serializer.serialize(stat).trim() + "\"");
-//			System.out.println("    context:      " + context);
-//			System.out.println("    resource uri: " + context.eResource().getURI());
-//		} else {
-//			System.out.println("Mocked object info: ");
-//			System.out.println("	serialized:   \"" + serializer.serialize(context).trim() + "\"");
-//			System.out.println("    context:      " + context);
-//			System.out.println("    resource uri: " + context.eResource().getURI());
-//		}
-//	}
-	
 	
 	
 	

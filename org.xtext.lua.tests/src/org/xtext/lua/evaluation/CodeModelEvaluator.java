@@ -3,7 +3,6 @@ package org.xtext.lua.evaluation;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -23,7 +22,6 @@ public class CodeModelEvaluator {
 	
 	private HashMap<String, CodeModelGenerationEvalData> evalDatas = new HashMap<>();
 	private HashMap<String, CodeModelGenerationDurationEvalData> durationDatas = new HashMap<>();
-	private MockInfoCollector mockInfoCollector = new MockInfoCollector();
 	private SyntheticReferenceInfoCollector syntheticReferenceInfoCollector = new SyntheticReferenceInfoCollector();
 	
 	/**
@@ -47,9 +45,11 @@ public class CodeModelEvaluator {
 			computeAndSetMockedElementsData(codeModel, evalData);
 		}
 	}
-
-	public MockInfoCollector getMockInfoCollector() {
-		return mockInfoCollector;
+	
+	public void clear() {
+		evalDatas.clear();
+		durationDatas.clear();
+		syntheticReferenceInfoCollector.clear();
 	}
 
 	public void setupAndStartTimingEvaluationFor(final String projectId) {
@@ -175,7 +175,6 @@ public class CodeModelEvaluator {
 	}
 	
 	private void computeAndSetMockedElementsData(final ResourceSet codeModel, CodeModelGenerationEvalData evalData) {
-		mockInfoCollector.clear();
 		
 		var mockedObjectCount = 0;
 		var numberReferencingElements = 0;
@@ -189,26 +188,12 @@ public class CodeModelEvaluator {
 				.stream()
 				.forEach( refing -> {
 					if (refing.getRef() instanceof SyntheticVar) {
-						mockInfoCollector.collect(refing);
 					}
 				});
 		}
-		
-		final var numberMockedReferences = mockInfoCollector.getCount();
-//		final var mockedPercentage = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(numberMockedReferences, numberReferencingElements));
-		
+
 		evalData.setNumberMockedElements(mockedObjectCount);
 		
-//		evalData.setNumberReferencingObjects(numberReferencingElements);
-//		evalData.setNumberNonMockedReferences(numberReferencingElements - numberMockedReferences);
-//		evalData.setNumberMockedReferences(numberMockedReferences);
-//		evalData.setMockedReferencesPercentage(mockedPercentage);
-//		evalData.setMockedReferenceCategoryDatas(
-//				createMockedCategoriesdata(mockInfoCollector, numberMockedReferences, numberReferencingElements, evalData)
-//		);
-		
-		
-		// new
 		final var numberReferencesTotal = numberReferencingElements;
 		final var syntheticReferenceData = syntheticReferenceInfoCollector.getSyntheticReferenceTypeEvalData(codeModel, numberReferencesTotal);
 		evalData.setSyntheticReferenceEvalDatas(syntheticReferenceData);
@@ -234,39 +219,6 @@ public class CodeModelEvaluator {
 		evalData.setNumberSyntheticReferencesFiltered(numberSyntheticReferencesFiltered);
 		evalData.setPercentageSyntheticReferencesFiltered(percentageSyntheticReferencesFiltered);
 	}
-	
-	private Collection<MockedReferenceCategoryEvalData> createMockedCategoriesdata(
-			final MockInfoCollector mockInfoCollector, 
-			final long numberMockedReferences,
-			final long numberReferencingElements,
-			final CodeModelGenerationEvalData evalData) {
-		var infoByCause = mockInfoCollector.getInfoByCause();
-		
-		var result = new ArrayList<MockedReferenceCategoryEvalData>();
-		infoByCause.keySet().stream().forEach(cause -> {
-			final var count = infoByCause.get(cause).size();
-			final var numberCausedByPrevious = infoByCause.get(cause)
-				.stream()
-				.filter(MockInfo::isCausedByPreviousFeature)
-				.toList()
-				.size();
-			var categoryData = new MockedReferenceCategoryEvalData();
-			final var percentageOfMockedReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(count, numberMockedReferences));
-			
-			final var percentageOfAllReferences = NumberUtil.roundPercentage(100d - NumberUtil.computePercentage(count, numberReferencingElements));
-			
-			categoryData.setCategory(cause);
-			categoryData.setNumberCausedByOther(numberCausedByPrevious);
-			categoryData.setNumberTotal(count);
-			categoryData.setPercentageOfAllReferences(percentageOfAllReferences);
-			categoryData.setPercentageOfMockedReferences(percentageOfMockedReferences);
-			
-			result.add(categoryData);
-		});
-		
-		return result;
-	}
-	
 	
 	private long computeTotalNumberOfModelElements(final ResourceSet codeModel) {
 		var counter = new AtomicLong();

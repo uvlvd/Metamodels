@@ -637,5 +637,6 @@ class LuaLocalScopingTest {
 		'''
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
+
 	
 }

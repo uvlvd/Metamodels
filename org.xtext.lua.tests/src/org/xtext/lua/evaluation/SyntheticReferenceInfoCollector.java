@@ -20,14 +20,11 @@ import org.xtext.lua.lua.GroupedExp;
 import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.MethodCall;
 import org.xtext.lua.lua.NamedFeature;
-import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
 import org.xtext.lua.mocking.FeaturePath;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
-import org.xtext.lua.scoping.LuaResourceDescriptionStrategy;
-import org.xtext.lua.utils.AssignmentUtil;
 import org.xtext.lua.utils.ExpUtil;
 import org.xtext.lua.utils.FeatureUtil;
 import org.xtext.lua.utils.LuaRequireUtil;
@@ -244,7 +241,7 @@ public class SyntheticReferenceInfoCollector {
 		for (final var feature: featurePath.getContextFeatures()) {
 			// handle root feature being GroupedExp
 			if (feature instanceof GroupedExp) {
-				return Cause.GROUPED_EXP;
+				return Cause.GROUPED_EXP; // grouped expressions are never resolved -> special cause
 			}
 			
 			
@@ -260,7 +257,7 @@ public class SyntheticReferenceInfoCollector {
 			// referenced a synthetic element, the contextFeature itself must contain the cause.
 			// The condition feature == contextFeature is needed to skip non-named features like FunctionCall
 			if (feature == contextFeature) {
-				return getCauseForFeature(contextFeature);
+				return getCauseForFirstUnresolvableFeatureInFeaturePath(contextFeature);
 			}
 		}
 		
@@ -272,12 +269,11 @@ public class SyntheticReferenceInfoCollector {
 	// 2. for first feature that directly references a synthetic element, the PREVIOUS feature is the cause
 	//     - if a var is synthetic (i.e. no previous feature):
 	//              - probably external library, or some global value that could not be resolved
-	//              - ???
 	// 3. pass through reference chain of PREVIOUS feature, for all features check if
 	//     - direct reference to synthetic element -> cause is cause of that feature
 	//     - end in function call -> cause is function call resolution
 	//     - check for implicit imports along the way (which are function resolutions!)
-	private Cause getCauseForFeature(final NamedFeature unresolvableFeature) {
+	private Cause getCauseForFirstUnresolvableFeatureInFeaturePath(final NamedFeature unresolvableFeature) {
 		// no previous feature
 		if (unresolvableFeature instanceof Var) {
 			// probably defined in external library or not found by global scope provider
@@ -285,16 +281,15 @@ public class SyntheticReferenceInfoCollector {
 		}
 		
 		if (ExpUtil.isTableAccessWithLinkingDummyName(unresolvableFeature)) {
-			// probably defined in external library or not found by global scope provider
+			// Dynamic Access to table field could not be resolved
 			return Cause.TABLE_INDEX_EXP;
 		}
-		
 		
 		
 		// check for causes in the previous feature
 		final var previous = FeatureUtil.getPreviousFeature(unresolvableFeature);
 		// previous feature should be available here
-		if (previous == null) {
+		if (previous == null) { // should never happen, previous features should have been handled before
 			LOGGER.error("Could not determine previous Feature for unresolvable feature: " + unresolvableFeature);
 			return Cause.UNIDENTIFIED;
 		}
@@ -313,11 +308,6 @@ public class SyntheticReferenceInfoCollector {
 		
 		// if previous is namedFeature (MemberAccess, TableAccess, or MethodCall
 		if (previous instanceof NamedFeature namedPrevious) {
-			// if direct reference to Arg -> Cause is Arg access
-//			if (namedPrevious.getRef() instanceof Arg) {
-//				return Cause.ARG_ACCESS;
-//			}
-			// TODO: this is probably never called because this method is only called with the first
 			// feature in a path that has MockUtil.referencesMocked == true (i.e. the previous feature
 			// cannot return true for this referencesMocked
 			// if the previous feature directly references a synthetic element, it defines the cause
@@ -334,7 +324,6 @@ public class SyntheticReferenceInfoCollector {
 		return Cause.UNEXPECTED;
 	}
 	
-	// TODO: should getInfo for first named feature prefix to the functionCall
 	private Cause getCauseForFunctionCallFeature(FunctionCall functionCall) {
 		final var calledFunctionName = FeatureUtil.getFirstNamedPrefix(functionCall);
 		
@@ -375,20 +364,6 @@ public class SyntheticReferenceInfoCollector {
 		return Cause.FUNCTION_RESOLUTION;
 	}
 	
-	private Cause getCauseByFeatureType(NamedFeature feature) {
-		if (isInImplicitResource(feature)) {
-			return Cause.IMPLICIT_IMPORT;
-		}
-		if (feature instanceof TableAccess || feature instanceof MemberAccess) {
-			return Cause.TABLE_INDEX_EXP;
-		}
-		if (feature instanceof MethodCall) {
-			return Cause.FUNCTION_RESOLUTION;
-		}
-		LOGGER.error("Could not determine cause by feature type: " + feature);
-		return Cause.UNEXPECTED;
-	}
-	
 	private boolean isInImplicitResource(EObject obj) {
 		if (obj == null) {
 			return false;
@@ -413,26 +388,12 @@ public class SyntheticReferenceInfoCollector {
 	private Cause tryInferCauseAlongReferenceChain(NamedFeature previousFeature, NamedFeature unresolvable) {
 		final var referenceChain = ReferenceUtil.getReferenceChain(previousFeature);
 		
-		//...
-		// - TODO: need to think about how this should be resolved,
-		//    -> 
-		
-		// new: for referencing in reference chain
-		// - check if feature 
-		// 		-> check if any feature is mocked -> return cause
-		// - for last element in reference chain: -> check if followed by FunctionCall -> return Cause.Function_Resolution
-		
-		Referencing previous = previousFeature;
 		for (final var referencing : referenceChain) {
 			// if any along the reference chain directly reference a synthetic element, compute and return
 			// the corresponding cause
 			if (referencing instanceof NamedFeature named && MockUtil.referencesMocked(named)) {
 				return getInfoFor(named).getCause();
 			}
-			
-			//if (AssignmentUtil.isAssignable(referencing))
-		
-			
 			
 			if (referencing instanceof Feature referencedFeature) {
 				final var featurePath = new FeaturePath(referencedFeature);
@@ -443,7 +404,6 @@ public class SyntheticReferenceInfoCollector {
 					}
 				}
 			}
-			previous = referencing;
 		}
 		
 		final var referenced = ReferenceUtil.getReferencedElement(previousFeature);
@@ -473,218 +433,9 @@ public class SyntheticReferenceInfoCollector {
 		return Cause.UNIDENTIFIED;
 	}
 	
-	
-	
 	private boolean importFailed(final FeaturePath featurePath) {
 		final var root = featurePath.getPrefix();
 		return root instanceof Var var && LuaRequireUtil.isRequireFunctionCall(var);
 	}
-
-	
-//	
-//	
-//	
-//	private Cause getCauseForFeature2(final Feature unresolvableFeature) {
-//		if (unresolvableFeature instanceof NamedFeature feature) {
-//			final var referenced = feature.getRef();
-//			final var featurePath = new FeaturePath(feature);
-//			
-//			// handle implicit imports: check if feature path starts with "require" etc.
-//			if (originatesInImplicitImport(featurePath)) {
-//				return Cause.IMPLICIT_IMPORT;
-//			}
-//			
-//			if (importFailed(featurePath)) {
-//				return Cause.OTHER_IMPORT;
-//			}
-//			
-//			if (referenced instanceof Arg) {
-//				return Cause.ARG_ACCESS;
-//			} else if (feature instanceof Var) {
-//				return Cause.VAR_NOT_FOUND;
-//			}
-//			
-//			// check for causes in the previous feature
-//			final var previous = FeatureUtil.getPreviousFeature(unresolvableFeature);
-//			// previous feature should be available here
-//			if (previous == null) {
-//				LOGGER.error("Could not determine previous Feature for unresolvable feature: " + unresolvableFeature);
-//				return Cause.UNIDENTIFIED;
-//			}
-//			// assumption: return values of previous function call feature could not be computed => cause is function resolution
-//			if (previous instanceof FunctionCall || previous instanceof MethodCall) {
-//				return Cause.FUNCTION_RESOLUTION;
-//			}
-//			// assumption: table access index expression of previous access feature could not be computed => cause is index expression resolution
-//			// this includes member accesses of the form table.member, for example when the field was declared by table["mem" .. "ber"] = x.
-//			if (previous instanceof TableAccess || previous instanceof MemberAccess) {
-//				return Cause.TABLE_INDEX_EXP;
-//			}
-//			
-//			
-//			
-//			if (previous instanceof NamedFeature previousRef) {
-//				if (previousRef.getRef() instanceof Arg) {
-//					return Cause.ARG_ACCESS;
-//				}
-//				return inferCauseAlongReferenceChain(previousRef);
-//			}
-//			
-//			else if (previous instanceof Var) {
-//				return Cause.VAR_NOT_FOUND;
-//			}
-//			
-//			// Fallback: could not identify cause
-//			return Cause.UNIDENTIFIED;
-//		}
-//		
-//		LOGGER.error("Unexpectedly found non-named feature: " + unresolvableFeature);
-//		return Cause.UNEXPECTED;
-//	}
-	
-	
-//	private boolean originatesInImplicitImport(final FeaturePath featurePath) {
-//		final var root = featurePath.getRoot();
-//		if (root instanceof Var var) {
-//			return originatesInImplicitImport(var);
-//		}
-//		return false;
-//	}
-
-//	
-//	/**
-//	 * Check if the given Feature path originates in an implicit import (i.e. a Lua language library), by checking if any
-//	 * feature path root in the reference chain is part of an implicit resource.
-//	 */
-//	private boolean originatesInImplicitImport(final Var var) {
-//		
-//		if (LuaRequireUtil.isRequireFunctionCall(var)) {
-//			final var importUriStrOpt = LuaRequireUtil.getImportUri(var);
-//			if (importUriStrOpt.isPresent()) {
-//				var importUri = importUriStrOpt.get();
-//				if (!importUri.endsWith(".lua")) {
-//					importUri += ".lua";
-//				}
-//				
-//				final var matchUri = importUri;
-//				final var implicitUris = LuaGlobalScopeProvider.getImplicitLibraryUris()
-//						.stream()
-//						.map(uri -> uri.toFileString())
-//						.toList();
-//				return implicitUris.stream()
-//						.anyMatch(implicitUri -> LuaResourceDescriptionStrategy.importUriEqualsFileUri(matchUri, implicitUri));
-//				
-////				return LuaGlobalScopeProvider.getImplicitLibraryUris()
-////						.stream()
-////						.map(uri -> uri.toFileString())
-////						.anyMatch(implicitUriString -> implicitUriString.contains(uriString));
-//			}
-//			
-//		}
-//		return false;
-//	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-//	
-//	private Cause inferCauseAlongReferenceChain() {
-//		final var referenceChain = ReferenceUtil.getReferenceChain(feature);
-//	}
-//	
-//	
-//	// TODO: need to consider all FeaturePaths of the reference chain, since they 
-//	//  may contain features that are the real cause???
-//	private Cause inferCause(final Feature contextFeature) {
-//		
-//		final var featurePath = new FeaturePath(contextFeature);
-//		for (final var feature: featurePath.getContextFeatures()) {
-//			// handle root feature being GroupedExp
-//			if (feature instanceof GroupedExp) {
-//				return Cause.GROUPED_EXP;
-//			}
-//			
-//			if (feature instanceof NamedFeature namedFeature) {
-//				final var referenced = ReferenceUtil.getReferencedElement(namedFeature);
-//				if (referenced == null) {
-//					System.out.println("Unexpected null returned as referencd element for Feature: " + feature);
-//					assert(false);
-//				}
-//				if (MockUtil.isMocked(referenced)) {
-//					return inferCauseByPreviousFeature(namedFeature);
-//				}
-//			}
-//		}
-//		
-//		return Cause.UNIDENTIFIED;
-//	}
-//	
-//	
-//	
-//	/**
-//	 * Infers the cause for the given feature not being resolvable by considering the previous Feature in the Feature Path.
-//	 * Assumes that the unresolvedFeature is the first unresolved feature in the corresponding FeaturePath.
-//	 * @param unresolvedFeature the first unresolved Feature in the corresponding FeaturePath.
-//	 * @return the cause according to the previous feature.
-//	 */
-//	private Cause inferCauseByPreviousFeature(final NamedFeature unresolvableFeature) {
-//		// TODO: handle implicit imports as causes
-//		if (unresolvableFeature instanceof Var var) {
-//			if (referenceChainContainsReferenceToArg(var)) {
-//				return Cause.ARG_ACCESS;
-//			}
-//			if (referenceChainContainsReferenceToImplicitImport(var)) {
-//				return Cause.IMPLICIT_IMPORT;
-//			}
-//			// TODO: test for arg access
-//			return Cause.VAR_NOT_FOUND;
-//		}
-//		
-//		final var previous = FeatureUtil.getPreviousFeature(unresolvableFeature);
-//		// previous feature should be available here
-//		if (previous == null) {
-//			LOGGER.error("Could not determine previous Feature for unresolvable feature: " + unresolvableFeature);
-//			return Cause.UNIDENTIFIED;
-//		}
-//		// assumption: return values of previous function call feature could not be computed => cause is function resolution
-//		if (previous instanceof FunctionCall || previous instanceof MethodCall) {
-//			return Cause.FUNCTION_RESOLUTION;
-//		}
-//		// assumption: table access index expression of previous access feature could not be computed => cause is index expression resolution
-//		// this includes member accesses of the form table.member, for example when the field was declared by table["mem" .. "ber"] = x.
-//		if (previous instanceof TableAccess || previous instanceof MemberAccess) {
-//			return Cause.TABLE_INDEX_EXP;
-//		}
-//		
-//		
-//		return Cause.UNIDENTIFIED;
-//	}
-//	
-//	private boolean referenceChainContainsReferenceToArg(NamedFeature feature) {
-//		final var referenceChain = ReferenceUtil.getReferenceChain(feature);
-//		return referenceChain.stream().anyMatch(ref -> {
-//			if (ref instanceof Arg) {
-//				return true;
-//			}
-//			
-//			// test that no references along the path
-//			if (ref instanceof Feature f) {
-//				final var featurePath = new FeaturePath(f);
-//				final var root = featurePath.getPrefix();
-//				if (root instanceof Var varRoot) {
-//					final var referencedByFeature = ReferenceUtil.getReferencedElement(varRoot);
-//				}
-//			}
-//			
-//			
-//			
-//		});
-//	}
 
 }

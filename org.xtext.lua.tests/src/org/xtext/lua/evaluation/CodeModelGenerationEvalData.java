@@ -1,7 +1,7 @@
 package org.xtext.lua.evaluation;
 
-import java.util.Collection;
 import java.util.Map;
+
 import org.xtext.lua.evaluation.SyntheticReferenceInfo.Type;
 
 /**
@@ -32,14 +32,7 @@ public class CodeModelGenerationEvalData {
 	// mock info: mocked objects and references to mocked objects 
 	private long numberMockedElements = -1;
 	
-	// TODO: these can be removed in favour of the new synthetic stuff
-//	private long numberReferencingObjects = -1;
-//	private long numberNonMockedReferences = -1;
-//	private long numberMockedReferences = -1;
-//	private double mockedReferencesPercentage = -1;
-//	private Collection<MockedReferenceCategoryEvalData> mockedReferenceCategoryDatas = null;
-	
-	
+	// data generated based on SyntheticReferenceInfoCollector
 	private long numberReferencesTotal = -1;
 	private long numberNonSyntheticReferencesTotal = -1;
 	private long numberSyntheticReferencesTotal = -1;
@@ -142,47 +135,6 @@ public class CodeModelGenerationEvalData {
 	public void setPercentDirectReferencesToMockedElements(double percentDirectReferencesToMockedElements) {
 		this.percentDirectReferencesToMockedElements = percentDirectReferencesToMockedElements;
 	}
-
-//	public long getNumberReferencingObjects() {
-//		return numberReferencingObjects;
-//	}
-//
-//	public void setNumberReferencingObjects(long numberReferencingObjects) {
-//		this.numberReferencingObjects = numberReferencingObjects;
-//	}
-//
-//	public long getNumberNonMockedReferences() {
-//		return numberNonMockedReferences;
-//	}
-//
-//	public void setNumberNonMockedReferences(long numberNonMockedReferences) {
-//		this.numberNonMockedReferences = numberNonMockedReferences;
-//	}
-//
-//	public long getNumberMockedReferences() {
-//		return numberMockedReferences;
-//	}
-//
-//	public void setNumberMockedReferences(long numberMockedReferences) {
-//		this.numberMockedReferences = numberMockedReferences;
-//	}
-//
-//	public double getMockedReferencesPercentage() {
-//		return mockedReferencesPercentage;
-//	}
-//
-//	public void setMockedReferencesPercentage(double mockedReferencesPercentage) {
-//		this.mockedReferencesPercentage = mockedReferencesPercentage;
-//	}
-//	
-//
-//	public Collection<MockedReferenceCategoryEvalData> getMockedReferenceCategoryDatas() {
-//		return mockedReferenceCategoryDatas;
-//	}
-//
-//	public void setMockedReferenceCategoryDatas(Collection<MockedReferenceCategoryEvalData> mockedReferenceCategoryDatas) {
-//		this.mockedReferenceCategoryDatas = mockedReferenceCategoryDatas;
-//	}
 
 	public long getNumberMockedElements() {
 		return numberMockedElements;

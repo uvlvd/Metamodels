@@ -68,43 +68,50 @@ public class FunctionUtil {
 	 * @param maxDepth max recursion depth.
 	 * @return the referenced {@link LuaFunctionDeclaration}, or null.
 	 */
-	public static LuaFunctionDeclaration getReferencedFunction(Referenceable ref, int currDepth, final int maxDepth) {
-		if (currDepth > maxDepth) {
-			throw new RuntimeException("Reached max depth while attempting to get called function value from " + ref);
+	public static LuaFunctionDeclaration getReferencedFunction(EObject ref) {
+		if (ref instanceof Referencing refing) {
+			final var referenced = ReferenceUtil.getReferencedElement(refing);
+			return LuaFunctionDeclaration.of(referenced);
 		}
-		
-		if (ref instanceof FunctionDeclaration decl) {
-			return LuaFunctionDeclaration.of(decl);
-		}
-
-		if (ref instanceof LocalFunctionDeclaration decl) {
-			return LuaFunctionDeclaration.of(decl);
-		}
-		
-		if (ref instanceof ExpFunctionDeclaration decl) {
-			return LuaFunctionDeclaration.of(decl);
-		}
-		
-		if (MockUtil.isMocked(ref)) {
-			return null;
-		}
-		
-		if (ref instanceof Referencing referencing) {
-			var refsRef = referencing.getRef();
-			
-			// if ref references a feature, use the feature path leaf as the next ref
-			if (refsRef instanceof Feature feature) {
-				final var namedLeafOpt = FeatureUtil.findFeaturePathNamedLeaf(feature);
-				if (namedLeafOpt.isPresent()) {
-					refsRef = namedLeafOpt.get();
-				}
-			}
-			return getReferencedFunction(refsRef, ++currDepth, maxDepth);
-		}
-		
-		// TODO: this fails in certain cases, e.g.g a = b and load(b) in lua 5.2 test suite api.lua
-		//throw new RuntimeException("Could not find called function!");
 		return null;
+		
+		
+//		if (currDepth > maxDepth) {
+//			throw new RuntimeException("Reached max depth while attempting to get called function value from " + ref);
+//		}
+//		
+//		if (ref instanceof FunctionDeclaration decl) {
+//			return LuaFunctionDeclaration.of(decl);
+//		}
+//
+//		if (ref instanceof LocalFunctionDeclaration decl) {
+//			return LuaFunctionDeclaration.of(decl);
+//		}
+//		
+//		if (ref instanceof ExpFunctionDeclaration decl) {
+//			return LuaFunctionDeclaration.of(decl);
+//		}
+//		
+//		if (MockUtil.isMocked(ref)) {
+//			return null;
+//		}
+//		
+//		if (ref instanceof Referencing referencing) {
+//			var refsRef = referencing.getRef();
+//			
+//			// if ref references a feature, use the feature path leaf as the next ref
+//			if (refsRef instanceof Feature feature) {
+//				final var namedLeafOpt = FeatureUtil.findFeaturePathNamedLeaf(feature);
+//				if (namedLeafOpt.isPresent()) {
+//					refsRef = namedLeafOpt.get();
+//				}
+//			}
+//			return getReferencedFunction(refsRef, ++currDepth, maxDepth);
+//		}
+//		
+//		// TODO: this fails in certain cases, e.g.g a = b and load(b) in lua 5.2 test suite api.lua
+//		//throw new RuntimeException("Could not find called function!");
+//		return null;
 	}
 	
     

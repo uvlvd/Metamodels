@@ -25,6 +25,7 @@ import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.LocalVar;
+import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.MethodCall;
 import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.Referenceable;
@@ -123,6 +124,7 @@ public class LuaFeatureScopeProvider extends LuaAbstractBlockScopeProvider {
     	// TODO: we use features here to be able to distinguish between function/methodCalls and other feature types
     	// i.e. can't use a FeaturePathCandidate for the current feature, but might want to implement a FeaturePath class.
     	final var featurePathPrefixOpt = FeatureUtil.findFeaturePathPrefixAsVar(context);
+    	
     	if (featurePathPrefixOpt.isPresent()) {
     		final var featurePathRoot = featurePathPrefixOpt.get();
         	final var featurePathCandidates = featurePathCandidateBuilder.buildFeaturePathCandidates(referenceables);
@@ -203,6 +205,14 @@ public class LuaFeatureScopeProvider extends LuaAbstractBlockScopeProvider {
     	final var currentName = currentFqn.getLastSegment();
     	// check for all candidates if they match, build new candidates from function calls and candidates that reference other Referenceables
     	for (var candidate : candidates) {
+    		// TODO: this appears twice here (and I think it may need to?), should overhaul this whole providr
+    		// to be closer to the algorithm described in the thesis
+    		if (candidate.referencesReferencing()) {	
+				// this is the rhs expression the candidate points at if it is an assignable:
+				// -> points at the start of a featurePath if it is a feature
+				var assignedReferencing = candidate.getReferencedReferencing(); // TODO: is this always a feature if this is referencing?
+				result.addAll(buildFeaturePathCandidatesFromAssignedReferencing(context, reference, assignedReferencing));		
+			}
     		if (candidate.checkAndIncrementIndex(currentName)) {
     			result.add(candidate); // candidate matches, keep as part of result
     				

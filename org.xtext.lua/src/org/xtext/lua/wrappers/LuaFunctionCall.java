@@ -2,18 +2,11 @@ package org.xtext.lua.wrappers;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.xtext.EcoreUtil2;
-
-import org.xtext.lua.lua.ExpFunctionDeclaration;
 import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.FunctionCallStat;
-import org.xtext.lua.lua.FunctionDeclaration;
-import org.xtext.lua.lua.LocalFunctionDeclaration;
 import org.xtext.lua.lua.MethodCall;
 import org.xtext.lua.lua.NamedFeature;
-import org.xtext.lua.lua.Referenceable;
-import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.mocking.FeaturePath;
 import org.xtext.lua.utils.FeatureUtil;
 import org.xtext.lua.utils.FunctionUtil;
@@ -33,6 +26,12 @@ public class LuaFunctionCall {
 	 * The feature calling the function;
 	 */
 	private Feature callingFeature;
+	
+	/**
+	 * The named feature of this function call, either the name of a {@link MethodCall}, or
+	 * the feature preceding the {@link FunctionCall} this {@link LuaFunctionCall} was built from.
+	 */
+	private NamedFeature namedFeature;
 	
 	// set on init, contract: calledFunction = null <=> isMocked = true
 	private boolean isMocked = false; 
@@ -58,6 +57,11 @@ public class LuaFunctionCall {
 	public Feature getCallingFeature() {
 		return callingFeature;
 	}
+
+	public NamedFeature getNamedFeature() {
+		return namedFeature;
+	}
+
 
 	/**
 	 * Returns true if the reference to the called function is mocked, i.e. {@link #getCalledFunction()} returns null.
@@ -88,20 +92,18 @@ public class LuaFunctionCall {
 	}
 
 	public static LuaFunctionCall of(final FunctionCallStat functionCallStat) {
-		var result = new LuaFunctionCall();
-		
 		final var featureRoot = (Feature) functionCallStat.getPrefix();
 		final var featurePathLeaf = FeatureUtil.getFeaturePathLeaf(featureRoot);
-		final var featurePathNamedLeafOpt = FeatureUtil.findFeaturePathNamedLeaf(featureRoot);
-		if (featurePathNamedLeafOpt.isPresent()) {
-			result.initFromNamedFeature(featurePathLeaf, featurePathNamedLeafOpt.get());
+		
+		if (featurePathLeaf instanceof FunctionCall fc) {
+			return of(fc);
 		}
 		
-		if (!result.validateConstruction()) {
-			return null;
+		if (featurePathLeaf instanceof MethodCall mc) {
+			return of(mc);
 		}
 		
-		return result;
+		return null;
 	}
 	
 	public static LuaFunctionCall of(final FunctionCall functionCall) {
@@ -150,6 +152,7 @@ public class LuaFunctionCall {
 	private void initFromNamedFeature(Feature callingFeature, NamedFeature named) {
 		this.callingFeature = callingFeature;
 		this.name = named.getName();
+		this.namedFeature = named;
 		this.calledFunction = getCalledFunction(named);
 		if (calledFunction == null) {
 			// TODO: this is confusing because it is different then MockUtil.isMocked(),
@@ -165,7 +168,8 @@ public class LuaFunctionCall {
 			return false;
 		}
 		
-		if (name == null) {
+		
+		if (name == null || namedFeature == null) {
 			var featurePath = new FeaturePath(getCallingFeature());
 			var features = featurePath.getContextFeatures();
 			LOGGER.error("Expected FunctionCall built from " + getCallingFeature() + " to contain a named feature leaf. FeaturePath context features: " + features);
@@ -176,8 +180,8 @@ public class LuaFunctionCall {
 	}
 	
 	private LuaFunctionDeclaration getCalledFunction(NamedFeature named) {
-		var ref = named.getRef();
-		return FunctionUtil.getReferencedFunction(ref, 0, 1000);
+		//var ref = named.getRef();
+		return FunctionUtil.getReferencedFunction(named);
 	}
 	
 

@@ -195,6 +195,33 @@ class LuaGlobalScopingTest {
 		'''
 		parseHelper.parseAndPerformBaseScopingTest(REQUIRING_SUT, rs)
 	}
+	
+	@Test
+	def void functionDeclarationTest() { 
+
+		val PROVIDING_SUT = '''
+			local _M = {}
+			
+			function _M.external_function() 
+			end
+
+			
+			return _M
+		'''
+		val result = parseHelper.parseAndPerformBaseScopingTest(PROVIDING_SUT)
+		val resultUri = result.eResource.getURI	
+		val rs = result.eResource.getResourceSet
+		
+		val REQUIRING_SUT = 
+		'local external_service = require(\"' + resultUri + '\") ' +
+		'''
+			local function temp()
+				external_service.external_function()
+			end
+			
+		'''
+		parseHelper.parseAndPerformBaseScopingTest(REQUIRING_SUT, rs)
+	}
 	    
     /**
      * Utility debug function to print the exported objects.

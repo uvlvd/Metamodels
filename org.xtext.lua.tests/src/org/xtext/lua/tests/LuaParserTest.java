@@ -2,11 +2,16 @@ package org.xtext.lua.tests;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 
 import org.junit.jupiter.api.Test;
 import org.xtext.lua.LuaParser;
 import org.xtext.lua.evaluation.CodeModelEvaluator;
 import org.xtext.lua.evaluation.EvalDataWriter;
+import org.xtext.lua.scoping.LuaGlobalScopeProvider;
+import org.xtext.lua.utils.FunctionUtil;
+import org.xtext.lua.utils.ReferenceUtil;
+import org.xtext.lua.wrappers.LuaFunctionCall;
 
 public class LuaParserTest {
 	
@@ -41,6 +46,23 @@ public class LuaParserTest {
 			// write mock infos to json for debugging
 			//final var statementMockInfos = evaluator.getMockInfoCollector().getStatementMockInfosByCause(luaParser.getSerializer());
 			//EvalDataWriter.writeAll(statementMockInfos);
+			var allFunctionCalls = new ArrayList<LuaFunctionCall>();
+			for (var res: codeModel.getResources()) {
+				allFunctionCalls.addAll(FunctionUtil.getFunctionCallsContainedIn(res.getContents().get(0)));
+			}
+			var totalExternal = 0;
+			for (var fc : allFunctionCalls) {
+				if (!fc.isMocked()) {
+					var declResource = fc.getCalledFunction().getRoot().eResource();
+					if (LuaGlobalScopeProvider.isImplicitResource(declResource)) {
+						continue;
+					}
+					if (fc.getCallingFeature().eResource() != declResource) {
+						totalExternal++;
+					}
+				}
+			}
+			System.out.println("total calls to other files without implicit: " + totalExternal);
 		}
 		
 		EvalDataWriter.writeAll(evaluator.getEvalDatas());

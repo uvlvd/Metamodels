@@ -638,5 +638,20 @@ class LuaLocalScopingTest {
 		parseHelper.parseAndPerformBaseScopingTest(SUT)
 	}
 
+	@Test
+	def void functionDeclarationTest2() { 
+		val SUT = '''
+		local a = {}
+		function a.func() 
+			local M = {}
+			M.a = 10
+			return M
+		end
+
+		b = a.func()
+
+		'''
+		parseHelper.parseAndPerformBaseScopingTest(SUT)
+	}
 	
 }

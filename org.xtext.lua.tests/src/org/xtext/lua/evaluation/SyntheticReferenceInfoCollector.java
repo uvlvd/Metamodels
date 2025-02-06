@@ -1,5 +1,6 @@
 package org.xtext.lua.evaluation;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -15,21 +16,27 @@ import org.xtext.lua.evaluation.SyntheticReferenceInfo.Cause;
 import org.xtext.lua.evaluation.SyntheticReferenceInfo.Type;
 import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.Feature;
+import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.GroupedExp;
 import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.MethodCall;
 import org.xtext.lua.lua.NamedFeature;
+import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
 import org.xtext.lua.mocking.FeaturePath;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
+import org.xtext.lua.scoping.LuaResourceDescriptionStrategy;
 import org.xtext.lua.utils.ExpUtil;
 import org.xtext.lua.utils.FeatureUtil;
+import org.xtext.lua.utils.FieldUtil;
 import org.xtext.lua.utils.LuaRequireUtil;
 import org.xtext.lua.utils.MockUtil;
 import org.xtext.lua.utils.ReferenceUtil;
+import org.xtext.lua.wrappers.LuaFunctionCall;
+import org.xtext.lua.wrappers.LuaFunctionDeclaration;
 
 public class SyntheticReferenceInfoCollector {
 	private static final Logger LOGGER = Logger.getLogger(SyntheticReferenceInfoCollector.class);
@@ -40,6 +47,7 @@ public class SyntheticReferenceInfoCollector {
 			Cause.VAR_NOT_FOUND);
 	
 	private Map<EObject, SyntheticReferenceInfo> infos = new HashMap<>();
+	private ResourceSet codeModel;
 	
 	
 	public Map<Type, SyntheticReferenceEvalData> getSyntheticReferenceTypeEvalData(final ResourceSet codeModel, final int totalReferences) {
@@ -171,6 +179,7 @@ public class SyntheticReferenceInfoCollector {
 	
 	public void clear() {
 		infos.clear();
+		codeModel = null;
 	}
 	
 	/**
@@ -178,6 +187,7 @@ public class SyntheticReferenceInfoCollector {
 	 * @param codeModel
 	 */
 	private void collect(ResourceSet codeModel) {
+		this.codeModel = codeModel;
 		for (final var res : codeModel.getResources()) {
 			var root = res.getContents().get(0);
 			final var syntheticReferences = EcoreUtil2.getAllContentsOfType(root, Referencing.class)
@@ -294,34 +304,28 @@ public class SyntheticReferenceInfoCollector {
 			return Cause.UNIDENTIFIED;
 		}
 		
-		if (previous instanceof FunctionCall functionCall) {
-			// TODO: check if require call, else Function Resolution
-			return getCauseForFunctionCallFeature(functionCall);
-		}
-		
-		// since we know the previous methodCall itself does not reference a synthetic element
-		// if this function was called, we assume it could not be resolved
-		if (previous instanceof MethodCall methodCall) {
-			// TODO: check if require call, else Function Resolution
-			return getCauseForMethodCallFeature(methodCall);
-		}
+//		if (previous instanceof FunctionCall functionCall) {
+//			// TODO: check if require call, else Function Resolution
+//			return getCauseForFunctionCallFeature(functionCall);
+//		}
+//		
+//		// since we know the previous methodCall itself does not reference a synthetic element
+//		// if this function was called, we assume it could not be resolved
+//		if (previous instanceof MethodCall methodCall) {
+//			// TODO: check if require call, else Function Resolution
+//			return getCauseForMethodCallFeature(methodCall);
+//		}
 		
 		// if previous is namedFeature (MemberAccess, TableAccess, or MethodCall
-		if (previous instanceof NamedFeature namedPrevious) {
+
 			// feature in a path that has MockUtil.referencesMocked == true (i.e. the previous feature
 			// cannot return true for this referencesMocked
 			// if the previous feature directly references a synthetic element, it defines the cause
-			if (MockUtil.referencesMocked(namedPrevious)) {
-				//return getCauseByFeatureType(namedPrevious);
-			}
+//			if (MockUtil.referencesMocked(previousFeature)) {
+//				//return getCauseByFeatureType(namedPrevious);
+//			}
 			// else we search the cause along the previous feature's reference chain
-			return tryInferCauseAlongReferenceChain(namedPrevious, unresolvableFeature);
-		}
-		
-
-		
-		LOGGER.error("Unexpectedly found non-named feature: " + unresolvableFeature);
-		return Cause.UNEXPECTED;
+		return tryInferCauseAlongReferenceChain(previous);
 	}
 	
 	private Cause getCauseForFunctionCallFeature(FunctionCall functionCall) {
@@ -385,28 +389,75 @@ public class SyntheticReferenceInfoCollector {
 	 * @param previousFeature the previous feature to an unresolvable feature.
 	 * @return
 	 */
-	private Cause tryInferCauseAlongReferenceChain(NamedFeature previousFeature, NamedFeature unresolvable) {
-		final var referenceChain = ReferenceUtil.getReferenceChain(previousFeature);
+	private Cause tryInferCauseAlongReferenceChain(Feature previousFeature) {
+		
+		final var functionCall = LuaFunctionCall.of(previousFeature);
+		
+		NamedFeature namedPrevious;
+		if (functionCall != null) {
+			namedPrevious = functionCall.getNamedFeature();
+		} else if (previousFeature instanceof NamedFeature named) {
+			namedPrevious = named;
+		} else if (previousFeature instanceof FunctionCall || previousFeature instanceof MethodCall) {
+			return Cause.DOUBLE_FUNCTION_CALL;
+		} else {
+			LOGGER.error("Unexpected non-named previous feature");
+			return Cause.UNEXPECTED;
+		}
+		
+		// here, we know the next feature is resolved synthetically, but the namedPrevious
+		// is not, so we need to test if the namedPrevious is a require call. If so, we expect
+		// that the next feature could only not be resolved if the require call could not determine
+		// a resource, i.e. the import is from an external library for which the code is not available.
+		
+		if (isRequireCall(namedPrevious)) {
+			// TODO: get uri from require call and match to all uris known in the resourceset.
+			// if any match -> import resolution failed (i.e. function resolution)
+			// if no match -> external library not available in the resourceSet (i.e. CM)
+			if (isExternalImport(namedPrevious)) { // uri not found in resources
+				return Cause.EXTERNAL_IMPORT;
+			}
+			return Cause.OTHER_IMPORT; // uri found in resources
+		}
+		
+		final var referenceChain = ReferenceUtil.getReferenceChain(namedPrevious);
+		
+		// TODO: test if namedPrevious is require call?
 		
 		for (final var referencing : referenceChain) {
-			// if any along the reference chain directly reference a synthetic element, compute and return
-			// the corresponding cause
-			if (referencing instanceof NamedFeature named && MockUtil.referencesMocked(named)) {
-				return getInfoFor(named).getCause();
+			if (referencing instanceof Arg) {
+				return Cause.ARG_ACCESS; // arg accesses are not resolved by the Lua CMoGS
 			}
 			
-			if (referencing instanceof Feature referencedFeature) {
-				final var featurePath = new FeaturePath(referencedFeature);
-				
-				for (var fpFeature : featurePath.getContextFeatures()) {
-					if (fpFeature instanceof NamedFeature named && MockUtil.referencesMocked(named)) {
-						return getInfoFor(named).getCause();
-					}
+			if (isInImplicitResource(referencing)) {
+				// assume that the next feature could not be resolved because of 
+				// missing information in the library code (i.e. C code not represented in Lua
+				// standard library files used from sumneko language server)
+				return Cause.IMPLICIT_IMPORT; 
+			}
+			
+			if (referencing instanceof Field field && FieldUtil.isFieldWithLinkingDummyName(field)) {
+				return Cause.TABLE_INDEX_EXP;
+			}
+			
+			if (isRequireCall(namedPrevious)) {
+				// TODO: get uri from require call and match to all uris known in the resourceset.
+				// if any match -> import resolution failed (i.e. function resolution)
+				// if no match -> external library not available in the resourceSet (i.e. CM)
+				if (isExternalImport(namedPrevious)) { // uri not found in resources
+					return Cause.EXTERNAL_IMPORT;
 				}
+				return Cause.OTHER_IMPORT; // uri found in resources
+			}
+			
+			// if an element on the reference chain is itself unresolvable, we return it's cause
+			if (referencing instanceof NamedFeature feature && MockUtil.referencesMocked(feature)) {
+				return getInfoFor(feature).getCause();
 			}
 		}
 		
-		final var referenced = ReferenceUtil.getReferencedElement(previousFeature);
+		// after traversing the complete reference chain, we check the final referenced element
+		final var referenced = ReferenceUtil.getReferencedElement(namedPrevious);
 		if (referenced instanceof Arg) {
 			return Cause.ARG_ACCESS;
 		}
@@ -415,27 +466,71 @@ public class SyntheticReferenceInfoCollector {
 			return Cause.IMPLICIT_IMPORT;
 		}
 		
-		if (ExpUtil.isTableAccessWithLinkingDummyName(referenced)) {
+		if (referenced instanceof Field field && FieldUtil.isFieldWithLinkingDummyName(field)) {
 			return Cause.TABLE_INDEX_EXP;
 		}
 		
-		// check if last named feature (last element of reference chain)
-		// is followed by a function call. If so, we assume that it could not be resolved.
-		if (referenced instanceof NamedFeature named) {
-			final var next = FeatureUtil.getNextFeature(named);
-			if (next instanceof FunctionCall functionCall) {
-				return getCauseForFunctionCallFeature(functionCall);
+		if (referenced instanceof NamedFeature feature) {
+			if (isRequireCall(feature)) {
+				// TODO: get uri from require call and match to all uris known in the resourceset.
+				// if any match -> import resolution failed (i.e. function resolution)
+				// if no match -> external library not available in the resourceSet (i.e. CM)
+				if (isExternalImport(feature)) { // uri not found in resources
+					return Cause.EXTERNAL_IMPORT;
+				}
+				return Cause.OTHER_IMPORT; // uri found in resources
+			}
+			
+			if (MockUtil.referencesMocked(feature)) {
+				return getInfoFor(feature).getCause();
 			}
 		}
 		
+		if (functionCall != null) {
+			final var referencedDeclaration = functionCall.getCalledFunction();
+			if (referencedDeclaration != null) {
+				if (isInImplicitResource(referencedDeclaration.getRoot())) {
+					return Cause.IMPLICIT_IMPORT;
+				}
+				return Cause.FUNCTION_RESOLUTION;
+			}
+		}
+		
+		
 		// Fallback: could not identify cause, e.g. unresolved table access on previous
 		//  feature in Assignment ("b" in a.b is not resolved for a[func()] = 1 with func() returning "b")
+		//  other e.g.: a,b = func(); b points at synthetic nil expression but func() may return multiple values
 		return Cause.UNIDENTIFIED;
+	}
+	
+	private boolean isExternalImport(NamedFeature feature) {
+		if (isRequireCall(feature)) {
+			final var importUriOpt = LuaRequireUtil.getImportUri(feature);
+			if (importUriOpt.isPresent()) {
+				var importUriPart = importUriOpt.get();
+				if (!importUriPart.endsWith(".lua")) {
+					importUriPart += ".lua";
+	            }
+				final var importUri = importUriPart;
+				var isInternal = codeModel.getResources().stream()
+						.filter(resource -> !LuaGlobalScopeProvider.isImplicitResource(resource))
+						.anyMatch(resource -> {
+							final var resourceUriStr = resource.getURI().toFileString();
+							return LuaResourceDescriptionStrategy.importUriEqualsFileUri(importUri, resourceUriStr);
+						});
+				return !isInternal;
+			}
+		}
+		return false;
 	}
 	
 	private boolean importFailed(final FeaturePath featurePath) {
 		final var root = featurePath.getPrefix();
 		return root instanceof Var var && LuaRequireUtil.isRequireFunctionCall(var);
+	}
+	
+	private boolean isRequireCall(NamedFeature feature) {
+		return feature instanceof Var var && LuaRequireUtil.isRequireFunctionCall(var);
 	}
 
 }

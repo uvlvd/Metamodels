@@ -21,7 +21,7 @@ public class ReferenceUtil {
 		if (referenceChain.size() > 0) {
 			return referenceChain.get(referenceChain.size() - 1).getRef();
 		}
-		return null;
+		return referencing.getRef();
 	}
 	
 	/**

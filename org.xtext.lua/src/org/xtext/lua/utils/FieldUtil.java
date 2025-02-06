@@ -3,6 +3,7 @@ package org.xtext.lua.utils;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.lua.Assignment;
@@ -16,6 +17,7 @@ import org.xtext.lua.lua.LocalAssignment;
 import org.xtext.lua.lua.TableConstructor;
 
 public class FieldUtil {
+	private static final Logger LOGGER = Logger.getLogger(FieldUtil.class);
 	
 	private FieldUtil() { }
 	
@@ -41,10 +43,14 @@ public class FieldUtil {
 		}
 		
 		if (name == null) {
-			throw new RuntimeException("Could not set field name for field " + field);
+			LOGGER.debug("Could not set field name for field " + field);
 		}
 		
 		return name;
+	}
+	
+	public static boolean isFieldWithLinkingDummyName(final Field field) {
+		return LuaConstants.LINKING_DUMMY_NAME.equals(field.getName());
 	}
 	
 	public static Optional<EObject> findTableForField(Field field) {

@@ -91,7 +91,7 @@ public class LuaFunctionDeclaration {
 			if (containingChunk != null) {
 				var isReturnedByChunk = getReferenceablesFromReturnStat(containingChunk)
 						.stream()
-						.map(ref -> FunctionUtil.getReferencedFunction(ref, 0, 1000))
+						.map(ref -> FunctionUtil.getReferencedFunction(ref))
 						.filter(Objects::nonNull)
 						.anyMatch(fd -> fd.getRoot().equals(root));
 				isGlobal = isReturnedByChunk;

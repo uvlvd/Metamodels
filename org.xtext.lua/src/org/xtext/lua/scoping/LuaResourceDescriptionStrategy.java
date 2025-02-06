@@ -1,6 +1,5 @@
 package org.xtext.lua.scoping;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -105,8 +104,9 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
 			var userDataReturnIndex = description.getUserData(GLOBAL_RETURN_USERDATA_KEY);
 			var userDataReturnURI = description.getUserData(GLOBAL_RETURN_URI_USERDATA_KEY);
 			if (userDataReturnIndex != null && userDataReturnURI != null) {
-				return userDataReturnIndex.equals(Integer.toString(index)) 
-						&& importUriEqualsFileUri(uriString, userDataReturnURI);
+				return importUriEqualsFileUri(uriString, userDataReturnURI);
+				//return userDataReturnIndex.equals(Integer.toString(index)) 
+				//		&& importUriEqualsFileUri(uriString, userDataReturnURI);
 						//&& userDataReturnURI.equals(uriString);
 			}
 			return false;
@@ -115,20 +115,18 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
     
     // This comparison depends on the importUri computed in LuaImportUriResolver,
     // do not change one without the other
-    private static boolean importUriEqualsFileUri(final String importUri, final String fileUri) {
+    public static boolean importUriEqualsFileUri(final String importUri, final String fileUri) {
     	if (fileUri == null) {
     		return importUri == null;
     	}
-    	
+
     	if (fileUri.equals(importUri)) {
     		return true;
     	}
-    	
-    	// replace all "." chars with the system separator char to
-    	// compare importUri's "qualified-name"-form with fileUri
-    	final var seperator = File.separatorChar;
-    	var rImportUri = importUri.replace('.', seperator);
-    	var rFileUri = fileUri.replace('.', seperator);
+
+
+    	var rImportUri = importUri.replaceAll("\\W", "/");
+    	var rFileUri = fileUri.replaceAll("\\W", "/");
     	return rFileUri.endsWith(rImportUri);
     	
     }

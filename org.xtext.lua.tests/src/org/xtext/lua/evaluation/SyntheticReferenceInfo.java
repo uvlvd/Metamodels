@@ -40,6 +40,8 @@ public class SyntheticReferenceInfo {
 		OTHER_IMPORT, // The import Uri was not correctly resolved, or references an external library
 		ARG_ACCESS, // access of an Arg (e.g. MemberAccess on member in function func(arg) arg.member end)
 		VAR_NOT_FOUND,
+		DOUBLE_FUNCTION_CALL,
+		EXTERNAL_IMPORT,
 		UNIDENTIFIED, // could not identify the cause
 		UNEXPECTED // fallback
 	}

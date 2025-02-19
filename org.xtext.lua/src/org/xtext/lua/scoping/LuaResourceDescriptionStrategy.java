@@ -81,8 +81,6 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
         	}
 
         	// we traversed the Chunk as well as the root block to get to the return statement of the root block.
-        	//LinkingAndScopingUtils.getReferenceablesFromReturnStat(returnStat, getQualifiedNameProvider())
-        	//	.forEach(assignable -> createEObjectDescription(acceptor, assignable));
         	return false;
         }
     	return false;
@@ -105,9 +103,6 @@ public class LuaResourceDescriptionStrategy extends DefaultResourceDescriptionSt
 			var userDataReturnURI = description.getUserData(GLOBAL_RETURN_URI_USERDATA_KEY);
 			if (userDataReturnIndex != null && userDataReturnURI != null) {
 				return importUriEqualsFileUri(uriString, userDataReturnURI);
-				//return userDataReturnIndex.equals(Integer.toString(index)) 
-				//		&& importUriEqualsFileUri(uriString, userDataReturnURI);
-						//&& userDataReturnURI.equals(uriString);
 			}
 			return false;
 		};

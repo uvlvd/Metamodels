@@ -34,7 +34,6 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 			}
 			// set "name" attribute for all other Referenceables: 
 			else if (obj instanceof Referenceable refble) {
-				//setLinkTextAsName(refble);
 				setNameAsRef(refble);
 			}
 		});
@@ -81,7 +80,6 @@ public class LuaDerivedStateComputer implements IDerivedStateComputer {
 		if (refble instanceof Referencing referencing) {
 			linkingSupport.createAndSetProxy(referencing, Literals.REFERENCING__REF, name);
 		} else {
-			//LOGGER.warn("Attempting to create 'ref' cross-reference from 'name' attribute for for " + refble + ", which is not Referencing.");
 			return;
 		}
 	}

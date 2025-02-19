@@ -18,8 +18,15 @@ import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 
 import com.google.inject.Injector;
 
-// TODO: doc, mention the difference between generate and parse, resolveReferences;
-// mention serialize
+/**
+ * 
+ * This class represents the CIPM Lua CMoGS (Code Model Generator and Serialiser). 
+ * Use the {@link #parse(Path)} method to parse Lua files to a Code Model, without resolving references. The {@link #generate(Path)}
+ * method parses the code model and resolves all references. A {@link #serialize(LuaCodeModel)} method is also provided to transform
+ * {@link LuaCodeModel}s into source code.
+ * @author jsaenz
+ *
+ */
 public class LuaParser {
 	private static final Logger LOGGER = Logger.getLogger(LuaParser.class);
 	

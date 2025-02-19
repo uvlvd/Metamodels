@@ -21,8 +21,6 @@ public class NumberValueConverter implements IValueConverter<Double> {
     public Double toValue(String string, INode node) throws ValueConverterException {
         if (isHexString(string)) {
         	return toValueFromHex(string);
-            //var hexLong = Long.valueOf(Long.parseLong(string.substring(2), 16));
-            //return Double.valueOf(hexLong.doubleValue());
         }
 
         return Double.valueOf(string);

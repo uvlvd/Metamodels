@@ -57,7 +57,6 @@ public class ExpUtil {
 		else {
 			// TODO
 			LOGGER.warn("TableAccess is not (yet) implemented for non-string indexExps like " + exp);
-			//throw new RuntimeException("TableAccess is not (yet) implemented for non-string indexExps!");
 		}
 		
 		if (name == null) {
@@ -112,7 +111,6 @@ public class ExpUtil {
 			throw new RuntimeException("The parsed content contains a String literal");
 		}
 		return removeQuotesFromString(stringLiteral.getValue());
-		//return stringLiteral.getValue();
 	}
 	
 	public static String removeQuotesFromString(String str) {

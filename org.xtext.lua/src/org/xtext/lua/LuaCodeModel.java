@@ -1,7 +1,6 @@
 package org.xtext.lua;
 
 import java.util.Collection;
-import java.util.List;
 
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -10,6 +9,12 @@ import org.eclipse.xtext.resource.XtextResourceSet;
 import org.xtext.lua.mocking.MockObjectCreator;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 
+/**
+ * {@link XtextResourceSet} implementation representing the Lua Code Model. Implements methods to return only the serialisable
+ * Resources, given that implicit imports e.g. are not serialisable.
+ * @author jsaenz
+ *
+ */
 public class LuaCodeModel extends XtextResourceSet {
 		
 	/**

@@ -16,7 +16,18 @@ import org.xtext.lua.lua.LuaFactory;
 import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.Var;
 import org.xtext.lua.utils.LuaConstants;
+import org.xtext.lua.linking.LuaLinkingService;
 
+/**
+ * Class responsible for the creation of synthetic elements for recovery mechanism.
+ * <p>
+ * Whenever a reference cannot be resolved by the scope providers, this class is called byt he
+ * {@link LuaLinkingService} to insert a synthetic element into the Lua Code Model s.t. a synthetic
+ * reference can be created to this element.
+ * </p>
+ * @author jsaenz
+ *
+ */
 public class MockObjectCreator implements IMockObjectCreator {
 	public static final URI MOCKED_RESOURCE_URI = URI.createURI("mock:/mocked_objects.lua");
 

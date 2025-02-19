@@ -50,7 +50,6 @@ public class FeaturePathCandidate {
 			return result;
 		}
 		return false; // candidate has no more segments/is completely matched
-		//throw new RuntimeException("Cannot check FeaturePathCandidate for " + context + " with fqn " + qualifiedName + " at index " + indexToCheck);
 	}
 	
 	// TODO: should build canidates without fqn and completely avoid usage of QualifiedNameProvider /

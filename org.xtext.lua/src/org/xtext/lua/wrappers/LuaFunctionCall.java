@@ -180,7 +180,6 @@ public class LuaFunctionCall {
 	}
 	
 	private LuaFunctionDeclaration getCalledFunction(NamedFeature named) {
-		//var ref = named.getRef();
 		return FunctionUtil.getReferencedFunction(named);
 	}
 	

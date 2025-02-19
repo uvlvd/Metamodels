@@ -62,34 +62,4 @@ public class ReferenceUtil {
 		return referenceChain;
 	}
 	
-//	public static Referenceable traverseReferenceChain(final Referencing referencing) {
-//		return traverseReferenceChain(referencing, 0, MAX_RECURSION_DEPTH);
-//	}
-	
-//	private static Referenceable traverseReferenceChain(final Referencing referencing, int currDepth, final int maxDepth) {
-//		if (currDepth > maxDepth) {
-//			throw new RuntimeException("Reached max depth while attempting to traverse reference chain for " + referencing);
-//		}
-//		
-//		var referenced = referencing.getRef();
-//		
-//		// referenced element is itself Referencing, traverse further
-//		if (referenced instanceof Referencing referencingsReferencing) {
-//			
-//			// Currently, vars on the lhs on an assignment assigned to a FeaturePath on the rhs
-//			// erroneously reference (point to) the FeaturePath root insted of the FeaturePath leaf.
-//			// This check can be removed whenever this problem has been refactored.
-//			if (referencingsReferencing instanceof Feature feature) {
-//				final var namedLeafOpt = FeatureUtil.findFeaturePathNamedLeaf(feature);
-//				if (namedLeafOpt.isPresent()) {
-//					referencingsReferencing = namedLeafOpt.get();
-//				}
-//			}
-//			return traverseReferenceChain(referencingsReferencing, ++currDepth, maxDepth);
-//		}
-//		
-//		// end of reference chain reached
-//		return referenced;
-//	}
-	
 }

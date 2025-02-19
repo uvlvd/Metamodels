@@ -19,7 +19,6 @@ import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
 import org.xtext.lua.lua.TableAccess;
 import org.xtext.lua.lua.Var;
-import org.xtext.lua.mocking.FeaturePath;
 import org.xtext.lua.mocking.SyntheticExpNil;
 
 public class AssignmentUtil {
@@ -128,10 +127,6 @@ public class AssignmentUtil {
 		if (ref.getRef() == null || ref.getRef().eIsProxy()) {
 			return null;
 		}
-		// TODO: this can probably be removed, since now synthetic NIL exps are assigned 
-//		if (ref.getRef().equals(ref)) { // reference to self means no value was assigned (i.e. the value is 'nil')
-//			return null;
-//		}
 		if (ref.getRef() instanceof Referencing refsRef) {
 			return tryGetReferencedExp(refsRef, ++currDepth, maxDepth);
 		}
@@ -204,22 +199,6 @@ public class AssignmentUtil {
 		}
 		// fall-through, e.g. if explist does not contain an exp for every declared var (i.e. value is 'nil')
 		return null;
-	}
-	
-	// TODO: vars in assignments should point to leaf in feature path or to function return value if feature path ends with function/method call
-	private static Referenceable getExpToPointTo(Exp exp) {
-//		if (exp instanceof Feature feature) {
-//			final var featurePath = new FeaturePath(feature);
-//			final var leaf = featurePath.getLeaf();
-//			if (leaf instanceof FunctionCall || leaf instanceof MethodCall) {
-//				// TODO
-//			}
-//			if (leaf instanceof NamedFeature namedLeaf) {
-//				return namedLeaf;
-//			} 
-//			if (featurePath.getLeaf())
-//		}
-		throw new RuntimeException("Not yet implemented");
 	}
 	
 	public static Optional<? extends Referenceable> findAssignableForExp(final Exp exp) {

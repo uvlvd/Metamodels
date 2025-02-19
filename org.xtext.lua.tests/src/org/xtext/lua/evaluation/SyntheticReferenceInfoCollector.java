@@ -36,6 +36,12 @@ import org.xtext.lua.utils.MockUtil;
 import org.xtext.lua.utils.ReferenceUtil;
 import org.xtext.lua.wrappers.LuaFunctionCall;
 
+/**
+ * This class contains the logic for detecting the causes for synthetic references (i.e. "Cause Detection Algorithm" in the thesis).
+ * It analyses all synthetic references in a given Lua Code Model and attempts to determine the cause for their synthetic resolution.
+ * @author jsaenz
+ *
+ */
 public class SyntheticReferenceInfoCollector {
 	private static final Logger LOGGER = Logger.getLogger(SyntheticReferenceInfoCollector.class);
 	private static final List<Cause> FILTER_CAUSES = List.of(
@@ -342,40 +348,6 @@ public class SyntheticReferenceInfoCollector {
 			}
 		}
 		
-//		if (functionCall != null && !functionCall.isMocked()) {
-//			var calledFunctionName = functionCall.getNamedFeature();
-//			// fist check if require call (i.e. import)
-//			if (isRequireCall(calledFunctionName)) {
-//				// if any match -> import resolution failed (i.e. function resolution)
-//				// if no match -> external library not available in the resourceSet (i.e. CM)
-//				if (isExternalImport(calledFunctionName)) { // uri not found in resources
-//					return Cause.EXTERNAL_IMPORT;
-//				}
-//				// uri found in resources -> could not resolve an access to the value returned 
-//				// by the require call, which we regard as a function call resolution failure
-//				return Cause.FUNCTION_RESOLUTION; 
-//			}
-//			
-//			if (calledFunctionName instanceof Arg) {
-//				return Cause.ARG_ACCESS; // arg accesses are not resolved by the Lua CMoGS
-//			}
-//			
-//			// since we already checked for require calls, here only other standard library
-//			// functions are checked
-//			if (isInImplicitResource(calledFunctionName)) {
-//				// assume that the next feature could not be resolved because of 
-//				// missing information in the library code (i.e. C code not represented in Lua
-//				// standard library files used from sumneko language server)
-//				return Cause.IMPLICIT_IMPORT; 
-//			}
-//			
-//			// if function call was not mocked and other causes do not apply, the
-//			// next feature could not be resolved because the function call's return value
-//			// could not be resolved
-//			return Cause.FUNCTION_RESOLUTION;
-//		}
-		
-		
 		// here, the name of the function called by the functionCall could still point
 		// to another unresolved feature
 		NamedFeature namedPrevious;
@@ -391,20 +363,7 @@ public class SyntheticReferenceInfoCollector {
 		// here, we know the next feature is resolved synthetically, but the namedPrevious
 		// is not, so we need to test if the namedPrevious is a require call. If so, we expect
 		// that the next feature could only not be resolved if the require call could not determine
-		// a resource, i.e. the import is from an external library for which the code is not available.
-		
-//		if (isRequireCall(namedPrevious)) {
-//			// get uri from require call and match to all uris known in the resourceset.
-//			// if any match -> import resolution failed (i.e. function resolution)
-//			// if no match -> external library not available in the resourceSet (i.e. CM)
-//			if (isExternalImport(namedPrevious)) { // uri not found in resources
-//				return Cause.EXTERNAL_IMPORT;
-//			}
-//			// uri found in resources -> could not resolve an access to the value returned 
-//			// by the require call, which we regard as a function call resolution failure
-//			return Cause.FUNCTION_RESOLUTION;
-//		}
-//		
+		// a resource, i.e. the import is from an external library for which the code is not available.	
 		final var referenceChain = ReferenceUtil.getReferenceChain(namedPrevious);
 
 		
@@ -458,17 +417,6 @@ public class SyntheticReferenceInfoCollector {
 				return getInfoFor(feature).getCause();
 			}
 		}
-		
-//		if (functionCall != null) {
-//			final var referencedDeclaration = functionCall.getCalledFunction();
-//			if (referencedDeclaration != null) {
-//				if (isInImplicitResource(referencedDeclaration.getRoot())) {
-//					return Cause.IMPLICIT_IMPORT;
-//				}
-//				return Cause.FUNCTION_RESOLUTION;
-//			}
-//		}
-		
 		
 		// Fallback: could not identify cause, e.g. unresolved table access on previous
 		//  feature in Assignment ("b" in a.b is not resolved for a[func()] = 1 with func() returning "b")

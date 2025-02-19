@@ -25,7 +25,6 @@ import org.xtext.lua.lua.Field;
 import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.LocalVar;
-import org.xtext.lua.lua.MemberAccess;
 import org.xtext.lua.lua.MethodCall;
 import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.Referenceable;

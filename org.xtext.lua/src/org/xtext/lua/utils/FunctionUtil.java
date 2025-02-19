@@ -9,17 +9,14 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.xtext.lua.lua.Arg;
 import org.xtext.lua.lua.ExpFunctionDeclaration;
-import org.xtext.lua.lua.Feature;
 import org.xtext.lua.lua.FuncBody;
 import org.xtext.lua.lua.FunctionCall;
 import org.xtext.lua.lua.FunctionCallStat;
 import org.xtext.lua.lua.FunctionDeclaration;
 import org.xtext.lua.lua.LocalFunctionDeclaration;
 import org.xtext.lua.lua.MethodCall;
-import org.xtext.lua.lua.NamedFeature;
 import org.xtext.lua.lua.Referenceable;
 import org.xtext.lua.lua.Referencing;
-import org.xtext.lua.mocking.FeaturePath;
 import org.xtext.lua.wrappers.LuaFunctionCall;
 import org.xtext.lua.wrappers.LuaFunctionDeclaration;
 
@@ -74,44 +71,6 @@ public class FunctionUtil {
 			return LuaFunctionDeclaration.of(referenced);
 		}
 		return null;
-		
-		
-//		if (currDepth > maxDepth) {
-//			throw new RuntimeException("Reached max depth while attempting to get called function value from " + ref);
-//		}
-//		
-//		if (ref instanceof FunctionDeclaration decl) {
-//			return LuaFunctionDeclaration.of(decl);
-//		}
-//
-//		if (ref instanceof LocalFunctionDeclaration decl) {
-//			return LuaFunctionDeclaration.of(decl);
-//		}
-//		
-//		if (ref instanceof ExpFunctionDeclaration decl) {
-//			return LuaFunctionDeclaration.of(decl);
-//		}
-//		
-//		if (MockUtil.isMocked(ref)) {
-//			return null;
-//		}
-//		
-//		if (ref instanceof Referencing referencing) {
-//			var refsRef = referencing.getRef();
-//			
-//			// if ref references a feature, use the feature path leaf as the next ref
-//			if (refsRef instanceof Feature feature) {
-//				final var namedLeafOpt = FeatureUtil.findFeaturePathNamedLeaf(feature);
-//				if (namedLeafOpt.isPresent()) {
-//					refsRef = namedLeafOpt.get();
-//				}
-//			}
-//			return getReferencedFunction(refsRef, ++currDepth, maxDepth);
-//		}
-//		
-//		// TODO: this fails in certain cases, e.g.g a = b and load(b) in lua 5.2 test suite api.lua
-//		//throw new RuntimeException("Could not find called function!");
-//		return null;
 	}
 	
     

@@ -15,7 +15,6 @@ import org.junit.jupiter.api.^extension.ExtendWith
 import org.xtext.lua.lua.Assignment
 import org.xtext.lua.lua.MemberAccess
 import org.xtext.lua.lua.Var
-import org.xtext.lua.utils.FunctionUtil
 
 /**
  * Tests for global scoping, i.e. resolution of functions and variables declared in another file and imported

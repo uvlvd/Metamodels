@@ -140,9 +140,6 @@ public class FeatureUtil {
 			return named;
 		}
 		final var previous = getPreviousFeature(feature);
-//		if (previous == null) {
-//			return null;
-//		}
 		return getFirstNamedPrefix(previous);
 	}
 }

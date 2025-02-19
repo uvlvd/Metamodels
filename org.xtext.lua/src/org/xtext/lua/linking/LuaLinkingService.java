@@ -16,6 +16,11 @@ import org.xtext.lua.utils.ReferenceableUtil;
 
 import com.google.inject.Inject;
 
+/**
+ * Implementation of Xtext's linking service used to resolve Code Model references.
+ * @author jsaenz
+ *
+ */
 public class LuaLinkingService extends DefaultLinkingService {
 	
 	@Inject
@@ -45,7 +50,6 @@ public class LuaLinkingService extends DefaultLinkingService {
         	if (ReferenceableUtil.referencesImplicitSelfParam(context)) {
         		// referencesImplicitSelfParam ensures that funcBody is present
         		var containingFuncBody = EcoreUtil2.getContainerOfType(context, FuncBody.class);
-        		//var selfArg = implicitSelfArgs.getSelfArgFor(containingFuncBody);
         		var selfArg = mockObjectCreator.getSelfArgFor(containingFuncBody);
         		return Collections.singletonList(selfArg);
         	}

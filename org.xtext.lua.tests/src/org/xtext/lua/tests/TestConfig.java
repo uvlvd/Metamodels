@@ -16,8 +16,8 @@ public class TestConfig {
 	 * {@link LuaParserTest}.
 	 */
 	public static final List<EvalProjectConfig> EVAL_PROJECT_CONFIGS = List.of(
-		new EvalProjectConfig("test_data\\lua-5.2.0-tests_utf8", false),
-		new EvalProjectConfig("D:\\MA\\repos\\apisix", false),
+		//new EvalProjectConfig("test_data\\lua-5.2.0-tests_utf8", false),
+		//new EvalProjectConfig("D:\\MA\\repos\\apisix", false),
 		new EvalProjectConfig("D:\\MA\\repos\\blink.cmp", false)	
 	);
 }

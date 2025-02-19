@@ -103,7 +103,7 @@ class LuaLocalScopingTest {
 			b = a[v]
 			b = a[v2]
 		'''
-		val result = parseHelper.parseAndPerformBaseScopingTest(SUT) 
+		parseHelper.parseAndPerformBaseScopingTest(SUT) 
 	}
 	
 	@Test

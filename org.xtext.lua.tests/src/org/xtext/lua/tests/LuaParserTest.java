@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 
+import org.apache.log4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.xtext.lua.LuaParser;
 import org.xtext.lua.evaluation.CodeModelEvaluator;
@@ -13,6 +14,7 @@ import org.xtext.lua.utils.FunctionUtil;
 import org.xtext.lua.wrappers.LuaFunctionCall;
 
 public class LuaParserTest {
+	private static final Logger LOGGER = Logger.getLogger(LuaParserTest.class);
 	
 	/**
 	 * Test used for the evaluation of the Lua code model converter. 
@@ -41,10 +43,7 @@ public class LuaParserTest {
 			evaluator.stopTimingReferenceResolutionProcessFor(projectPath);
 			
 			evaluator.evaluate(projectPath, codeModel);
-			
-			// write mock infos to json for debugging
-			//final var statementMockInfos = evaluator.getMockInfoCollector().getStatementMockInfosByCause(luaParser.getSerializer());
-			//EvalDataWriter.writeAll(statementMockInfos);
+
 			var allFunctionCalls = new ArrayList<LuaFunctionCall>();
 			for (var res: codeModel.getResources()) {
 				allFunctionCalls.addAll(FunctionUtil.getFunctionCallsContainedIn(res.getContents().get(0)));
@@ -61,7 +60,7 @@ public class LuaParserTest {
 					}
 				}
 			}
-			System.out.println("total calls to other files without implicit: " + totalExternal);
+			LOGGER.info("total calls to other files without implicit: " + totalExternal);
 		}
 		
 		EvalDataWriter.writeAll(evaluator.getEvalDatas());

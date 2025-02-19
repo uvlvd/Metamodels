@@ -16,76 +16,8 @@ public class TestConfig {
 	 * {@link LuaParserTest}.
 	 */
 	public static final List<EvalProjectConfig> EVAL_PROJECT_CONFIGS = List.of(
-			new EvalProjectConfig("test_data\\lua-5.2.0-tests_utf8", false),
-			new EvalProjectConfig("D:\\MA\\repos\\apisix", false),
-			new EvalProjectConfig("D:\\MA\\repos\\blink.cmp", false)//,
-			
-			
-//				new EvalProjectConfig(
-//					"test_data\\lua-5.2.0-tests_utf8",
-//					false
-//				)//,
-				
-//
-//				new EvalProjectConfig(
-//						"D:\\MA\\repos\\nvim_plugins\\nvim-dbee",
-//						false
-//				)
-//				,
-//				new EvalProjectConfig(
-//						"D:\\MA\\repos\\nvim_plugins\\lualine.nvim",
-//						false
-//				)
-//				,
-//				new EvalProjectConfig(
-//						"D:\\MA\\repos\\nvim_plugins\\telescope.nvim",
-//						false
-//				),
-//
-//				
-//				
-//				,
-//				new EvalProjectConfig(
-//						"D:\\MA\\apisix\\apisix",
-//						false
-//				)
-				
-//				,
-//				new EvalProjectConfig(
-//						"D:\\MA\\repos\\temp",
-//						false
-//				)
-			
-//			new EvalProjectConfig(
-//			"D:\\MA\\own\\CIPM\\commit-based-cipm\\bundles\\si\\cipm.consistency.vsum.test\\ciTestRepos\\test_eval_case",
-//			false
-//			)
-//			
-//				new EvalProjectConfig(
-//					"D:\\MA\\own\\CIPM\\commit-based-cipm\\bundles\\si\\cipm.consistency.vsum.test\\ciTestRepos\\apisix",
-//						false
-//				)//,
-			
-//			new EvalProjectConfig("test_data\\lua-5.2.0-tests_utf8", false),
-//			new EvalProjectConfig("D:\\MA\\repos\\apisix", false),
-//			new EvalProjectConfig("D:\\MA\\repos\\blink.cmp", false)// ,
-				
-//				new EvalProjectConfig(
-//						"D:\\MA\\repos\\xmake",
-//						false
-//				),
-//				new EvalProjectConfig(
-//						"D:\\MA\\repos\\ntopng",
-//						false
-//				)
-				
-				
-				
-//				,
-//				new EvalProjectConfig(
-//						"D:\\MA\\repos\\nvim_plugins\\trouble.nvim",
-//						false
-//				)
-				
-			);
+		new EvalProjectConfig("test_data\\lua-5.2.0-tests_utf8", false),
+		new EvalProjectConfig("D:\\MA\\repos\\apisix", false),
+		new EvalProjectConfig("D:\\MA\\repos\\blink.cmp", false)	
+	);
 }

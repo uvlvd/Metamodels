@@ -145,6 +145,10 @@ public class LuaFunctionDeclaration {
 		
 		final var name = decl.getName();
 		final var args = getArgsFromParList(decl.getBody().getParList());
+		if (decl.getBody() == null) {
+			return null;
+		}
+		
 		final var block = decl.getBody().getBlock();
 		
 		functionDeclaration.init(decl, name, args, block, decl);
@@ -155,6 +159,10 @@ public class LuaFunctionDeclaration {
 		var functionDeclaration = new LuaFunctionDeclaration();
 		
 		final var name = decl.getName();
+		if (decl.getBody() == null) {
+			return null;
+		}
+		
 		final var args = getArgsFromParList(decl.getBody().getParList());
 		final var block = decl.getBody().getBlock();
 		
@@ -172,6 +180,10 @@ public class LuaFunctionDeclaration {
 			return null;
 		}
 		final var args = getArgsFromParList(decl.getBody().getParList());
+		if (decl.getBody() == null) {
+			return null;
+		}
+		
 		final var block = decl.getBody().getBlock();
 		
 		functionDeclaration.init(decl, name, args, block, containingStat);

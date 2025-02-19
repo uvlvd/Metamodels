@@ -37,7 +37,6 @@ public class SyntheticReferenceInfo {
 		TABLE_INDEX_EXP, // TableAccess indexExp could not be resolved
 		GROUPED_EXP, // feature path started with grouped exp
 		IMPLICIT_IMPORT, // the implicit import files are not complete (e.g. fields are not defined in .lua files, see e.g. io.stderr)
-		OTHER_IMPORT, // The import Uri was not correctly resolved, or references an external library
 		ARG_ACCESS, // access of an Arg (e.g. MemberAccess on member in function func(arg) arg.member end)
 		VAR_NOT_FOUND,
 		DOUBLE_FUNCTION_CALL,

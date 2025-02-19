@@ -10,7 +10,6 @@ import org.xtext.lua.evaluation.CodeModelEvaluator;
 import org.xtext.lua.evaluation.EvalDataWriter;
 import org.xtext.lua.scoping.LuaGlobalScopeProvider;
 import org.xtext.lua.utils.FunctionUtil;
-import org.xtext.lua.utils.ReferenceUtil;
 import org.xtext.lua.wrappers.LuaFunctionCall;
 
 public class LuaParserTest {
